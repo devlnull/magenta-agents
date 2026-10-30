@@ -17,17 +17,21 @@ class YamlError(ValueError):
 
 
 def _strip_comment(line: str) -> str:
-    out, quote = [], None
-    for i, ch in enumerate(line):
+    """Drop a ' #' comment. A quote opens a quoted scalar only at the start of a token."""
+    quote, i = None, 0
+    while i < len(line):
+        ch = line[i]
         if quote:
-            if ch == quote:
+            if ch == "'" == quote and line[i + 1:i + 2] == "'":
+                i += 1
+            elif ch == quote:
                 quote = None
-        elif ch in "\"'":
+        elif ch in "\"'" and (i == 0 or line[i - 1] in " \t[{,"):
             quote = ch
         elif ch == "#" and (i == 0 or line[i - 1] in " \t"):
-            break
-        out.append(ch)
-    return "".join(out).rstrip()
+            return line[:i].rstrip()
+        i += 1
+    return line.rstrip()
 
 
 def _split_flow(text: str) -> list[str]:
@@ -129,6 +133,33 @@ class _Parser:
                 self.i += 1
                 out.append(_scalar(item))
 
+    def block_scalar(self, indent: int, header: str) -> str:
+        """Read a literal (|) or folded (>) block. '-' strips the final newline, else it is kept."""
+        raw = []
+        while self.i < len(self.lines):
+            line = self.lines[self.i]
+            if line.strip() and len(line) - len(line.lstrip(" ")) <= indent:
+                break
+            raw.append(line)
+            self.i += 1
+        while raw and not raw[-1].strip():
+            raw.pop()
+        first = next((ln for ln in raw if ln.strip()), "")
+        width = len(first) - len(first.lstrip(" "))
+        lines = [ln[width:] if ln.strip() else "" for ln in raw]
+        if header[0] == "|":
+            text = "\n".join(lines)
+        else:
+            text = ""
+            for n, line in enumerate(lines):
+                if n == 0:
+                    text = line
+                elif line == "":
+                    text += "\n"
+                else:
+                    text += line if lines[n - 1] == "" else " " + line
+        return text if header.endswith("-") or not text else text + "\n"
+
     def map(self, indent: int) -> dict:
         out = {}
         while True:
@@ -141,19 +172,7 @@ class _Parser:
             key, value = _scalar(m.group(1)), (m.group(2) or "").strip()
             self.i += 1
             if value in (">", ">-", "|", "|-"):
-                parts = []
-                while self.i < len(self.lines):
-                    raw = self.lines[self.i]
-                    if raw.strip() and len(raw) - len(raw.lstrip(" ")) <= indent:
-                        break
-                    parts.append(raw.strip())
-                    self.i += 1
-                while parts and parts[-1] == "":
-                    parts.pop()
-                if value.startswith(">"):
-                    out[key] = " ".join(p for p in parts if p)
-                else:
-                    out[key] = "\n".join(parts)
+                out[key] = self.block_scalar(indent, value)
             elif value == "":
                 nxt = self.current()
                 if nxt and (nxt[0] > indent or (nxt[0] == indent and nxt[1].startswith("- "))):
@@ -175,6 +194,7 @@ def parse_yaml(text: str):
 
 def split_front_matter(text: str):
     """Return (front matter dict, body) of a Markdown file with YAML front matter."""
+    text = text.replace("\r\n", "\n")
     if not text.startswith("---\n"):
         raise YamlError("the file does not start with '---'")
     end = text.find("\n---\n", 4)

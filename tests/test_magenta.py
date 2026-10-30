@@ -46,7 +46,7 @@ k: {provider: openai-compatible, base_url: "https://llm.internal/v1"}
 
     @unittest.skipIf(yaml is None, "PyYAML is not installed")
     def test_matches_pyyaml_on_all_source_files(self):
-        files = [ROOT / "magenta.yaml", ROOT / "models.yaml"]
+        files = [ROOT / "magenta.yaml", ROOT / "models.yaml", ROOT / "templates" / "checks.yaml"]
         for path in files:
             self.assertEqual(parse_yaml(path.read_text(encoding="utf-8")), yaml.safe_load(path.read_text(encoding="utf-8")), path)
         for path in list((ROOT / "agents").glob("*.md")) + list((ROOT / "skills").glob("*/SKILL.md")):
