@@ -12,7 +12,7 @@ magenta:
   role_type: reviewer
   model_profile: reviewer-alt
   tools: [read, search, write-own-files, shell, web, skill]
-  shell: ["git status*", "git log*", "git diff*", "git show*", "git rev-parse*", "git grep *", "ls*", "promtool check *", "amtool check-config *", "pint *", "actionlint*", "hadolint *", "kubeconform *", "helm lint *", "helm template *", "kustomize build *", '"*" "*/verify.py" run*', '"*" "*/verify.py" list*', '"*" "*/verify.py" status*']
+  shell: ["git status*", "git log*", "git diff*", "git show*", "git rev-parse*", "git grep *", "ls*", "promtool check *", "amtool check-config *", "pint *", "actionlint*", "hadolint *", "kubeconform *", "helm lint *", "helm template *", "kustomize build *", "terraform fmt -check*", "terraform init -backend=false*", "terraform validate*", "tflint*", "checkov *", "shellcheck *", "docker compose config*", '"*" "*/verify.py" run*', '"*" "*/verify.py" list*', '"*" "*/verify.py" status*']
   writes:
     - .magenta/work/*/03-reliability.md
     - .magenta/checks/sre.yaml

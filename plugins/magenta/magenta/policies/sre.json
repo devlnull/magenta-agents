@@ -32,6 +32,13 @@
     "helm lint *",
     "helm template *",
     "kustomize build *",
+    "terraform fmt -check*",
+    "terraform init -backend=false*",
+    "terraform validate*",
+    "tflint*",
+    "checkov *",
+    "shellcheck *",
+    "docker compose config*",
     "\"*\" \"*/verify.py\" run*",
     "\"*\" \"*/verify.py\" list*",
     "\"*\" \"*/verify.py\" status*"

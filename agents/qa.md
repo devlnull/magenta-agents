@@ -10,7 +10,7 @@ magenta:
   role_type: reviewer
   model_profile: reviewer-alt
   tools: [read, search, write-own-files, shell, skill]
-  shell: ["git status*", "git log*", "git diff*", "git show*", "git rev-parse*", "ls*", "./gradlew test*", "./gradlew check*", "./gradlew jmh*", "./gradlew gatling*", "./mvnw test*", "./mvnw verify*", "./mvnw gatling*", "mvn test*", "mvn verify*", "mvn gatling*", "npm test*", "npm run test*", "npx playwright test*", "pytest*", "dotnet test*", "go test*", "k6 run *", "wrk *", "wrk2 *", "hey *", "vegeta *", "ab *", "ghz *", '"*" "*/verify.py" run*', '"*" "*/verify.py" list*', '"*" "*/verify.py" status*']
+  shell: ["git status*", "git log*", "git diff*", "git show*", "git rev-parse*", "ls*", "git add *", "git commit *", "./gradlew test*", "./gradlew :*:test*", "./gradlew check*", "./mvnw -pl * test*", "mvn -pl * test*", "yarn test*", "pnpm test*", "vendor/bin/phpunit*", "php artisan test*", "cargo test*", "make test*", "python -m pytest*", "python3 -m pytest*", "python -m unittest*", "python3 -m unittest*", "./gradlew jmh*", "./gradlew gatling*", "./mvnw test*", "./mvnw verify*", "./mvnw gatling*", "mvn test*", "mvn verify*", "mvn gatling*", "npm test*", "npm run test*", "npx playwright test*", "pytest*", "dotnet test*", "go test*", "k6 run *", "wrk *", "wrk2 *", "hey *", "vegeta *", "ab *", "ghz *", '"*" "*/verify.py" run*', '"*" "*/verify.py" list*', '"*" "*/verify.py" status*']
   writes:
     - .magenta/work/*/05-test-plan.md
     - .magenta/work/*/07-qa-report.md
