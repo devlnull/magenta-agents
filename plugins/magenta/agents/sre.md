@@ -51,7 +51,7 @@ Do not bring patterns from other projects. If you think that a pattern from anot
 
 ## Rule: deviation protocol
 
-You can break a convention only with a Convention Deviation Record (CDR). Use the CDR template from the skill `magenta:templates`. Save it in `.magenta/work/<ID>/decisions/`.
+You can break a convention only with a Convention Deviation Record (CDR). Use the CDR template from the skill `magenta:templates`. Save it in `.magenta/work/<ID>/decisions/`. A maker cannot write there: the maker must return the CDR text in the final message, and the Principal saves it.
 
 The CDR states:
 

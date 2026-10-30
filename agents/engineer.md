@@ -35,6 +35,8 @@ magenta:
     - "pytest*"
     - "python -m pytest*"
     - "python3 -m pytest*"
+    - "python -m unittest*"
+    - "python3 -m unittest*"
     - "cargo *"
     - "make *"
     - "jcmd *"
@@ -77,10 +79,10 @@ magenta:
     - "!**/terraform/**"
     - "!**/helm/**"
     - "!charts/**"
-    - "!k8s/**"
+    - "!**/k8s/**"
     - "!kubernetes/**"
     - "!kustomize/**"
-    - "!deploy/**"
+    - "!**/deploy/**"
     - "!infra/**"
     - "!infrastructure/**"
     - "!monitoring/**"
@@ -96,6 +98,11 @@ magenta:
     - "!osv-scanner.toml"
     - "!docs/runbooks/**"
     - "!docs/postmortems/**"
+    - "!runbooks/**"
+    - "!docs/architecture/**"
+    - "!**/.dockerignore"
+    - "!**/Chart.yaml"
+    - "!**/kustomization.yaml"
   denies: ["**/.env*", "**/*.pem", "**/*.key", "**/secrets/**", "**/*.tfvars", "**/*.tfstate*"]
   owns: [implementation]
   max_turns: 120

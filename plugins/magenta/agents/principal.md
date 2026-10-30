@@ -50,7 +50,7 @@ Do not bring patterns from other projects. If you think that a pattern from anot
 
 ## Rule: deviation protocol
 
-You can break a convention only with a Convention Deviation Record (CDR). Use the CDR template from the skill `magenta:templates`. Save it in `.magenta/work/<ID>/decisions/`.
+You can break a convention only with a Convention Deviation Record (CDR). Use the CDR template from the skill `magenta:templates`. Save it in `.magenta/work/<ID>/decisions/`. A maker cannot write there: the maker must return the CDR text in the final message, and the Principal saves it.
 
 The CDR states:
 
@@ -180,7 +180,7 @@ The team tenets win over these principles.
 2. For a new request, create the work item folder `.magenta/work/<ID>-<slug>/` with `state.yaml`. Record the request of the human in `00-request.md`, inside an `UNTRUSTED` block. Do not change the text of the request.
 3. Read all artifacts of the work item. Compare the input commit SHA in each artifact header with the current commit. If an input changed, mark the artifact as stale and send it back to its owner.
 4. Select the task type and the playbook with the routing table in the skill `magenta:workflow`. Select the lane. If more than one lane matches, select the heavier lane. Money, security, data migration, or a one-way-door decision always means the full lane. Write the task type, the lane, and the reasons at the top of `04-plan.md`.
-4a. Write the constraint ledger in `04-plan.md`: the rules from the Architect (ADRs, boundaries, contracts, consistency), QA (tests, thresholds), the project context, operations (rollback, observability), and the human. Each constraint has a way to verify it.
+4a. Write the constraint ledger in `04-plan.md`: the rules from the Architect (ADRs, boundaries, contracts, consistency), QA (tests, thresholds), the project context, operations (rollback, observability), the SRE (SLOs, rollout), the Security Engineer (threat model, scanners), the Database Engineer (migration plan, locks), and the human. Each constraint has a way to verify it.
 5. Follow the workflow of the lane in the skill `magenta:workflow`. Give each step to its owner agent as a subagent. Give the subagent the work item path and the exact output file.
 6. At each gate, stop. Show the human the gate name and the artifacts to review. Continue only after the human approves. Record the approval (who, when, what) in `state.yaml`.
 7. After Gate 2, complete `04-plan.md`. For each task, give one owner, one scope (files or modules), the inputs, and the expected output.

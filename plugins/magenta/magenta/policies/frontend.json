@@ -30,10 +30,10 @@
     "!**/terraform/**",
     "!**/helm/**",
     "!charts/**",
-    "!k8s/**",
+    "!**/k8s/**",
     "!kubernetes/**",
     "!kustomize/**",
-    "!deploy/**",
+    "!**/deploy/**",
     "!infra/**",
     "!infrastructure/**",
     "!monitoring/**",
@@ -48,7 +48,12 @@
     "!.snyk",
     "!osv-scanner.toml",
     "!docs/runbooks/**",
-    "!docs/postmortems/**"
+    "!docs/postmortems/**",
+    "!runbooks/**",
+    "!docs/architecture/**",
+    "!**/.dockerignore",
+    "!**/Chart.yaml",
+    "!**/kustomization.yaml"
   ],
   "denies": [
     "**/.env*",

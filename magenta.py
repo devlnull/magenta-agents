@@ -37,7 +37,7 @@ import plugin as team_plugin  # noqa: E402
 import runner as headless  # noqa: E402
 import lock as test_lock  # noqa: E402
 import verify as checks_verify  # noqa: E402
-from common import YamlError, split_front_matter  # noqa: E402
+from common import YamlError, glob_to_regex, split_front_matter  # noqa: E402
 
 DIST_ROOT = Path(os.environ.get("MAGENTA_DIST") or ROOT / "dist")
 DIST = DIST_ROOT / "claude-code"
@@ -60,7 +60,7 @@ def validate(root: Path = ROOT) -> list[str]:
     if not (root / "workflows" / "routing.md").exists():
         errors.append("workflows/routing.md: the routing table of the conductor is missing")
     known_skills = skills | {f"{prefix}{s}" for s in claude_code.GENERATED_SKILLS}
-    owners: dict[str, str] = {}
+    owners: list[tuple[str, str]] = []
 
     for name in sorted(skills):
         try:
@@ -115,16 +115,27 @@ def validate(root: Path = ROOT) -> list[str]:
                 if glob in ("**", "*"):
                     errors.append(f"{where}: only maker agents can write {glob!r}")
                 continue
-            if glob in owners:
-                errors.append(f"{where}: {glob!r} also belongs to {owners[glob]} (one writer for each file)")
-            owners[glob] = agent_id
+            if glob.startswith(".magenta/checks/") and re.search(r"[*?]", glob):
+                errors.append(f"{where}: {glob!r} is a wildcard under .magenta/checks/ (name each checks file)")
+            for other, other_agent in owners:
+                if other_agent != agent_id and (glob_to_regex(other).match(glob) or glob_to_regex(glob).match(other)):
+                    errors.append(f"{where}: {glob!r} overlaps {other!r} of {other_agent} (one writer for each file)")
+            owners.append((glob, agent_id))
 
+    valid_names = known_skills | {f"{prefix}{n}" for n in (cfg.get("agents_enabled") or []) + (cfg.get("agents_planned") or [])} \
+        | {f"{prefix}{s}" for s in skills}
     texts = list((root / "agents").glob("*.md")) + list((root / "rules").glob("*.md")) \
         + list((root / "workflows").glob("*.md")) + list((root / "skills").glob("*/SKILL.md"))
     for path in texts:
-        for ref in re.findall(r"skill `([a-z0-9-]+)`", path.read_text(encoding="utf-8")):
+        text = path.read_text(encoding="utf-8")
+        refs = [ref for group in re.findall(r"skills? ((?:`[a-z0-9-]+`(?:, and |, | and | or )?)+)", text)
+                for ref in re.findall(r"`([a-z0-9-]+)`", group)]
+        for ref in refs:
             if ref not in known_skills:
                 errors.append(f"{path.relative_to(root)}: reference to an unknown skill {ref!r}")
+        for ref in re.findall(rf"`({re.escape(prefix)}[a-z0-9-]+)`", text):
+            if ref not in valid_names:
+                errors.append(f"{path.relative_to(root)}: reference to an unknown skill or agent {ref!r}")
     return errors
 
 

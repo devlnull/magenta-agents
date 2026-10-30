@@ -59,10 +59,12 @@ magenta:
     - "**/terraform/**"
     - "**/helm/**"
     - charts/**
-    - k8s/**
+    - "**/k8s/**"
+    - "**/Chart.yaml"
+    - "**/kustomization.yaml"
     - kubernetes/**
     - kustomize/**
-    - deploy/**
+    - "**/deploy/**"
     - infra/**
     - infrastructure/**
     - monitoring/**
