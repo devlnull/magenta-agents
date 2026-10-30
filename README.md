@@ -18,6 +18,7 @@ All phases are implemented. They wait for the first real test.
 | 3. Other tools and vendors | OpenCode and AGENTS.md (Codex CLI) adapters, model profiles for other vendors |
 | 4. Runner | Headless `prd-review` and `pr-review`, budgets, logs, GitLab and GitHub CI templates |
 | 5. Team rollout | Plugin and marketplace, onboarding guide, organization standards, metrics |
+| 6. Conductor | `/magenta` for all daily tasks: task types, playbooks, dynamic teams, constraint ledger; entry points for Claude Code, OpenCode, Codex CLI, and Gemini CLI |
 
 ## Install
 
@@ -38,14 +39,14 @@ claude plugin install magenta@magenta-marketplace
 
 The agents are `magenta:principal`, `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, and `magenta:frontend`. Update: `claude plugin marketplace update magenta-marketplace`.
 
-### Option 2: installer script (user-level agents, OpenCode, or Codex CLI)
+### Option 2: installer script (Claude Code user level, OpenCode, Codex CLI, or Gemini CLI)
 
 macOS and Linux:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # other tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target opencode --ref v0.5.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.6.0
 ```
 
 Windows (PowerShell):
@@ -65,7 +66,8 @@ python3 magenta.py validate && python3 -m unittest discover -s tests
 python3 magenta.py build
 python3 magenta.py install                     # Claude Code, user level
 python3 magenta.py install --target opencode   # optional
-python3 magenta.py install --target codex      # optional, advisors only
+python3 magenta.py install --target codex      # optional: custom agents and $magenta
+python3 magenta.py install --target gemini     # optional: subagents and /magenta
 ```
 
 On Windows, use `py -3` or `python` in place of `python3`. The install does not replace a file that Magenta did not generate. To remove the installed files: `python3 magenta.py uninstall`.
@@ -75,18 +77,68 @@ On Windows, use `py -3` or `python` in place of `python3`. The install does not 
 ```bash
 python3 ~/.magenta-agents/magenta.py init /path/to/repository   # creates .magenta/ and keeps it out of git
 cd /path/to/repository
-claude --agent magenta-principal              # then ask: "Run discover-project."
+claude                                        # then: /magenta <your task>
 ```
 
-Review `.magenta/project-context.md` and confirm it.
+The first `/magenta` task asks to run discover-project. Review `.magenta/project-context.md` and confirm it.
 
-## Use
+## Use: `/magenta`
+
+Give Magenta any daily task in your own words. The conductor analyzes the request, selects the task type and the agents, runs them together, and checks the result against the rules of all agents.
+
+| Tool | Command |
+|---|---|
+| Claude Code | `/magenta <task>` (plugin: `/magenta:magenta <task>` if another `/magenta` exists) |
+| OpenCode | `/magenta <task>` |
+| Gemini CLI | `/magenta <task>` |
+| Codex CLI | `$magenta <task>` |
+
+Example:
+
+```text
+/magenta find the performance issues of GET /v2/addresses/default. The average is 10 ms now.
+I need p95 at or below 5 ms; p99 can be 10 ms.
+```
+
+For this request, the conductor selects the task type "performance" and this team:
+
+| Agent | Work in this task |
+|---|---|
+| Principal | Checks that the target is realistic, makes the latency budget, writes the plan and the constraint ledger, does the final review |
+| QA | Writes the measurement plan, measures the baseline and each change, runs the functional tests |
+| Engineer | Traces and profiles the code path, implements the selected option |
+| Architect | Finds the structural causes, gives options with trade-offs, writes the structural constraints, does the rule check |
+
+The result must meet the target **and** pass the constraint ledger: the ADRs and boundaries of the Architect, the tests and thresholds of QA, the readiness rules of the Principal, the project conventions, and your constraints. A faster solution that breaks a rule is rejected.
+
+### Task types
+
+| Task type | Example request | Core team |
+|---|---|---|
+| bug | "/magenta orders over 1M fail with a rounding error" | QA, Engineer, Principal |
+| performance | "/magenta reduce the p99 of the search API to 50 ms" | QA, Engineer, Architect, Principal |
+| improvement | "/magenta remove the duplicated price rules in checkout" | Architect, QA, Engineer, Principal |
+| investigation | "/magenta why does the stock sync job run twice?" | Only the experts that the question needs |
+| review | "/magenta review my branch against main" | QA, Architect, Principal |
+| incident | "/magenta payments fail since the last deploy" | Principal, Engineer, QA |
+| security | "/magenta fix CVE-2026-1234 in our JWT library use" | Principal, Architect, Engineer, QA |
+| upgrade | "/magenta upgrade Spring Boot from 3.3 to 3.5" | Engineer, QA, Principal |
+| tests | "/magenta fix the flaky OrderCancelTest" | QA, Engineer |
+| design | "/magenta design the retry strategy for the shipping events" | Architect, Principal |
+| feature | "/magenta implement this PRD: ..." | PM, Architect, QA, Engineer, Principal |
+
+The routing table and the playbooks are in [`workflows/`](workflows/). The conductor uses the smallest team that covers the risks.
+
+### Gates
+
+You stay in control. Small, clear tasks have one gate at the end (done gate). Other tasks also have a plan gate: you approve the brief, the success criteria, the team, the plan, and the constraint ledger. Features also have the PRD gate. Magenta never pushes or merges.
+
+### More commands
 
 | You want | Do this |
 |---|---|
-| A complete work item with gates | `claude --agent magenta-principal`, then "New work item: <PRD link or text>" |
-| One role only | `@magenta-product-manager`, `@magenta-architect`, `@magenta-qa`, `@magenta-engineer`, or `@magenta-frontend` in any session |
-| A review of a branch | In a Principal session: "Run the PR review panel against main." |
+| One role only | `@magenta-architect`, `@magenta-qa`, and the other agents, in any session |
+| The lead agent as the main session | `claude --agent magenta-principal` |
 | Lock the acceptance tests (you, after review) | `python3 magenta.py lock <repo> <work-item>` |
 | Check the lock (QA, CI, pre-commit) | `python3 magenta.py check-lock <repo> <work-item>` |
 | A headless PRD review | `python3 magenta.py run prd-review --repo <repo> --prd <file>` |
@@ -102,7 +154,9 @@ Start each session in the root folder of the repository. The guard uses it as th
 | Claude Code (user level) | A `PreToolUse` guard hook in each agent (`~/.claude/magenta/guard.py`) |
 | Claude Code (team plugin) | One plugin hook, `guard.py --auto`, that finds the agent by its name |
 | OpenCode | Ordered permission rules in each agent |
-| Codex CLI and other AGENTS.md tools | Instructions only. Use them for advisors. |
+| Codex CLI | Write and shell rules as instructions in each custom agent, plus the Codex sandbox and approvals |
+| Gemini CLI | Write and shell rules as instructions in each subagent, plus the Gemini approvals |
+| Other AGENTS.md tools | Instructions only. Use them for advisors. |
 
 The guard blocks writes outside the files of the agent, access to secret paths, shell commands outside the allowlist, all shell operators (`;`, `|`, `>`, and more), and writes to `.magenta/policy.json`, `acceptance.lock`, `.claude/`, and `.git/`.
 

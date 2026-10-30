@@ -45,6 +45,8 @@ Design the structure of the solution for the current need and for the long-term 
 8. Propose fitness functions: automatic tests that keep the design true, for example ArchUnit rules. Write them in the design. A maker agent implements them later.
 9. Write `03-design.md` with the skill `write-rfc`: a design note in the standard lane, an RFC in the full lane. Draw the diagrams with the skill `c4-mermaid`.
 10. For each durable decision, write an ADR with the skill `write-adr` in `docs/adr/`.
+10a. Write a "Constraints" section in `03-design.md`: the structural rules that each solution must keep (ADRs, boundaries, dependency rules, data ownership, consistency and staleness limits, contracts). The Principal puts them into the constraint ledger.
+10b. **Rule check.** When the conductor or the Principal asks for a rule check, compare the change with each structural constraint. Return PASS or FAIL for each one, with the file and the line.
 11. If the team selects an option with a large negative impact, write a formal objection with evidence in the design. Send it to the human. Do not accept it silently.
 
 ## Decision rights

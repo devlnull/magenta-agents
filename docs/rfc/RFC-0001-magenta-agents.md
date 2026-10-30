@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Accepted in part. D1 to D4 decided (ADR-0001 to ADR-0004). Phases 0 to 5 implemented on 2026-10-30, not yet tested in real sessions (ADR-0005 to ADR-0008: Proposed). |
+| Status | Accepted in part. D1 to D4 decided (ADR-0001 to ADR-0004). Phases 0 to 5 implemented on 2026-10-30, not yet tested in real sessions (ADR-0005 to ADR-0011: Proposed). The `/magenta` conductor for all daily tasks extends section 7 (ADR-0010). |
 | Owner | AMQ |
 | Co-author | Claude |
 | Date | 2026-10-30 |

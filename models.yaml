@@ -6,6 +6,8 @@
 #   effort       Reasoning effort for Claude Code (low, medium, high, xhigh, max).
 #   opencode     OpenCode model as provider/model[#variant]. Optional. Without it, the agent
 #                uses the model of the OpenCode session.
+#   codex        Codex CLI model for the custom agent. Optional. Without it, the agent uses the session model.
+#   gemini       Gemini CLI model for the subagent. Optional. Without it, the agent uses the session model.
 #   runner       Headless runner engine for this profile: {engine: <name in engines>, model: <optional>}.
 #
 # Phase 3 (ADR-0004): put real model IDs for OpenAI, Gemini, Grok, or a self-hosted model in the
@@ -30,6 +32,8 @@ profiles:
     claude-code: opus
     effort: high
     # opencode: openai/<model-id>        # or google/<model-id>, or xai/<model-id>
+    # codex: <openai-model-id>
+    # gemini: <gemini-model-id>
     runner: {engine: claude}
     # runner: {engine: opencode, model: "openai/<model-id>"}
   local-private:

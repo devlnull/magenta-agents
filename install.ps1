@@ -3,7 +3,7 @@
 #   irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
 #
 # Options (environment variables, set them before you run the command):
-#   $env:MAGENTA_TARGET = "claude-code" | "opencode" | "codex"   (default claude-code)
+#   $env:MAGENTA_TARGET = "claude-code" | "opencode" | "codex" | "gemini"   (default claude-code)
 #   $env:MAGENTA_REF    = "<branch or tag>"                        (default main)
 #   $env:MAGENTA_HOME   = "<folder for the source>"                (default $HOME\.magenta-agents)
 #   $env:MAGENTA_REPO   = "<git URL>"
@@ -55,6 +55,8 @@ Write-Host ""
 Write-Host "Magenta is installed for $Target."
 Write-Host "Next steps:"
 Write-Host "  1. Prepare a repository:  $($Python -join ' ') `"$cli`" init C:\path\to\your\repository"
-Write-Host "  2. Start the lead agent:   cd C:\path\to\your\repository; claude --agent magenta-principal"
-Write-Host "  3. Ask it:                 `"Run discover-project.`""
+Write-Host "  2. Open your tool in the repository and run a task:"
+Write-Host "       Claude Code, OpenCode, Gemini CLI:  /magenta <your task>"
+Write-Host "       Codex CLI:                          `$magenta <your task>"
+Write-Host "     The first time, Magenta asks to run discover-project for the repository."
 Write-Host "Update later: run this installer again. Remove: $($Python -join ' ') `"$cli`" uninstall"

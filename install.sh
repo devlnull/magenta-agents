@@ -5,7 +5,7 @@
 #   curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target opencode --ref v0.5.0
 #
 # Options (or environment variables):
-#   --target claude-code|opencode|codex   (MAGENTA_TARGET, default claude-code)
+#   --target claude-code|opencode|codex|gemini   (MAGENTA_TARGET, default claude-code)
 #   --ref <branch or tag>                 (MAGENTA_REF, default main)
 #   --dir <folder for the source>         (MAGENTA_HOME, default ~/.magenta-agents)
 #   --repo <git URL>                      (MAGENTA_REPO)
@@ -57,7 +57,9 @@ cat <<NEXT
 Magenta is installed for $TARGET.
 Next steps:
   1. Prepare a repository:  $PY "$DIR/magenta.py" init /path/to/your/repository
-  2. Start the lead agent:   cd /path/to/your/repository && claude --agent magenta-principal
-  3. Ask it:                 "Run discover-project."
+  2. Open your tool in the repository and run a task:
+       Claude Code, OpenCode, Gemini CLI:  /magenta <your task>
+       Codex CLI:                          \$magenta <your task>
+     The first time, Magenta asks to run discover-project for the repository.
 Update later: run this installer again. Remove: $PY "$DIR/magenta.py" uninstall
 NEXT

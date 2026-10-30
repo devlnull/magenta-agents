@@ -26,7 +26,7 @@ After a change to the rules, the agents, or the model mapping, run the evals (`e
 ## More commands (phases 2 to 5)
 
 ```bash
-python3 magenta.py install --target opencode   # or codex
+python3 magenta.py install --target opencode   # or codex, or gemini
 python3 magenta.py lock <repo> <work-item>       # human, after the acceptance tests are reviewed
 python3 magenta.py check-lock <repo> <work-item>
 python3 magenta.py run prd-review --repo <repo> --prd <file>

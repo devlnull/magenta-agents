@@ -31,6 +31,50 @@ Copy the template. Replace each `<...>` placeholder. Delete the sections that do
 One-way door / two-way door. Reason:
 ````
 
+## Template: brief
+
+````markdown
+# Brief: <title>
+
+| Work item | Step | Owner | Status | Inputs (commit SHA) |
+|---|---|---|---|---|
+| <ID>-<slug> | <step> | <agent> | DRAFT / DONE / BLOCKED / NEEDS-HUMAN | <files> @ <sha> |
+
+## Task
+- Task type: <bug | performance | improvement | feature | investigation | review | incident | security | upgrade | tests | design>
+- Playbook: <name>
+- Lane: <lite | standard | full>. Reason:
+- Goal (one sentence):
+
+## Success criteria
+| Metric or check | Current value (source) | Target | How we measure |
+|---|---|---|---|
+
+## Scope
+- In:
+- Out:
+
+## Team
+| Agent | Reason |
+|---|---|
+
+## Constraints known now
+- 
+
+## Assumptions and questions
+- ASSUMPTION:
+- QUESTION:
+
+## Plan and constraint ledger (lite lane only)
+
+## Handoff
+
+- Done:
+- Open:
+- Next owner:
+- What to check:
+````
+
 ## Template: cdr
 
 ````markdown
@@ -106,8 +150,14 @@ flowchart LR
 |---|---|---|---|---|
 | <ID>-<slug> | <step> | <agent> | DRAFT / DONE / BLOCKED / NEEDS-HUMAN | <files> @ <sha> |
 
-## Lane
-<lite|standard|full>. Reason:
+## Task type, playbook, and lane
+- Task type and playbook:
+- Lane: <lite|standard|full>. Reason:
+
+## Constraint ledger
+| ID | Source (Architect, QA, Principal, Project, Human) | Constraint | How we verify |
+|---|---|---|---|
+| C1 | | | |
 
 ## Tasks
 | ID | Task | Owner agent | Scope (files or modules) | Inputs | Output | Status |
@@ -256,6 +306,17 @@ PASS / PASS WITH RISKS / FAIL
 | Suite | Command | Result |
 |---|---|---|
 
+## Performance results (performance tasks)
+| Metric | Baseline | After | Target | Result |
+|---|---|---|---|---|
+| p50 | | | | |
+| p95 | | | | |
+| p99 | | | | |
+| Throughput | | | | |
+| Error rate | | | | |
+
+Method: tool, load profile, warm-up, duration, samples, runs, environment.
+
 ## Acceptance criteria coverage
 | Acceptance criterion | Test | Result |
 |---|---|---|
@@ -319,6 +380,10 @@ APPROVED / CHANGES REQUESTED. Open BLOCKER: <n>. Open MAJOR: <n>.
 ## Findings
 | Severity | File:line | Finding | Risk | Fix |
 |---|---|---|---|---|
+
+## Constraint check
+| ID | Constraint | Result (PASS, FAIL, WAIVED) | Evidence |
+|---|---|---|---|
 
 ## Production readiness
 | Item | Status | Evidence | Action |
@@ -420,6 +485,13 @@ Out of scope:
 - In scope:
 - Out of scope:
 - Levels (unit, integration, contract, E2E) and reasons:
+
+## Performance test (performance tasks)
+- Tool and harness:
+- Load profile (arrival rate or concurrency, payload, data size):
+- Warm-up, duration, samples, runs:
+- Environment:
+- Thresholds (from the success criteria):
 
 ## Risks
 | Risk | Level | Covered by |

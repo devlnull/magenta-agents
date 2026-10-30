@@ -24,6 +24,8 @@ sys.path.insert(0, str(ROOT / "runner"))
 
 import agents_md  # noqa: E402
 import claude_code  # noqa: E402
+import codex  # noqa: E402
+import gemini  # noqa: E402
 import metrics as team_metrics  # noqa: E402
 import opencode  # noqa: E402
 import plugin as team_plugin  # noqa: E402
@@ -33,7 +35,7 @@ from common import YamlError, split_front_matter  # noqa: E402
 
 DIST_ROOT = Path(os.environ.get("MAGENTA_DIST") or ROOT / "dist")
 DIST = DIST_ROOT / "claude-code"
-TARGETS = ("claude-code", "opencode", "codex")
+TARGETS = ("claude-code", "opencode", "codex", "gemini")
 REQUIRED_MAGENTA_KEYS = ("title", "role_type", "model_profile", "tools", "writes", "denies")
 REQUIRED_SECTIONS = ("## Mission", "## Procedure", "## Done when", "## Do not", "## Output contract")
 ROLE_TYPES = {"lead", "advisor", "reviewer", "maker"}
@@ -47,6 +49,10 @@ def validate(root: Path = ROOT) -> list[str]:
         return [f"config: {exc}"]
     prefix = cfg["prefix"]
     skills = set(claude_code.skill_names(root))
+    if "magenta" not in skills:
+        errors.append("skills/magenta: the conductor skill (/magenta) is missing")
+    if not (root / "workflows" / "routing.md").exists():
+        errors.append("workflows/routing.md: the routing table of the conductor is missing")
     known_skills = skills | {f"{prefix}{s}" for s in claude_code.GENERATED_SKILLS}
     owners: dict[str, str] = {}
 
@@ -254,8 +260,12 @@ def main(argv=None) -> int:
         if oc["agents_without_model"]:
             print("             note: no 'opencode' model in models.yaml for: "
                   + ", ".join(oc["agents_without_model"]) + " (they use the session model)")
+        cx = codex.build(ROOT, DIST_ROOT / "codex")
+        print(f"codex:       {len(cx['agents'])} agents, {len(cx['skills'])} skills -> dist/codex/")
+        gm = gemini.build(ROOT, DIST_ROOT / "gemini")
+        print(f"gemini:      {len(gm['agents'])} agents, {len(gm['skills'])} skills, /magenta -> dist/gemini/")
         am = agents_md.build(ROOT, DIST_ROOT / "agents-md")
-        print(f"agents-md:   {len(am['skills'])} skills and AGENTS.md -> dist/agents-md/")
+        print(f"agents-md:   {len(am['skills'])} skills and AGENTS.md (tools without subagents) -> dist/agents-md/")
         for name, fn in _extra_builds():
             print(fn())
         return 0
@@ -263,13 +273,16 @@ def main(argv=None) -> int:
         try:
             if args.target == "claude-code":
                 installed = claude_code.install(DIST, args.home, force=args.force, python=args.python)
-                hint = "cd <repo> && claude --agent magenta-principal"
+                hint = 'cd <repo> && claude, then: /magenta <task>'
             elif args.target == "opencode":
                 installed = opencode.install(DIST_ROOT / "opencode", args.home, force=args.force)
-                hint = "cd <repo> && opencode  (then select the agent magenta-principal)"
+                hint = 'cd <repo> && opencode, then: /magenta <task>'
+            elif args.target == "codex":
+                installed = codex.install(DIST_ROOT / "codex", args.home, force=args.force)
+                hint = 'cd <repo> && codex, then: $magenta <task>'
             else:
-                installed = agents_md.install_codex(DIST_ROOT / "agents-md", args.home, force=args.force)
-                hint = "cd <repo> && codex  (then ask: \"as the Magenta architect, review ...\")"
+                installed = gemini.install(DIST_ROOT / "gemini", args.home, force=args.force)
+                hint = 'cd <repo> && gemini, then: /magenta <task>'
         except claude_code.BuildError as exc:
             print(f"error: {exc}")
             return 1
@@ -278,7 +291,7 @@ def main(argv=None) -> int:
         return 0
     if args.cmd == "uninstall":
         removed = claude_code.uninstall(args.home)
-        agents_md.uninstall_codex(args.home)
+        codex.uninstall(args.home)
         print(f"Removed {len(removed)} items." if removed else "Nothing to remove.")
         return 0
     if args.cmd == "check":

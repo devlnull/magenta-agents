@@ -1,0 +1,53 @@
+---
+name: performance-investigation
+description: Measure, analyze, and improve latency, throughput, memory, CPU, or query cost with correct statistics and without breaking other rules. Use it for each performance task.
+---
+
+# Performance investigation
+
+## 1. Define the target
+
+- Use percentiles, not only averages: p50, p95, p99, and the maximum. State the load (requests per second or concurrency), the payload, the data size, and the environment.
+- State where the time is measured: server side (from the framework or the traces) or client side (includes the network).
+- Get the current numbers and their source. Production metrics are the best baseline. Note the difference between production and the test environment.
+
+## 2. Measure correctly
+
+- Use a load tool with a constant arrival rate (for example k6 `constant-arrival-rate`, Gatling, or wrk2). A closed loop hides queueing delays (coordinated omission).
+- Warm up before you measure (JIT, caches, connection pools).
+- Run long enough for the percentile: about 1,000 samples for p95 and 10,000 samples for p99, at minimum.
+- Run each measurement three times. Report the median of the runs and the spread.
+- Use the same machine, data, and configuration for the baseline and each change.
+- For code-level work, use a micro-benchmark harness (for example JMH or BenchmarkDotNet). Do not use loops with a stopwatch.
+
+## 3. Make a latency budget
+
+Divide the current time into parts: framework and middleware, authentication, business logic, data access (each query), remote calls, serialization, logging, and garbage collection. Use traces and a profiler for evidence. The budget shows the parts that can reach the target.
+
+Example: a target of 5 ms at p95 with two sequential database queries of 2 ms each leaves 1 ms for all other work. Then the query count or the query time must change.
+
+## 4. Profile
+
+Use the profiler of the stack: async-profiler or JFR (Java), dotnet-trace and dotnet-counters (.NET), pprof (Go), py-spy (Python), Xdebug or Blackfire (PHP), the browser performance panel (web). For SQL, use `EXPLAIN ANALYZE` on a test database. If a tool is blocked, ask the human to add it to `.magenta/policy.json`.
+
+## 5. Common causes and the constraints that they touch
+
+| Cause | Typical fix | Check these constraints |
+|---|---|---|
+| N+1 queries | One query with a join or a batch load | Data ownership, module boundaries |
+| Missing or wrong index | An index for the query pattern | Migration safety, write cost |
+| Too many columns or rows | Select only what the response needs | API contract |
+| Sequential remote calls | Parallel calls, or one batch call | Timeouts, resilience, error handling |
+| No cache, or a cache miss | A cache with a clear invalidation | Consistency, staleness, memory, ADRs |
+| Large payload | A smaller response, compression | API contract, clients |
+| Allocation and GC pressure | Fewer allocations in the hot path | Code clarity |
+| Lock contention | Smaller critical sections | Correctness under concurrency |
+| Pool too small | Pool size from the measurement | Database capacity |
+| Logging in the hot path | Less logging or a lower level | Observability rules |
+
+## 6. Verify
+
+- Show the baseline, the result, and the target for each metric in one table.
+- Run all functional tests. A faster wrong answer is a failure.
+- Make sure that the observability can show the target percentile in production (a histogram metric for the endpoint).
+- Prefer a feature flag for a risky change, so that the human can compare in production and roll back.

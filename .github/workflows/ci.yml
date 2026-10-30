@@ -40,6 +40,9 @@ jobs:
           python magenta.py install --home "$HOME_DIR"
           python magenta.py install --home "$HOME_DIR" --target opencode
           python magenta.py install --home "$HOME_DIR" --target codex
+          python magenta.py install --home "$HOME_DIR" --target gemini
+          test -f "$HOME_DIR/.claude/skills/magenta/SKILL.md"
+          test -f "$HOME_DIR/.gemini/commands/magenta.toml"
           test -f "$HOME_DIR/.claude/agents/magenta-principal.md"
           python magenta.py uninstall --home "$HOME_DIR"
 

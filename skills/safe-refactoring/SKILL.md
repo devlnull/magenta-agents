@@ -1,0 +1,12 @@
+---
+name: safe-refactoring
+description: Change the structure of code without a change of behavior, with characterization tests and small steps. Use it for each refactor or tech-debt task.
+---
+
+# Safe refactoring
+
+1. **Lock the behavior.** Write characterization tests for the scope: they record what the code does now, also when it looks wrong. Report the suspicious behavior; do not fix it in the refactor.
+2. **Make small steps.** Use one mechanical refactoring at a time: rename, extract a method or a class, move, inline, replace a conditional. Run the tests after each step.
+3. **Commit each step** when the tests are green. Do not mix behavior changes into these commits.
+4. **For a large change,** use branch by abstraction or the Strangler Fig pattern: new code behind an interface or a flag, then move the callers step by step, then remove the old code.
+5. **Measure the improvement** that the brief asks for: complexity, duplication, dependency rules, or the size of the change surface.

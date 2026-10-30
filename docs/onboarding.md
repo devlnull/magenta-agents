@@ -27,6 +27,16 @@ Ask: "Run discover-project." Read `.magenta/project-context.md`. Correct it. Con
 
 ## 4. Daily use
 
+For most work, give Magenta the task in your own words:
+
+```text
+/magenta fix the rounding error in the order total for amounts over 1M
+/magenta the p99 of GET /v2/addresses/default must be at or below 10 ms
+/magenta review my branch against main
+```
+
+The conductor selects the agents, shows you the plan when the task is not trivial, and reports the result with the evidence and the constraint check. You can also call one role directly:
+
 | You want | Do this |
 |---|---|
 | A PRD review | `@magenta:product-manager review this PRD: <link or text>` |

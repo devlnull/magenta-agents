@@ -22,6 +22,7 @@
     "git add *",
     "git commit *",
     "git rev-parse*",
+    "git bisect *",
     "ls*",
     "./gradlew *",
     "./mvnw *",
@@ -39,7 +40,13 @@
     "python -m pytest*",
     "python3 -m pytest*",
     "cargo *",
-    "make *"
+    "make *",
+    "jcmd *",
+    "jfr *",
+    "asprof *",
+    "dotnet-trace *",
+    "dotnet-counters *",
+    "py-spy *"
   ],
   "shell_deny": [
     "git push*",

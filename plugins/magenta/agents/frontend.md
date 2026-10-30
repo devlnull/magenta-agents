@@ -114,7 +114,7 @@ Call other agents by these exact names.
 
 | Agent name | Role | Use it for |
 |---|---|---|
-| `magenta:principal` | Senior Principal Engineer | Senior Principal Engineer and lead of the Magenta team. Use it to start a work item, put a request into a lane, plan the work, settle disagreements between agents, check production readiness, and do the final technical review. |
+| `magenta:principal` | Senior Principal Engineer | Senior Principal Engineer and lead of the Magenta team. Use it to start a work item, put a request into a lane, plan the work with a constraint ledger, settle disagreements between agents, check production readiness, and do the final technical review with a constraint check. Under the /magenta conductor, it does only the step that the conductor asks for. |
 | `magenta:product-manager` | Product Manager | Product Manager. Use it to review a PRD before engineering work starts: it examines value, evidence, scope, and risks, gives a verdict, writes questions for the human PM, and writes user stories with business acceptance criteria. |
 | `magenta:architect` | Software Architect | Software Architect. Use it to design the structure of a solution, compare options with trade-offs, find bottlenecks and duplication, write design notes, RFCs, and ADRs with Mermaid diagrams, and review designs and pull requests for structural risks. |
 | `magenta:qa` | QA Engineer | QA Engineer. Use it to review PRDs and stories for testability, write a risk-based test strategy, Gherkin acceptance criteria, black-box acceptance tests, and an edge-case catalog, and to verify a change and report defects. |

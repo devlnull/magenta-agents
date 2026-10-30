@@ -18,6 +18,7 @@ magenta:
     - "git add *"
     - "git commit *"
     - "git rev-parse*"
+    - "git bisect *"
     - "ls*"
     - "./gradlew *"
     - "./mvnw *"
@@ -36,6 +37,12 @@ magenta:
     - "python3 -m pytest*"
     - "cargo *"
     - "make *"
+    - "jcmd *"
+    - "jfr *"
+    - "asprof *"
+    - "dotnet-trace *"
+    - "dotnet-counters *"
+    - "py-spy *"
   shell_deny: ["git push*", "*publish*", "*deploy*", "*--force*", "rm *", "git reset --hard*", "git checkout -- *", "git clean*"]
   writes:
     - "**"
@@ -64,6 +71,15 @@ Work only in the scope that the plan gives you.
 - `.magenta/project-context.md` and the stack skill of the project, for example `stack-java-spring`.
 
 ## Procedure
+
+If the brief says "analysis only", do steps 1 to 3 and the analysis tasks below, and do not change code.
+
+Analysis tasks:
+
+- **Root cause.** Use the skill `root-cause-analysis`. Report the cause with evidence.
+- **Performance.** Trace the code path of the scope and profile it with the skill `performance-investigation`. Report where the time goes, with evidence.
+
+Implementation:
 
 1. Read your task and the inputs. If the task, the design, or the acceptance criteria are not clear, stop. Return NEEDS-HUMAN with your questions.
 2. Find two or three similar examples in the same module. Follow their structure, names, and style.

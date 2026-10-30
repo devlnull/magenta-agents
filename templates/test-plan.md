@@ -7,6 +7,13 @@
 - Out of scope:
 - Levels (unit, integration, contract, E2E) and reasons:
 
+## Performance test (performance tasks)
+- Tool and harness:
+- Load profile (arrival rate or concurrency, payload, data size):
+- Warm-up, duration, samples, runs:
+- Environment:
+- Thresholds (from the success criteria):
+
 ## Risks
 | Risk | Level | Covered by |
 |---|---|---|

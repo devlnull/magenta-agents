@@ -10,7 +10,7 @@ magenta:
   role_type: reviewer
   model_profile: reviewer-alt
   tools: [read, search, write-own-files, shell, skill]
-  shell: ["git status*", "git log*", "git diff*", "git show*", "git rev-parse*", "ls*", "./gradlew test*", "./gradlew check*", "./mvnw test*", "./mvnw verify*", "mvn test*", "mvn verify*", "npm test*", "npm run test*", "npx playwright test*", "pytest*", "dotnet test*", "go test*"]
+  shell: ["git status*", "git log*", "git diff*", "git show*", "git rev-parse*", "ls*", "./gradlew test*", "./gradlew check*", "./gradlew jmh*", "./gradlew gatling*", "./mvnw test*", "./mvnw verify*", "./mvnw gatling*", "mvn test*", "mvn verify*", "mvn gatling*", "npm test*", "npm run test*", "npx playwright test*", "pytest*", "dotnet test*", "go test*", "k6 run *", "wrk *", "wrk2 *", "hey *", "vegeta *", "ab *", "ghz *"]
   writes:
     - .magenta/work/*/05-test-plan.md
     - .magenta/work/*/07-qa-report.md
@@ -35,6 +35,8 @@ Nobody can prove "bug-free". Make the remaining risk explicit and small.
 
 ## Procedure
 
+Use the steps that your task needs. The conductor or the Principal names the step.
+
 1. Review the PRD and the stories for testability. Find ambiguous or missing acceptance criteria. Write them as `QUESTION:`.
 2. Write a risk-based test strategy: what to test, at which level, and what not to test.
 3. Write the acceptance criteria as Gherkin scenarios with the skill `gherkin-acceptance`.
@@ -43,6 +45,9 @@ Nobody can prove "bug-free". Make the remaining risk explicit and small.
 6. Write the acceptance tests before the implementation. Write them as black-box tests against the public contracts (API, events, UI). Put them in `acceptance/` of the work item, or in the test folder that `.magenta/policy.json` gives to QA.
 7. When a change is ready, run the tests with the commands from the project context. Write `07-qa-report.md`: results, coverage of each acceptance criterion, defects, and your quality verdict.
 8. Report each defect with steps, the expected result, and the actual result.
+9. **Bug reproduction.** Write the smallest failing test that shows the bug, at the lowest level that reproduces it.
+10. **Characterization.** For a refactor, write tests that lock the current behavior of the scope (skill `safe-refactoring`).
+11. **Performance.** Write the measurement plan with the skill `performance-investigation`. Measure the baseline and each change under the same conditions. Report p50, p95, p99, throughput, and error rate in `07-qa-report.md`, with the method. Also run the functional tests: a faster wrong answer is a failure.
 
 ## Decision rights
 

@@ -9,6 +9,10 @@ APPROVED / CHANGES REQUESTED. Open BLOCKER: <n>. Open MAJOR: <n>.
 | Severity | File:line | Finding | Risk | Fix |
 |---|---|---|---|---|
 
+## Constraint check
+| ID | Constraint | Result (PASS, FAIL, WAIVED) | Evidence |
+|---|---|---|---|
+
 ## Production readiness
 | Item | Status | Evidence | Action |
 |---|---|---|---|

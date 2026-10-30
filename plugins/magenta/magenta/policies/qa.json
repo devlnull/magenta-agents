@@ -20,16 +20,27 @@
     "ls*",
     "./gradlew test*",
     "./gradlew check*",
+    "./gradlew jmh*",
+    "./gradlew gatling*",
     "./mvnw test*",
     "./mvnw verify*",
+    "./mvnw gatling*",
     "mvn test*",
     "mvn verify*",
+    "mvn gatling*",
     "npm test*",
     "npm run test*",
     "npx playwright test*",
     "pytest*",
     "dotnet test*",
-    "go test*"
+    "go test*",
+    "k6 run *",
+    "wrk *",
+    "wrk2 *",
+    "hey *",
+    "vegeta *",
+    "ab *",
+    "ghz *"
   ],
   "shell_deny": []
 }
