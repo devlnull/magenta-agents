@@ -4,7 +4,8 @@
 
 ## Task
 - Task type: <bug | performance | improvement | feature | investigation | review | incident | security | upgrade | tests | design>
-- Playbook: <name>
+- Mode: <default | team>. Reason (the team trigger, or `--lead`):
+- Playbook (team mode): <name>
 - Lane: <lite | standard | full>. Reason:
 - Goal (one sentence):
 
@@ -16,9 +17,13 @@
 - In:
 - Out:
 
-## Team
-| Agent | Reason |
-|---|---|
+## Checks
+| Check | Owner | What it tests | Set | Red before the change? |
+|---|---|---|---|---|
+
+## Agents
+| Agent | Part (lead, checks, lens) | Reason |
+|---|---|---|
 
 ## Constraints known now
 - 
@@ -27,6 +32,6 @@
 - ASSUMPTION:
 - QUESTION:
 
-## Plan and constraint ledger (lite lane only)
+## Plan and constraint ledger (default mode)
 
 {{handoff}}

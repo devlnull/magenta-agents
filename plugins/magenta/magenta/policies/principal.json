@@ -2,6 +2,7 @@
   "agent": "principal",
   "writes": [
     ".magenta/project-context.md",
+    ".magenta/checks/project.yaml",
     ".magenta/lessons.md",
     ".magenta/work/*/00-request.md",
     ".magenta/work/*/04-plan.md",
@@ -23,7 +24,13 @@
     "git show*",
     "git rev-parse*",
     "git branch*",
-    "ls*"
+    "ls*",
+    "\"*\" \"*/verify.py\" run*",
+    "\"*\" \"*/verify.py\" list*",
+    "\"*\" \"*/verify.py\" status*",
+    "\"*\" \"*/verify.py\" start *",
+    "\"*\" \"*/verify.py\" finish*",
+    "\"*\" \"*/verify.py\" lock *"
   ],
   "shell_deny": []
 }

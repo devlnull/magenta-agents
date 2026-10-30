@@ -18,13 +18,14 @@ The profile tells all agents how this repository works. Agents follow it before 
 7. Read the ADRs, AGENTS.md, CLAUDE.md, CONTRIBUTING, and CODEOWNERS.
 8. List the areas that agents must not change (generated code, vendored code, migrations that ran in production).
 9. Write `.magenta/project-context.md` with the Project Context template from the skill `magenta-templates`. Set the status to DRAFT.
-10. Propose the content of `.magenta/policy.json` for the test folders that QA can write. Only the human writes this file. Example:
+10. Write the project checks in `.magenta/checks/project.yaml` with the template `checks` of the skill `magenta-templates`. Write one check for each command that CI runs: build, unit tests, lint, format check, and type check. Put fast commands in the set `quick` and slow ones in the set `full`. Do not run the commands. After the human approves them, the conductor runs verify.
+11. If the agents need other folders or commands in this repository, propose the content of `.magenta/policy.json`. Only the human writes this file. Example:
 
 ```json
-{ "qa": { "writes": ["src/acceptanceTest/**"] } }
+{ "qa": { "writes": ["src/acceptanceTest/**"] }, "engineer": { "shell": ["./scripts/dev-db.sh *"] } }
 ```
 
-11. Ask the human to confirm the profile. After the confirmation, set the status to CONFIRMED and record the commit SHA.
+12. Ask the human to confirm the profile and to approve the project checks. After the confirmation, set the status to CONFIRMED and record the commit SHA.
 
 ## Rules
 

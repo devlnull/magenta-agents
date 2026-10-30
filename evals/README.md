@@ -24,6 +24,29 @@ Five golden tasks for each advisor agent: PM, Architect, Principal, and QA.
 
 Phase 4 automates this with the runner and an LLM judge.
 
+## Compare the modes (ADR-0012)
+
+These evals tell us if the conductor helps on daily tasks, and when team mode is worth its cost. Use real, closed cases: bugs, performance work, refactors, and small features.
+
+1. Copy `tasks/TEMPLATE-conductor.md` to `tasks/conductor-<nn>-<slug>.md`. Write the task type, the hidden check, and the constraints.
+2. Prepare a fresh snapshot for each run (step 3 above). Each run starts from the same commit.
+3. Run the same task prompt in three modes, with the same model:
+   - **plain:** the tool without Magenta. Give only the task prompt.
+   - **default:** `/magenta <task prompt>`.
+   - **team:** `/magenta --team <task prompt>`.
+4. Score each run:
+   - **Correct:** run the hidden check, and read the result. Write yes, partial, or no.
+   - **Rule breaks:** count the constraints that the result breaks. A changed test or a weakened check counts as a rule break.
+   - **Cost and time:** use `/cost` in Claude Code, or the summary of the runner.
+5. Add one row for each run to the "Runs" table of the task.
+6. Run `python3 magenta.py eval-summary` to compare the modes for each task type.
+
+Decision rules (defaults; change them when the data shows a better rule):
+
+- Keep the default mode when it is at least as correct as plain mode, with fewer rule breaks, at less than twice the cost.
+- Keep a team trigger for a task type only when team mode is more correct than the default mode for that task type.
+- Run each task at least three times in each mode before you decide. Model results change from run to run.
+
 ## When to run
 
 - After each change to `rules/`, `agents/`, `skills/`, or `models.yaml`.

@@ -1,6 +1,6 @@
-## Routing: task type, team, and lane
+## Routing: task type, mode, team, and lane
 
-The conductor (skill `magenta`) and the Principal use this table. First select the task type. Then select the team and the lane. Use the playbook of the task type.
+The conductor (skill `magenta`) and the Principal use these tables. First select the task type. Then select the mode: the default mode (lead, checks, lenses) or team mode. In team mode, select the team and the lane, and use the playbook of the task type.
 
 ### Task types
 
@@ -20,6 +20,38 @@ The conductor (skill `magenta`) and the Principal use this table. First select t
 
 If a request has two types (for example "find out the performance issue and fix it"), use the type of the final result (performance). Use the steps of the other type inside it.
 
+### Modes
+
+Use the default mode for most tasks. Use team mode only when a team trigger applies. The request can select the mode: `--team` or `--lead`.
+
+| Task type | Lead (default mode) | Checks first | Lenses |
+|---|---|---|---|
+| bug | `engineer` or `frontend` | QA: a test that reproduces the bug (red). | QA. Architect, when the cause is structural. |
+| performance | `engineer` or `frontend` | QA: a measurement with the thresholds (red). Architect: the structural constraints (consistency, staleness, boundaries). | QA, Architect, Principal |
+| improvement | `engineer` or `frontend` | QA: characterization tests (green). Architect: the target structure as rules (red). | Architect, QA |
+| tests | `qa` | The project checks. | Principal, when the change affects CI for the team. |
+| upgrade | `engineer` | The project checks. QA: smoke tests for the changed behavior. | QA, Principal |
+| incident | `engineer` | QA: a test for the failure mode, when there is time. | Principal |
+| feature (small and clear) | `engineer` or `frontend` | QA: acceptance tests (red). Architect: the contracts. | QA, Architect, Principal |
+| investigation | None. The conductor or `principal` answers, read-only. | None. | None. |
+| review | None. | None. | The review panel: QA, Architect, Principal. |
+| design | `architect` | None. | Principal |
+| security | Team mode. | | |
+
+### Team triggers
+
+Use team mode when one of these applies. Write the trigger in the brief.
+
+1. The request starts with `--team`.
+2. A feature with a PRD, or a change of user-facing scope or priority. Add the Product Manager.
+3. A one-way-door decision, a new technology, or a change of a public API, an event contract, a schema, or data ownership.
+4. Money, security, personal data, or a data migration. These always use the full lane.
+5. The change crosses more than one bounded context.
+6. The lead did not pass the checks after three rounds in the default mode.
+7. Two or more promising solutions need a measurement (tournament, P8), or a difficult bug needs competing hypotheses (P9).
+
+The playbooks and the lanes below describe team mode. In the default mode, the agents use the same skills (for example `performance-investigation`, `root-cause-analysis`, and `safe-refactoring`) inside the steps of the conductor.
+
 ### Team rules
 
 1. Use the smallest team that covers the risks. Each agent in the team has a reason. Write the reason in the brief.
@@ -33,20 +65,21 @@ If a request has two types (for example "find out the performance issue and fix 
 
 | Lane | Use it when | Human gates |
 |---|---|---|
-| lite | One module, low risk, easy to revert, the change is obvious. | Done gate only. Ask before the work only if the request is not clear. |
-| standard | One bounded context, or the solution is not obvious, or a measurable target. | Plan gate, done gate. Feature tasks also have the PRD gate. |
+| lite | One module, low risk, easy to revert, the change is obvious. | Checks gate (only when there are new checks), done gate. |
+| standard | One bounded context, or the solution is not obvious, or a measurable target. | Checks gate or plan gate, done gate. Feature tasks also have the PRD gate. |
 | full | More than one bounded context, data migration, money or security flows, a one-way-door decision. | PRD gate (features), plan and design gate, done gate, release gate. |
 
 If more than one lane matches, use the heavier lane. Money, security, data migration, or a one-way-door decision always means the full lane.
 
 ### Gates for tasks that are not features
 
-- **Plan gate.** The human approves the brief (with the success criteria), the team, the plan, and the constraint ledger.
-- **Done gate.** The human reviews the result, the evidence, and the constraint check. Then the human merges, asks for more work, or stops.
+- **Checks gate.** The human approves the new checks: the success criteria and the rules as commands. In the default mode, the human also approves the brief and the short plan at this gate.
+- **Plan gate (team mode).** The human approves the brief (with the success criteria), the team, the plan, and the constraint ledger.
+- **Done gate.** The human reviews the result, the verify table, and the constraint check. Then the human merges, asks for more work, or stops.
 
 ### Constraint ledger
 
-Each task has a constraint ledger in `04-plan.md` (lite lane: in `00-brief.md`). It lists the rules that the result must not break:
+Each task has a constraint ledger in `00-brief.md` (team mode: `04-plan.md`). It lists the rules that the result must not break. Write each constraint as a check when a command can test it:
 
 | Source | Examples |
 |---|---|

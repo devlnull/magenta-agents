@@ -56,10 +56,12 @@ cat <<NEXT
 
 Magenta is installed for $TARGET.
 Next steps:
-  1. Prepare a repository:  $PY "$DIR/magenta.py" init /path/to/your/repository
+  1. Prepare a repository (one time). For Claude Code, this also adds the hooks that enforce the checks:
+       $PY "$DIR/magenta.py" init /path/to/your/repository
   2. Open your tool in the repository and run a task:
        Claude Code, OpenCode, Gemini CLI:  /magenta <your task>
        Codex CLI:                          \$magenta <your task>
      The first time, Magenta asks to run discover-project for the repository.
+  3. Approve the checks when Magenta asks. Only you can approve them.
 Update later: run this installer again. Remove: $PY "$DIR/magenta.py" uninstall
 NEXT

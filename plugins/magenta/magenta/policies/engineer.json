@@ -6,7 +6,13 @@
     ".magenta/work/*/06-impl-engineer.md",
     "!docs/adr/**",
     "!docs/rfc/**",
-    "!**/acceptance/**"
+    "!**/acceptance/**",
+    "!**/*ArchTest.*",
+    "!**/*ArchTests.*",
+    "!**/*ArchitectureTest.*",
+    "!**/*ArchitectureTests.*",
+    "!**/.dependency-cruiser.*",
+    "!**/.importlinter"
   ],
   "denies": [
     "**/.env*",
@@ -46,7 +52,10 @@
     "asprof *",
     "dotnet-trace *",
     "dotnet-counters *",
-    "py-spy *"
+    "py-spy *",
+    "\"*\" \"*/verify.py\" run*",
+    "\"*\" \"*/verify.py\" list*",
+    "\"*\" \"*/verify.py\" status*"
   ],
   "shell_deny": [
     "git push*",

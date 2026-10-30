@@ -9,8 +9,10 @@ Output (in the repository root, so that GitHub can serve it):
   plugins/magenta/.claude-plugin/plugin.json
   plugins/magenta/agents/<id>.md        shown as magenta:<id>
   plugins/magenta/skills/<name>/        shown as magenta:<name>
-  plugins/magenta/hooks/hooks.json      one guard hook for all agents (plugin agents ignore agent hooks)
-  plugins/magenta/magenta/              guard.sh, guard.py, common.py, policies/
+  plugins/magenta/hooks/hooks.json      the guard hook for all sessions (plugin agents ignore agent hooks)
+                                        and the verify Stop hook (ADR-0012)
+  plugins/magenta/magenta/              guard.sh, py.sh, guard.py, protect.py, verify.py, lock.py, common.py,
+                                        policies/
 """
 from __future__ import annotations
 
@@ -55,8 +57,12 @@ def build(root: Path, out: Path) -> dict:
         (plugin / "agents" / f"{agent_id}.md").write_text(text, encoding="utf-8")
     skills = claude_code.write_skills(root, cfg, PLUGIN_NAMING, plugin / "skills")
     claude_code.copy_guard(plugin / "magenta", root, cfg, agents)
-    shutil.copy2(Path(__file__).resolve().parent / "guard.sh", plugin / "magenta" / "guard.sh")
-    hooks = {"hooks": {"PreToolUse": [{"matcher": claude_code.GUARDED_TOOLS, "hooks": [
-        {"type": "command", "command": 'sh "${CLAUDE_PLUGIN_ROOT}/magenta/guard.sh" --auto'}]}]}}
+    claude_code.copy_scripts(plugin / "magenta", ("guard.sh", "py.sh", "verify.py", "lock.py"))
+    hooks = {"hooks": {
+        "PreToolUse": [{"matcher": claude_code.GUARDED_TOOLS, "hooks": [
+            {"type": "command", "command": 'sh "${CLAUDE_PLUGIN_ROOT}/magenta/guard.sh" --auto'}]}],
+        "Stop": [{"hooks": [
+            {"type": "command", "command": 'sh "${CLAUDE_PLUGIN_ROOT}/magenta/py.sh" --fail-open verify.py hook',
+             "timeout": 120}]}]}}
     (plugin / "hooks" / "hooks.json").write_text(json.dumps(hooks, indent=2) + "\n", encoding="utf-8")
     return {"agents": sorted(agents), "skills": sorted(skills), "version": version}

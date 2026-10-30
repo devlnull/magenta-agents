@@ -4,7 +4,7 @@ This guide is for an engineer who joins the Magenta pilot. Read it in 15 minutes
 
 ## 1. What Magenta is
 
-Six AI agents with fixed roles: Product Manager, Software Architect, Senior Principal Engineer, QA Engineer, Software Engineer, and Front-End Engineer. They hand off files with templates. You approve each gate. The design is in [RFC-0001](rfc/RFC-0001-magenta-agents.md).
+Six AI agents with fixed roles: Product Manager, Software Architect, Senior Principal Engineer, QA Engineer, Software Engineer, and Front-End Engineer. The success criteria and the rules of the agents become checks: commands that a machine runs. You approve the checks. A task is done only when they pass. The design is in [RFC-0001](rfc/RFC-0001-magenta-agents.md) and [ADR-0012](adr/0012-verify-first.md).
 
 ## 2. Install (one time)
 
@@ -19,11 +19,11 @@ The plugin gives the agents `magenta:principal`, `magenta:product-manager`, `mag
 
 ```bash
 git clone https://github.com/devlnull/magenta-agents.git ~/.magenta-agents   # once, for the CLI
-python3 ~/.magenta-agents/magenta.py init .
-claude --agent magenta:principal
+python3 ~/.magenta-agents/magenta.py init . --no-hook   # the plugin has the hooks
+claude
 ```
 
-Ask: "Run discover-project." Read `.magenta/project-context.md`. Correct it. Confirm it.
+Type `/magenta` with your first task. Magenta asks to run discover-project. Read `.magenta/project-context.md`. Correct it. Confirm it. Then approve the project checks (build, lint, unit tests) that it proposes.
 
 ## 4. Daily use
 
@@ -35,7 +35,7 @@ For most work, give Magenta the task in your own words:
 /magenta review my branch against main
 ```
 
-The conductor selects the agents, shows you the plan when the task is not trivial, and reports the result with the evidence and the constraint check. You can also call one role directly:
+The conductor asks QA (and the Architect, when the structure is at risk) to write the checks first. You approve them at the checks gate. One lead agent does the work until all checks pass. Then one to three reviewers look at the diff. The report shows the verify table and the constraint check. For a large or risky task, Magenta uses team mode: start the request with `--team` to ask for it. You can also call one role directly:
 
 | You want | Do this |
 |---|---|
@@ -48,15 +48,17 @@ The conductor selects the agents, shows you the plan when the task is not trivia
 ## 5. Your duties as the human
 
 - Approve or reject each gate. Only you can approve a gate.
-- Review the acceptance tests, then lock them: `python3 ~/.magenta-agents/magenta.py lock . <ID>`.
+- Read the checks that the agents propose, then approve them. Only you can approve a check. In Claude Code, type the approve command that Magenta shows after `!`, or run `python3 ~/.magenta-agents/magenta.py verify approve --repo .`. Approve only commands that you trust: a check runs on your computer.
 - Read the final review before you merge. The agents do not push or merge.
 - Report wrong behavior: add a line to `.magenta/lessons.md` or open an issue in the magenta-agents repository.
 
 ## 6. Rules that the guard enforces
 
-- Each agent writes only its own files. Makers do not change the acceptance tests.
+- Each agent writes only its own files. Makers do not change the checks or the locked tests.
 - No agent reads `.env` files, keys, or `secrets/`.
 - Shell commands: only the allowlist of each agent, without pipes or `;`.
+- No model approves checks or writes the verify state.
+- While a task is active and the code changed, the Stop hook does not let the agent finish until the approved checks pass. After two tries in one turn, it lets the agent stop and tells you.
 
 If the guard blocks an agent, the agent reports it. Do not turn off the guard. If a rule is wrong for your repository, ask the maintainer to add it to `.magenta/policy.json`.
 

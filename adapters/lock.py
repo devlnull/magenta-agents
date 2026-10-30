@@ -1,7 +1,8 @@
-"""Acceptance-test lock (RFC-0001, 6.6): the human locks the QA acceptance tests; a check finds any change.
+"""Test lock (RFC-0001, 6.6; ADR-0012): lock the tests of a work item; a check finds any change.
 
-The lock covers the files in `.magenta/work/<ID>/acceptance/` and the files that match the QA write
-patterns in `.magenta/policy.json` (for example `src/acceptanceTest/**`).
+The lock covers the files in `.magenta/work/<ID>/acceptance/`, the files that match the QA write
+patterns in `.magenta/policy.json` (for example `src/acceptanceTest/**`), and the exact files that
+the lock command names (for example the regression test that QA wrote for a bug).
 """
 from __future__ import annotations
 
@@ -9,6 +10,7 @@ import datetime as _dt
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 
 from common import path_matches
@@ -42,22 +44,55 @@ def patterns(repo: Path, work_item: Path) -> list[str]:
     return result
 
 
+def _base(glob: str) -> str:
+    """The folder part of a glob before the first wildcard ('' means the repository root)."""
+    parts = []
+    for part in glob.split("/"):
+        if any(ch in part for ch in "*?["):
+            break
+        parts.append(part)
+    return "/".join(parts)
+
+
+def _roots(globs: list[str]) -> list[str]:
+    roots: list[str] = []
+    for base in sorted({_base(g) for g in globs}):
+        if not any(r == "" or base == r or base.startswith(r + "/") for r in roots):
+            roots.append(base)
+    return roots
+
+
 def hash_files(repo: Path, globs: list[str]) -> dict[str, str]:
     found: dict[str, str] = {}
-    for dirpath, dirnames, filenames in os.walk(repo):
-        dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
-        for name in filenames:
-            full = Path(dirpath) / name
-            rel = full.relative_to(repo).as_posix()
-            if name == LOCK_NAME or not path_matches(rel, globs):
-                continue
-            found[rel] = hashlib.sha256(full.read_bytes()).hexdigest()
+    for root in _roots(globs):
+        start = repo / root if root else repo
+        if start.is_file():
+            walk = [(str(start.parent), [], [start.name])]
+        elif start.is_dir():
+            walk = os.walk(start)
+        else:
+            continue
+        for dirpath, dirnames, filenames in walk:
+            dirnames[:] = [d for d in dirnames if d not in SKIP_DIRS]
+            for name in filenames:
+                full = Path(dirpath) / name
+                rel = full.relative_to(repo).as_posix()
+                if name == LOCK_NAME or not path_matches(rel, globs):
+                    continue
+                found[rel] = hashlib.sha256(full.read_bytes()).hexdigest()
     return dict(sorted(found.items()))
 
 
-def lock(repo: Path, item: str) -> Path:
+def lock(repo: Path, item: str, files: list[str] | None = None) -> Path:
+    """Lock the acceptance tests of a work item, and also the exact `files` (paths from the repository root)."""
     work_item = find_work_item(repo, item)
     globs = patterns(repo, work_item)
+    for name in files or []:
+        path = (repo / name).resolve()
+        if not path.is_file():
+            raise LockError(f"the file {name!r} does not exist")
+        rel = path.relative_to(repo.resolve()).as_posix()
+        globs.append(re.sub(r"([*?\[\]])", "?", rel))  # an exact path (a glob character matches itself)
     files = hash_files(repo, globs)
     if not files:
         raise LockError(f"no acceptance test files match {globs}. QA must write them first.")

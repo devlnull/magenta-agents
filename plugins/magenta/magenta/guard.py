@@ -8,7 +8,8 @@
 Usage:
   guard.py <agent-id>   per-agent hook in the agent file (user-level install). Fails closed.
   guard.py --auto       one hook for all agents (plugin install). It finds the agent from the
-                        `agent_type` input field. Sessions that are not Magenta agents pass.
+                        `agent_type` input field. For sessions that are not Magenta agents, it
+                        only protects the verify state (protect.py).
 
 Write patterns are ordered. The last matching pattern wins. A pattern that starts with "!" denies.
 Exit code 2 blocks the tool call. Claude Code shows the stderr message to the agent.
@@ -24,12 +25,14 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import path_matches  # noqa: E402
+import protect  # noqa: E402
 
 PREFIX = "magenta-"
 PLUGIN_SCOPE = "magenta:"
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PATH_KEYS = ("file_path", "notebook_path", "path")
-HARD_DENY_WRITES = [".magenta/policy.json", "**/acceptance.lock", ".claude/**", ".git/**", ".opencode/**"]
+HARD_DENY_WRITES = [".magenta/policy.json", "**/acceptance.lock", ".magenta/checks.lock", ".magenta/verify-state.json",
+                    ".magenta/active.json", ".claude/**", ".git/**", ".opencode/**"]
 SHELL_OPERATORS = (";", "&", "|", ">", "<", "`", "$(", "\n")
 # macOS and Windows file systems ignore case by default: compare paths without case there.
 CASE_INSENSITIVE = sys.platform in ("darwin", "win32")
@@ -79,6 +82,9 @@ def decide(agent: str, policy: dict, event: dict):
     other = agent_id_from_type(event.get("agent_type"))
     if other and other != agent:
         return None  # another Magenta agent: its own policy decides
+    state = protect.decide(event)
+    if state:
+        return f"{me}: {state}"
 
     tool = event.get("tool_name", "")
     tool_input = event.get("tool_input") or {}
@@ -143,8 +149,12 @@ def main(argv=None) -> int:
         return 2
     if argv[0] == "--auto":
         agent = agent_id_from_type(event.get("agent_type"))
-        if agent is None:
-            return 0  # not a Magenta agent
+        if agent is None:  # not a Magenta agent: only the verify state is protected
+            reason = protect.decide(event if isinstance(event, dict) else {})
+            if reason:
+                print(f"Magenta: {reason}", file=sys.stderr)
+                return 2
+            return 0
     else:
         agent = argv[0]
     try:

@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
-"""Magenta CLI: validate the source, build and install the Claude Code agents, prepare a repository.
+"""Magenta CLI: validate the source, build and install the agents, prepare a repository, run checks.
 
   python3 magenta.py validate
   python3 magenta.py build
-  python3 magenta.py install [--force]
+  python3 magenta.py install [--target claude-code|opencode|codex|gemini] [--force]
   python3 magenta.py uninstall
-  python3 magenta.py init <path-to-product-repository>
-  python3 magenta.py lock <repo> <work-item>        (human, after reviewing the acceptance tests)
+  python3 magenta.py init <repo> [--no-hook]       (.magenta/ and the Claude Code hooks of the repository)
+  python3 magenta.py unhook <repo>                 (remove the Claude Code hooks of Magenta)
+  python3 magenta.py verify [run|list|status|approve|...] [--repo PATH]   (the checks, ADR-0012)
+  python3 magenta.py lock <repo> <work-item> [--files F ...]   (lock the tests of a work item)
   python3 magenta.py check-lock <repo> <work-item>  (QA, CI, or a pre-commit hook)
+  python3 magenta.py eval-summary                   (compare the eval runs of the three modes)
 """
 from __future__ import annotations
 
@@ -15,6 +18,7 @@ import argparse
 import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -25,12 +29,14 @@ sys.path.insert(0, str(ROOT / "runner"))
 import agents_md  # noqa: E402
 import claude_code  # noqa: E402
 import codex  # noqa: E402
+import eval_summary as mode_evals  # noqa: E402
 import gemini  # noqa: E402
 import metrics as team_metrics  # noqa: E402
 import opencode  # noqa: E402
 import plugin as team_plugin  # noqa: E402
 import runner as headless  # noqa: E402
 import lock as test_lock  # noqa: E402
+import verify as checks_verify  # noqa: E402
 from common import YamlError, split_front_matter  # noqa: E402
 
 DIST_ROOT = Path(os.environ.get("MAGENTA_DIST") or ROOT / "dist")
@@ -122,7 +128,64 @@ def validate(root: Path = ROOT) -> list[str]:
     return errors
 
 
-def init_repo(repo: Path) -> list[str]:
+CHECKS_README = """# Magenta checks
+
+Each YAML file in this folder lists checks: commands that test one rule each. Exit code 0 means PASS.
+The template `checks` in the skill `magenta-templates` shows the format.
+
+| File | Owner |
+|---|---|
+| project.yaml | Principal (build, lint, unit tests) |
+| qa.yaml | QA (tests, thresholds, regression tests) |
+| architect.yaml | Architect (structure rules, fitness functions) |
+| human.yaml | you |
+
+A check runs only after you approve its exact command:
+
+    python3 magenta.py verify approve --repo <repo>
+
+In Claude Code, the conductor shows the approve command. Type it after `!`.
+"""
+
+
+def installed_verify(home: Path) -> Path:
+    return home / ".claude" / "skills" / "magenta" / "scripts" / "verify.py"
+
+
+def _hooked_repos_file(home: Path) -> Path:
+    return home / ".claude" / "magenta" / "repos.json"
+
+
+def remember_hooked_repo(home: Path, repo: Path) -> None:
+    """Record the repository, so that `uninstall` can remove its hooks."""
+    path = _hooked_repos_file(home)
+    try:
+        repos = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    except ValueError:
+        repos = []
+    if str(repo) not in repos:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(sorted(set(repos) | {str(repo)}), indent=2) + "\n", encoding="utf-8")
+
+
+def unhook_all(home: Path) -> list[str]:
+    """Remove the Magenta hooks from all repositories that `init` prepared."""
+    path = _hooked_repos_file(home)
+    try:
+        repos = json.loads(path.read_text(encoding="utf-8")) if path.exists() else []
+    except ValueError:
+        repos = []
+    done = []
+    for repo in repos:
+        try:
+            if Path(repo).is_dir() and checks_verify.uninstall_hook(Path(repo)):
+                done.append(repo)
+        except checks_verify.VerifyError:
+            pass
+    return done
+
+
+def init_repo(repo: Path, home: Path | None = None, hook: bool = False) -> list[str]:
     if not repo.is_dir():
         raise SystemExit(f"error: {repo} is not a folder")
     base = repo / ".magenta"
@@ -133,10 +196,12 @@ def init_repo(repo: Path) -> list[str]:
         "product-context.md": (ROOT / "templates" / "product-context.md").read_text(encoding="utf-8"),
         "lessons.md": "# Lessons\n\nThe Principal adds stable lessons from retrospectives here.\n",
         "work/.gitkeep": "",
+        "checks/README.md": CHECKS_README,
     }
     for rel, text in files.items():
         path = base / rel
         if not path.exists():
+            path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text, encoding="utf-8")
             created.append(str(path))
     exclude = repo / ".git" / "info" / "exclude"
@@ -147,6 +212,19 @@ def init_repo(repo: Path) -> list[str]:
             with exclude.open("a", encoding="utf-8") as f:
                 f.write(("" if current.endswith("\n") or not current else "\n") + ".magenta/\n")
             created.append(f"{exclude} (+ .magenta/)")
+    if hook:
+        script = installed_verify(home or Path.home())
+        if not script.exists():
+            created.append("note: the Claude Code hooks are not installed, because Magenta is not installed for "
+                           "Claude Code (python3 magenta.py install). The plugin has its own hooks.")
+        else:
+            out = subprocess.run([sys.executable, str(script), "--repo", str(repo), "install-hook"],
+                                 capture_output=True, text=True)
+            if out.returncode == 0:
+                remember_hooked_repo(home or Path.home(), repo)
+                created.append(f"{repo / '.claude' / 'settings.local.json'} (Magenta Stop and protect hooks)")
+            else:
+                created.append(f"note: the hooks were not installed: {out.stderr.strip()}")
     return created
 
 
@@ -205,6 +283,9 @@ def _extra_builds():
 
 
 def main(argv=None) -> int:
+    argv = sys.argv[1:] if argv is None else list(argv)
+    if argv[:1] == ["verify"]:  # pass all arguments to the verify script, also options before the subcommand
+        return checks_verify.main(argv[1:])
     parser = argparse.ArgumentParser(description="Magenta agents CLI")
     sub = parser.add_subparsers(dest="cmd", required=True)
     sub.add_parser("validate", help="check the canonical source")
@@ -217,11 +298,18 @@ def main(argv=None) -> int:
     p_install.add_argument("--home", type=Path, default=Path.home(), help=argparse.SUPPRESS)
     p_uninstall = sub.add_parser("uninstall", help="remove the installed Magenta files")
     p_uninstall.add_argument("--home", type=Path, default=Path.home(), help=argparse.SUPPRESS)
-    p_init = sub.add_parser("init", help="prepare a product repository (.magenta/)")
+    p_init = sub.add_parser("init", help="prepare a product repository (.magenta/ and the Claude Code hooks)")
     p_init.add_argument("repo", type=Path)
-    p_lock = sub.add_parser("lock", help="lock the acceptance tests of a work item (human only)")
+    p_init.add_argument("--no-hook", action="store_true", help="do not add the Claude Code hooks")
+    p_init.add_argument("--home", type=Path, default=Path.home(), help=argparse.SUPPRESS)
+    p_unhook = sub.add_parser("unhook", help="remove the Claude Code hooks of Magenta from a repository")
+    p_unhook.add_argument("repo", type=Path)
+    p_verify = sub.add_parser("verify", help="the checks: run, list, status, approve (see adapters/verify.py)")
+    p_verify.add_argument("args", nargs=argparse.REMAINDER)
+    p_lock = sub.add_parser("lock", help="lock the tests of a work item")
     p_lock.add_argument("repo", type=Path)
     p_lock.add_argument("item", help="work item ID or folder name")
+    p_lock.add_argument("--files", nargs="*", default=[], help="also lock these files (paths from the repository root)")
     p_run = sub.add_parser("run", help="run a headless workflow (prd-review, pr-review)")
     p_run.add_argument("workflow", choices=("prd-review", "pr-review"))
     p_run.add_argument("--repo", type=Path, default=Path.cwd())
@@ -238,6 +326,9 @@ def main(argv=None) -> int:
     p_metrics = sub.add_parser("metrics", help="report work items and headless runs of repositories")
     p_metrics.add_argument("repos", type=Path, nargs="+")
     p_metrics.add_argument("--output", type=Path)
+    p_evals = sub.add_parser("eval-summary", help="compare the eval runs of the modes plain, default, and team")
+    p_evals.add_argument("--tasks", type=Path, default=ROOT / "evals" / "tasks")
+    p_evals.add_argument("--output", type=Path)
     p_check = sub.add_parser("check-lock", help="fail if the locked acceptance tests changed")
     p_check.add_argument("repo", type=Path)
     p_check.add_argument("item", help="work item ID or folder name")
@@ -273,15 +364,16 @@ def main(argv=None) -> int:
         try:
             if args.target == "claude-code":
                 installed = claude_code.install(DIST, args.home, force=args.force, python=args.python)
-                hint = 'cd <repo> && claude, then: /magenta <task>'
+                hint = ('python3 magenta.py init <repo> (one time, for the hooks); then cd <repo> && claude, '
+                        'then: /magenta <task>')
             elif args.target == "opencode":
-                installed = opencode.install(DIST_ROOT / "opencode", args.home, force=args.force)
+                installed = opencode.install(DIST_ROOT / "opencode", args.home, force=args.force, python=args.python)
                 hint = 'cd <repo> && opencode, then: /magenta <task>'
             elif args.target == "codex":
-                installed = codex.install(DIST_ROOT / "codex", args.home, force=args.force)
+                installed = codex.install(DIST_ROOT / "codex", args.home, force=args.force, python=args.python)
                 hint = 'cd <repo> && codex, then: $magenta <task>'
             else:
-                installed = gemini.install(DIST_ROOT / "gemini", args.home, force=args.force)
+                installed = gemini.install(DIST_ROOT / "gemini", args.home, force=args.force, python=args.python)
                 hint = 'cd <repo> && gemini, then: /magenta <task>'
         except claude_code.BuildError as exc:
             print(f"error: {exc}")
@@ -290,6 +382,8 @@ def main(argv=None) -> int:
         print(f"Start: {hint}")
         return 0
     if args.cmd == "uninstall":
+        for repo in unhook_all(args.home):
+            print(f"Removed the Magenta hooks from {repo}")
         removed = claude_code.uninstall(args.home)
         codex.uninstall(args.home)
         print(f"Removed {len(removed)} items." if removed else "Nothing to remove.")
@@ -311,14 +405,30 @@ def main(argv=None) -> int:
         return 0
     if args.cmd == "run":
         return run_workflow(args)
+    if args.cmd == "eval-summary":
+        text = mode_evals.report(mode_evals.collect(args.tasks))
+        if args.output:
+            args.output.write_text(text, encoding="utf-8")
+        print(text)
+        return 0
     if args.cmd == "lock":
         try:
-            target = test_lock.lock(args.repo.resolve(), args.item)
+            target = test_lock.lock(args.repo.resolve(), args.item, args.files)
         except test_lock.LockError as exc:
             print(f"error: {exc}")
             return 1
         files = json.loads(target.read_text(encoding="utf-8"))["files"]
-        print(f"Locked {len(files)} acceptance test files in {target}")
+        print(f"Locked {len(files)} test files in {target}")
+        return 0
+    if args.cmd == "verify":
+        return checks_verify.main(args.args)
+    if args.cmd == "unhook":
+        try:
+            count = checks_verify.uninstall_hook(args.repo.resolve())
+        except checks_verify.VerifyError as exc:
+            print(f"error: {exc}")
+            return 1
+        print(f"Removed {count} Magenta hooks." if count else "No Magenta hook found.")
         return 0
     if args.cmd == "check-lock":
         try:
@@ -334,10 +444,11 @@ def main(argv=None) -> int:
         print("The acceptance tests agree with the lock.")
         return 0
     if args.cmd == "init":
-        created = init_repo(args.repo.resolve())
+        created = init_repo(args.repo.resolve(), home=args.home, hook=not args.no_hook)
         for c in created:
-            print(f"created {c}")
-        print("Next: cd into the repository, run `claude --agent magenta-principal`, and ask it to run discover-project.")
+            print(c if c.startswith("note:") else f"created {c}")
+        print("Next: cd into the repository, start Claude Code, and type: /magenta <task>. "
+              "The first task runs discover-project and proposes the project checks.")
         return 0
     return 1
 

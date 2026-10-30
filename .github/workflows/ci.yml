@@ -44,7 +44,14 @@ jobs:
           test -f "$HOME_DIR/.claude/skills/magenta/SKILL.md"
           test -f "$HOME_DIR/.gemini/commands/magenta.toml"
           test -f "$HOME_DIR/.claude/agents/magenta-principal.md"
+          test -f "$HOME_DIR/.claude/skills/magenta/scripts/verify.py"
+          REPO_DIR="$RUNNER_TEMP/demo-repo"
+          git init -q "$REPO_DIR"
+          python magenta.py init "$REPO_DIR" --home "$HOME_DIR"
+          test -f "$REPO_DIR/.claude/settings.local.json"
+          python "$HOME_DIR/.claude/skills/magenta/scripts/verify.py" --repo "$REPO_DIR" status
           python magenta.py uninstall --home "$HOME_DIR"
+          if grep -q "verify.py" "$REPO_DIR/.claude/settings.local.json"; then echo "the hooks were not removed"; exit 1; fi
 
   installer:
     name: installer on ${{ matrix.os }}

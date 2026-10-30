@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import agents_md
@@ -67,12 +68,13 @@ def build(root: Path, out: Path) -> dict:
     return {"agents": sorted(agents), "skills": sorted(skills)}
 
 
-def install(dist: Path, home: Path, force: bool = False) -> list[str]:
+def install(dist: Path, home: Path, force: bool = False, python: str | None = None) -> list[str]:
     if not (dist / "agents").exists():
         raise SourceError("dist/codex does not exist. Run: python3 magenta.py build")
     plan = [(p, home / ".codex" / "agents" / p.name) for p in sorted((dist / "agents").glob("*.toml"))]
     plan += [(p, home / ".agents" / "skills" / p.name) for p in sorted((dist / "skills").iterdir())]
     installed = claude_code._copy_plan(plan, home / ".codex" / "magenta", None, force)
+    claude_code.render_conductor(home / ".agents" / "skills" / source.CONDUCTOR, python or sys.executable)
     target = home / ".codex" / "AGENTS.md"
     current = target.read_text(encoding="utf-8") if target.exists() else ""
     target.write_text(agents_md.merge_block(current, (dist / "AGENTS.md").read_text(encoding="utf-8")),

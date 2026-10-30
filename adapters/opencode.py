@@ -9,6 +9,7 @@ OpenCode permission rules are ordered; the last matching rule wins.
 from __future__ import annotations
 
 import shutil
+import sys
 from pathlib import Path
 
 import claude_code
@@ -43,7 +44,8 @@ def permissions(agent_id: str, agent: dict) -> list[dict]:
                 rule("edit", pattern[1:], "deny")
             else:
                 rule("edit", pattern, "allow")
-    for pattern in [".magenta/policy.json", "**/acceptance.lock", ".git/**", ".claude/**", ".opencode/**"]:
+    for pattern in [".magenta/policy.json", "**/acceptance.lock", ".magenta/checks.lock", ".magenta/verify-state.json",
+                    ".magenta/active.json", ".git/**", ".claude/**", ".opencode/**"]:
         rule("edit", pattern, "deny")
     for pattern in mg.get("denies") or []:
         rule("read", pattern, "deny")
@@ -104,7 +106,7 @@ def build(root: Path, out: Path) -> dict:
     return {"agents": sorted(agents), "skills": sorted(skills), "agents_without_model": without_model}
 
 
-def install(dist: Path, home: Path, force: bool = False) -> list[str]:
+def install(dist: Path, home: Path, force: bool = False, python: str | None = None) -> list[str]:
     if not (dist / "agents").exists():
         raise SourceError("dist/opencode does not exist. Run: python3 magenta.py build")
     config = home / ".config" / "opencode"
@@ -115,4 +117,6 @@ def install(dist: Path, home: Path, force: bool = False) -> list[str]:
         # OpenCode also reads ~/.claude/skills and ~/.agents/skills. Do not install a skill two times.
         if not any((folder / skill.name).exists() for folder in shared):
             plan.append((skill, config / "skills" / skill.name))
-    return claude_code._copy_plan(plan, config / "magenta", None, force)
+    installed = claude_code._copy_plan(plan, config / "magenta", None, force)
+    claude_code.render_conductor(config / "skills" / source.CONDUCTOR, python or sys.executable)
+    return installed

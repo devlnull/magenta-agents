@@ -2,7 +2,7 @@
 
 | Field | Value |
 |---|---|
-| Status | Proposed |
+| Status | Proposed. ADR-0012 changes the default mode (verify first); the playbooks of this ADR are team mode. |
 | Date | 2026-10-30 |
 | Decider | AMQ |
 | Source | Request: one command for all daily tasks (improvements, optimizations, bug fixes, features), with dynamic agent selection and results that keep the rules of all agents |

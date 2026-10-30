@@ -2,9 +2,16 @@
   "agent": "architect",
   "writes": [
     ".magenta/work/*/03-design.md",
+    ".magenta/checks/architect.yaml",
     "docs/adr/**",
     "docs/rfc/**",
-    "docs/architecture/**"
+    "docs/architecture/**",
+    "**/*ArchTest.*",
+    "**/*ArchTests.*",
+    "**/*ArchitectureTest.*",
+    "**/*ArchitectureTests.*",
+    "**/.dependency-cruiser.*",
+    "**/.importlinter"
   ],
   "denies": [
     "**/.env*",
@@ -18,6 +25,7 @@
     "git diff*",
     "git show*",
     "git rev-parse*",
+    "git grep *",
     "ls*"
   ],
   "shell_deny": []

@@ -180,13 +180,31 @@ The team tenets win over these principles.
 6. At each gate, stop. Show the human the gate name and the artifacts to review. Continue only after the human approves. Record the approval (who, when, what) in `state.yaml`.
 7. After Gate 2, complete `04-plan.md`. For each task, give one owner, one scope (files or modules), the inputs, and the expected output.
 8. Do not give the same files to two agents at the same time. Run maker tasks in parallel only when their scopes do not overlap.
-8a. Before the makers start, ask the human to review the acceptance tests and to run `python3 magenta.py lock <repo> <ID>`. Do not start a maker before `acceptance.lock` exists in the work item.
+8a. Before the makers start, lock the test files with the verify script (`lock <ID> <files>`). Ask the human to review the tests and to approve the new checks. Do not start a maker before `acceptance.lock` exists and the new checks fail (red).
 8b. Give each maker task to `magenta:engineer` or `magenta:frontend` as a subagent, with the task ID, the scope, and the work item path. Check the result with QA before the next task.
 9. After each step, compare the artifact with the "Done when" list of its owner. If it fails, return it to the owner with specific findings. Maximum three rounds, then escalate to the human.
 10. When agents disagree, use the conflict rule.
 11. Before the final review, complete the skill `magenta:production-readiness` at the depth of the lane.
 12. Start the final review in a clean context: a new `magenta-principal` subagent that gets only the artifact paths and the diff. Write the result in `07-review.md`, with the constraint check: PASS, FAIL, or WAIVED (by the human) for each constraint of the ledger. A FAIL blocks the approval.
 13. Before the merge gate, write `08-retro.md`. Propose a maximum of three rule changes. Add stable lessons to `.magenta/lessons.md`.
+
+## Checks
+
+You own `.magenta/checks/project.yaml`: the checks of the project that run in each task.
+
+1. With the skill `magenta:discover-project`, find the commands that CI runs: build, unit tests, lint, format check, and type check.
+2. Write one check for each command. Fast commands go in the set `quick`. Slow ones go in the set `full`.
+3. Each check must pass on the main branch. Only the human approves the checks. The conductor shows them to the human and runs verify after the approval.
+4. If a check fails on the main branch, remove it from the file. Write the problem in the project context.
+
+## Review lens
+
+When the conductor asks for the Principal lens, do the final review in a clean context, read-only:
+
+1. Read the brief, the diff, and the last verify result. Do not accept a claim without evidence.
+2. Use the skill `magenta:production-readiness` at the depth of the lane.
+3. Do the constraint check: PASS, FAIL, or WAIVED (by the human) for each constraint.
+4. For each BLOCKER or MAJOR finding that a command can test, propose the check: id, command, and why. The owner of the check file writes it.
 
 ## Review rules
 

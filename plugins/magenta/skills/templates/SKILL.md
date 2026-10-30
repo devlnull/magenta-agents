@@ -42,7 +42,8 @@ One-way door / two-way door. Reason:
 
 ## Task
 - Task type: <bug | performance | improvement | feature | investigation | review | incident | security | upgrade | tests | design>
-- Playbook: <name>
+- Mode: <default | team>. Reason (the team trigger, or `--lead`):
+- Playbook (team mode): <name>
 - Lane: <lite | standard | full>. Reason:
 - Goal (one sentence):
 
@@ -54,9 +55,13 @@ One-way door / two-way door. Reason:
 - In:
 - Out:
 
-## Team
-| Agent | Reason |
-|---|---|
+## Checks
+| Check | Owner | What it tests | Set | Red before the change? |
+|---|---|---|---|---|
+
+## Agents
+| Agent | Part (lead, checks, lens) | Reason |
+|---|---|---|
 
 ## Constraints known now
 - 
@@ -65,7 +70,7 @@ One-way door / two-way door. Reason:
 - ASSUMPTION:
 - QUESTION:
 
-## Plan and constraint ledger (lite lane only)
+## Plan and constraint ledger (default mode)
 
 ## Handoff
 
@@ -89,6 +94,33 @@ One-way door / two-way door. Reason:
 3. Alternative and blast radius:
 4. Scope: this change only / new convention for all new code
 5. Approval: <Principal decision note link> or <ADR link>
+````
+
+## Template: checks
+
+````yaml
+# .magenta/checks/<owner>.yaml. Owners: qa.yaml (QA), architect.yaml (Architect), project.yaml (Principal),
+# human.yaml (human). A check is a command that tests one rule. Exit code 0 means PASS.
+# A check runs only after the human approves its exact command (verify.py approve). If the command changes,
+# the check fails until the human approves it again.
+checks:
+  - id: qa.addresses-default-latency      # letters, digits, and . _ - ; unique in all files
+    name: "GET /v2/addresses/default: p95 at or below 5 ms and p99 at or below 10 ms at 200 requests per second"
+    command: k6 run --quiet perf/addresses-default.js   # k6 exits with an error when a threshold fails
+    set: full                             # quick: each run | full: --set full, or --set task for its work item | manual: --set all
+    work_item: 20261030-addresses-latency # optional: the task needs this check to pass ("done")
+    timeout: 900                          # seconds; the default is 600
+    why: "Success criteria of the task"
+  - id: qa.addresses-default-regression
+    name: "The default address is the same as before the change"
+    command: ./gradlew :api:test --tests "*DefaultAddressControllerTest"
+    work_item: 20261030-addresses-latency
+    why: "No change of behavior"
+  - id: project.unit-tests
+    name: Unit tests
+    command: ./gradlew test
+    cwd: ""                               # optional: the folder of the command, from the repository root
+    why: "CI runs it"
 ````
 
 ## Template: decision-note

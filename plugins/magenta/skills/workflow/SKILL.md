@@ -10,9 +10,9 @@ Start with the routing section: select the task type, the team, and the lane. Th
 
 Gates for features: Gate 1 PRD go, Gate 2 scope and design, Gate 3 merge, Gate 4 release (full lane). Gates for other task types: plan gate and done gate. Only a human approves a gate.
 
-## Routing: task type, team, and lane
+## Routing: task type, mode, team, and lane
 
-The conductor (skill `magenta`) and the Principal use this table. First select the task type. Then select the team and the lane. Use the playbook of the task type.
+The conductor (skill `magenta`) and the Principal use these tables. First select the task type. Then select the mode: the default mode (lead, checks, lenses) or team mode. In team mode, select the team and the lane, and use the playbook of the task type.
 
 ### Task types
 
@@ -32,6 +32,38 @@ The conductor (skill `magenta`) and the Principal use this table. First select t
 
 If a request has two types (for example "find out the performance issue and fix it"), use the type of the final result (performance). Use the steps of the other type inside it.
 
+### Modes
+
+Use the default mode for most tasks. Use team mode only when a team trigger applies. The request can select the mode: `--team` or `--lead`.
+
+| Task type | Lead (default mode) | Checks first | Lenses |
+|---|---|---|---|
+| bug | `magenta:engineer` or `magenta:frontend` | QA: a test that reproduces the bug (red). | QA. Architect, when the cause is structural. |
+| performance | `magenta:engineer` or `magenta:frontend` | QA: a measurement with the thresholds (red). Architect: the structural constraints (consistency, staleness, boundaries). | QA, Architect, Principal |
+| improvement | `magenta:engineer` or `magenta:frontend` | QA: characterization tests (green). Architect: the target structure as rules (red). | Architect, QA |
+| tests | `magenta:qa` | The project checks. | Principal, when the change affects CI for the team. |
+| upgrade | `magenta:engineer` | The project checks. QA: smoke tests for the changed behavior. | QA, Principal |
+| incident | `magenta:engineer` | QA: a test for the failure mode, when there is time. | Principal |
+| feature (small and clear) | `magenta:engineer` or `magenta:frontend` | QA: acceptance tests (red). Architect: the contracts. | QA, Architect, Principal |
+| investigation | None. The conductor or `magenta:principal` answers, read-only. | None. | None. |
+| review | None. | None. | The review panel: QA, Architect, Principal. |
+| design | `magenta:architect` | None. | Principal |
+| security | Team mode. | | |
+
+### Team triggers
+
+Use team mode when one of these applies. Write the trigger in the brief.
+
+1. The request starts with `--team`.
+2. A feature with a PRD, or a change of user-facing scope or priority. Add the Product Manager.
+3. A one-way-door decision, a new technology, or a change of a public API, an event contract, a schema, or data ownership.
+4. Money, security, personal data, or a data migration. These always use the full lane.
+5. The change crosses more than one bounded context.
+6. The lead did not pass the checks after three rounds in the default mode.
+7. Two or more promising solutions need a measurement (tournament, P8), or a difficult bug needs competing hypotheses (P9).
+
+The playbooks and the lanes below describe team mode. In the default mode, the agents use the same skills (for example `magenta:performance-investigation`, `magenta:root-cause-analysis`, and `magenta:safe-refactoring`) inside the steps of the conductor.
+
 ### Team rules
 
 1. Use the smallest team that covers the risks. Each agent in the team has a reason. Write the reason in the brief.
@@ -45,20 +77,21 @@ If a request has two types (for example "find out the performance issue and fix 
 
 | Lane | Use it when | Human gates |
 |---|---|---|
-| lite | One module, low risk, easy to revert, the change is obvious. | Done gate only. Ask before the work only if the request is not clear. |
-| standard | One bounded context, or the solution is not obvious, or a measurable target. | Plan gate, done gate. Feature tasks also have the PRD gate. |
+| lite | One module, low risk, easy to revert, the change is obvious. | Checks gate (only when there are new checks), done gate. |
+| standard | One bounded context, or the solution is not obvious, or a measurable target. | Checks gate or plan gate, done gate. Feature tasks also have the PRD gate. |
 | full | More than one bounded context, data migration, money or security flows, a one-way-door decision. | PRD gate (features), plan and design gate, done gate, release gate. |
 
 If more than one lane matches, use the heavier lane. Money, security, data migration, or a one-way-door decision always means the full lane.
 
 ### Gates for tasks that are not features
 
-- **Plan gate.** The human approves the brief (with the success criteria), the team, the plan, and the constraint ledger.
-- **Done gate.** The human reviews the result, the evidence, and the constraint check. Then the human merges, asks for more work, or stops.
+- **Checks gate.** The human approves the new checks: the success criteria and the rules as commands. In the default mode, the human also approves the brief and the short plan at this gate.
+- **Plan gate (team mode).** The human approves the brief (with the success criteria), the team, the plan, and the constraint ledger.
+- **Done gate.** The human reviews the result, the verify table, and the constraint check. Then the human merges, asks for more work, or stops.
 
 ### Constraint ledger
 
-Each task has a constraint ledger in `04-plan.md` (lite lane: in `00-brief.md`). It lists the rules that the result must not break:
+Each task has a constraint ledger in `00-brief.md` (team mode: `04-plan.md`). It lists the rules that the result must not break. Write each constraint as a check when a command can test it:
 
 | Source | Examples |
 |---|---|
@@ -75,10 +108,11 @@ A candidate solution that breaks one constraint is rejected, even when it is fas
 Use it for a bug fix or a small change in one module, with low risk, that is easy to revert.
 
 1. `magenta:principal`: triage, select the lane, write `04-plan.md` with one task.
-2. `magenta:engineer` or `magenta:frontend`: fix with TDD. For a bug, first write a test that reproduces it.
-3. `magenta:qa`: quick check. Write `07-qa-report.md`.
-4. `magenta:principal`: review (rollback and observability only). Write `07-review.md`.
-5. Gate 3, merge (human).
+2. `magenta:qa`: for a bug, write a test that reproduces it, and its check. The conductor locks the test, and the human approves the check.
+3. `magenta:engineer` or `magenta:frontend`: fix with TDD. Run verify until all checks pass.
+4. `magenta:qa`: quick check: run verify. Write `07-qa-report.md`.
+5. `magenta:principal`: review (rollback and observability only). Write `07-review.md`.
+6. Gate 3, merge (human).
 
 ## Lane: standard
 
@@ -91,10 +125,10 @@ Use it for new behavior inside one bounded context.
 5. `magenta:architect`: design note. Write `03-design.md` and ADRs if needed.
 6. Gate 2, scope and design (human): the stories, the acceptance criteria, and the design.
 7. `magenta:principal`: plan. Write `04-plan.md`. Give each maker task one scope.
-8. `magenta:qa`: write the acceptance tests first (red).
-9. Test lock (human): the human reviews the acceptance tests and runs `python3 magenta.py lock <repo> <ID>`. The makers start only after the lock exists.
-10. `magenta:engineer` and `magenta:frontend`: implement their tasks with TDD. Run them one after the other, or in parallel only when their scopes do not overlap.
-11. `magenta:qa`: verify. Write `07-qa-report.md`. Run `python3 magenta.py check-lock <repo> <ID>`: it must pass.
+8. `magenta:qa`: write the acceptance tests first (red), and their checks in `.magenta/checks/qa.yaml`.
+9. Checks gate and test lock: the conductor (or the Principal) locks the test files with the verify script (`lock <ID> <files>`). The human reviews the tests and approves the checks. The makers start only after the lock exists and the new checks fail (red).
+10. `magenta:engineer` and `magenta:frontend`: implement their tasks with TDD. Run them one after the other, or in parallel only when their scopes do not overlap. Each maker runs verify until its checks pass.
+11. `magenta:qa`: verify. Write `07-qa-report.md`. Run verify: all checks pass, and the locked tests did not change.
 12. `magenta:principal`: final review in a clean context, with the readiness items that apply. Write `07-review.md`.
 13. `magenta:principal`: retrospective. Write `08-retro.md`.
 14. Gate 3, merge (human).
@@ -102,7 +136,7 @@ Use it for new behavior inside one bounded context.
 ```mermaid
 flowchart LR
   T["Triage"] --> R["PRD review"] --> G1{"Gate 1"} --> A["Three Amigos"] --> D["Design"] --> G2{"Gate 2"}
-  G2 --> P["Plan"] --> AT["Acceptance tests"] --> L{"Test lock"} --> I["Implement"] --> V["Verify"] --> F["Final review"] --> RT["Retro"] --> G3{"Gate 3"}
+  G2 --> P["Plan"] --> AT["Acceptance tests"] --> L{"Checks gate<br/>and test lock"} --> I["Implement"] --> V["Verify"] --> F["Final review"] --> RT["Retro"] --> G3{"Gate 3"}
 ```
 
 ## Lane: full
@@ -120,10 +154,10 @@ All steps of the standard lane, with these changes:
 ## Playbook: bugfix
 
 1. Conductor: write the brief: the symptom, the expected and the actual behavior, the environment, and the evidence (logs and tickets in `UNTRUSTED` blocks).
-2. `magenta:qa`: reproduce the bug. Write the smallest failing test that shows it, at the lowest level that reproduces it. If QA cannot reproduce it, stop and ask the human for more data.
+2. `magenta:qa`: reproduce the bug. Write the smallest failing test that shows it, at the lowest level that reproduces it, and its check in `.magenta/checks/qa.yaml`. The conductor locks the test, and the human approves the check. If QA cannot reproduce it, stop and ask the human for more data.
 3. `magenta:engineer`: find the root cause with the skill `magenta:root-cause-analysis`. For a difficult bug, the conductor runs competing hypotheses (pattern P9): two or three investigators in parallel (`magenta:engineer`, `magenta:architect`, `magenta:qa`), read-only, each tries to prove or disprove one hypothesis.
 4. Plan gate (standard lane): the root cause, the fix plan, and the constraint ledger.
-5. `magenta:engineer`: fix the root cause, not the symptom. Use TDD. The reproduction test must pass. Keep the change small.
+5. `magenta:engineer`: fix the root cause, not the symptom. Use TDD. Run verify until the reproduction check passes. Keep the change small.
 6. `magenta:qa`: run all tests. Add tests for the edge cases near the root cause. Search for the same defect in similar code. Write `07-qa-report.md`.
 7. `magenta:principal`: final review with the constraint check. Add `magenta:architect` for a structural root cause.
 8. Done gate: the root cause, the fix, the tests, the risks, and the follow-ups that prevent the same class of bug.
@@ -135,14 +169,14 @@ Use it for latency, throughput, memory, CPU, and query cost. The result must mee
 1. Conductor: write the brief. Make the target measurable: the metric (for example p95 and p99 latency), the scope (endpoint or job), the load profile, the environment, and the current value with its source. Ask for the source of the current numbers (production metrics, a load test, or a local benchmark).
 2. In parallel, read-only:
    - `magenta:principal`: check that the target is realistic. Make a latency budget from the current numbers. Start the constraint ledger.
-   - `magenta:qa`: write the measurement plan in `05-test-plan.md` with the skill `magenta:performance-investigation`: tool, load profile, warm-up, duration, sample size, and the functional regression tests.
+   - `magenta:qa`: write the measurement plan in `05-test-plan.md` with the skill `magenta:performance-investigation`: tool, load profile, warm-up, duration, sample size, and the functional regression tests. Write the thresholds as checks in `.magenta/checks/qa.yaml` (set `full` for a load test).
    - `magenta:engineer`: trace the code path of the scope (handler, services, data access, remote calls, serialization). List the suspect hot spots with evidence.
    - `magenta:architect`: find the structural causes (N+1 queries, missing indexes, chatty remote calls, missing or wrong cache, large payloads). Give two or three options with trade-offs in `03-design.md`. Write the structural constraints (consistency, staleness, boundaries, ADRs).
 3. `magenta:qa`: measure the baseline with the plan. Write it in `07-qa-report.md`. If the system cannot run, ask the human for production metrics or a runnable environment.
 4. `magenta:engineer`: profile the scope under load. Find where the time goes. Update the latency budget with the evidence.
 5. Plan gate: the baseline, the latency budget, the options, the selected first option, and the constraint ledger.
 6. `magenta:engineer`: implement the option with the best gain for its risk. Keep the behavior the same. For two promising options, the conductor runs a tournament (pattern P8): two engineers in separate git worktrees, and QA measures both.
-7. `magenta:qa`: measure again under the same conditions. Run the functional tests. Compare the distributions, not only the averages.
+7. `magenta:qa`: measure again under the same conditions: run verify with the set `task`. Run the functional tests. Compare the distributions, not only the averages.
 8. Repeat steps 6 and 7 until the target is met or three rounds are done. Then stop. If the target is not possible inside the constraints, `magenta:architect` writes the options that need a larger change (for example a new cache layer or a data model change), and the conductor asks the human.
 9. `magenta:architect`: rule check of the change (ADRs, boundaries, contracts, consistency). `magenta:principal`: final review with the readiness items (cache invalidation, memory, observability of the target percentiles, rollback or feature flag) and the constraint check.
 10. Done gate: a table with the baseline, the result, and the target for each metric; what changed; the constraint check; the risks.
@@ -159,10 +193,10 @@ flowchart LR
 ## Playbook: refactor (improvement)
 
 1. Conductor: write the brief: the reason (readability, duplication, coupling, tech debt), the scope, and how to measure the improvement (for example complexity, duplication, dependency rules).
-2. `magenta:architect`: describe the target structure and the steps. Write a fitness function when the target is a structural rule.
-3. `magenta:qa`: write characterization tests that lock the current behavior of the scope (skill `magenta:safe-refactoring`).
+2. `magenta:architect`: describe the target structure and the steps. Write the target as checks in `.magenta/checks/architect.yaml` when it is a structural rule. These checks fail before the refactor.
+3. `magenta:qa`: write characterization tests that lock the current behavior of the scope (skill `magenta:safe-refactoring`), and their checks. These checks pass before the refactor. The conductor locks the tests, and the human approves the checks.
 4. Plan gate (standard lane).
-5. `magenta:engineer`: refactor in small steps. Each step keeps all tests green. Keep refactoring commits separate from behavior changes. No behavior change in this playbook.
+5. `magenta:engineer`: refactor in small steps. Each step keeps all checks green, except the target checks of the Architect, which become green at the end. Keep refactoring commits separate from behavior changes. No behavior change in this playbook.
 6. `magenta:qa`: run all tests and the characterization tests. Compare the behavior.
 7. `magenta:principal`: final review with the constraint check. Confirm that the improvement is measurable.
 8. Done gate.

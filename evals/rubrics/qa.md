@@ -9,3 +9,4 @@ Score each criterion: 0 (no), 1 (partly), 2 (yes).
 5. The test strategy selects the correct test levels and explains what not to test.
 6. The quality verdict agrees with the real quality of the change.
 7. Defect reports have steps, the expected result, and the actual result.
+8. Each success criterion has a check with a clear command, the correct set, and a reason. No check always passes.

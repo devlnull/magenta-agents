@@ -54,7 +54,7 @@ class MakerGuardTest(unittest.TestCase):
         self.assertIn("cannot write", self.decide("Write", file_path=".magenta/work/3-x/04-plan.md"))
         self.assertIn("cannot write", self.decide("Edit", file_path="src/test/acceptance/CancelTest.java"))
         self.assertIn("cannot write", self.decide("Write", file_path="docs/adr/0009-x.md"))
-        self.assertIn("Only the human", self.decide("Write", file_path=".magenta/work/3-x/acceptance.lock"))
+        self.assertIn("Only the verify script", self.decide("Write", file_path=".magenta/work/3-x/acceptance.lock"))
 
     def test_project_policy_negation_protects_acceptance_tests(self):
         (self.cwd / ".magenta").mkdir()

@@ -3,7 +3,28 @@
   "writes": [
     ".magenta/work/*/05-test-plan.md",
     ".magenta/work/*/07-qa-report.md",
-    ".magenta/work/*/acceptance/**"
+    ".magenta/work/*/acceptance/**",
+    ".magenta/checks/qa.yaml",
+    "test/**",
+    "tests/**",
+    "**/src/test/**",
+    "**/src/*Test/**",
+    "**/src/jmh/**",
+    "**/src/gatling/**",
+    "**/__tests__/**",
+    "**/*.test.*",
+    "**/*.spec.*",
+    "**/*_test.go",
+    "**/test_*.py",
+    "**/*_test.py",
+    "**/*Tests/**",
+    "**/e2e/**",
+    "perf/**",
+    "load-tests/**",
+    "!**/*ArchTest.*",
+    "!**/*ArchTests.*",
+    "!**/*ArchitectureTest.*",
+    "!**/*ArchitectureTests.*"
   ],
   "denies": [
     "**/.env*",
@@ -40,7 +61,10 @@
     "hey *",
     "vegeta *",
     "ab *",
-    "ghz *"
+    "ghz *",
+    "\"*\" \"*/verify.py\" run*",
+    "\"*\" \"*/verify.py\" list*",
+    "\"*\" \"*/verify.py\" status*"
   ],
   "shell_deny": []
 }

@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import json
 import shutil
+import sys
 from pathlib import Path
 
 import claude_code
@@ -52,11 +53,13 @@ def build(root: Path, out: Path) -> dict:
     return {"agents": sorted(agents), "skills": sorted(skills)}
 
 
-def install(dist: Path, home: Path, force: bool = False) -> list[str]:
+def install(dist: Path, home: Path, force: bool = False, python: str | None = None) -> list[str]:
     if not (dist / "agents").exists():
         raise SourceError("dist/gemini does not exist. Run: python3 magenta.py build")
     gemini = home / ".gemini"
     plan = [(p, gemini / "agents" / p.name) for p in sorted((dist / "agents").glob("*.md"))]
     plan.append((dist / "commands" / "magenta.toml", gemini / "commands" / "magenta.toml"))
     plan += [(p, home / ".agents" / "skills" / p.name) for p in sorted((dist / "skills").iterdir())]
-    return claude_code._copy_plan(plan, gemini / "magenta", None, force)
+    installed = claude_code._copy_plan(plan, gemini / "magenta", None, force)
+    claude_code.render_conductor(home / ".agents" / "skills" / source.CONDUCTOR, python or sys.executable)
+    return installed

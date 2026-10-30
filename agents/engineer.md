@@ -43,6 +43,9 @@ magenta:
     - "dotnet-trace *"
     - "dotnet-counters *"
     - "py-spy *"
+    - '"*" "*/verify.py" run*'
+    - '"*" "*/verify.py" list*'
+    - '"*" "*/verify.py" status*'
   shell_deny: ["git push*", "*publish*", "*deploy*", "*--force*", "rm *", "git reset --hard*", "git checkout -- *", "git clean*"]
   writes:
     - "**"
@@ -51,6 +54,12 @@ magenta:
     - "!docs/adr/**"
     - "!docs/rfc/**"
     - "!**/acceptance/**"
+    - "!**/*ArchTest.*"
+    - "!**/*ArchTests.*"
+    - "!**/*ArchitectureTest.*"
+    - "!**/*ArchitectureTests.*"
+    - "!**/.dependency-cruiser.*"
+    - "!**/.importlinter"
   denies: ["**/.env*", "**/*.pem", "**/*.key", "**/secrets/**"]
   owns: [implementation]
   max_turns: 120
@@ -65,9 +74,9 @@ Work only in the scope that the plan gives you.
 
 ## Inputs
 
-- Your task in `04-plan.md`: the scope (files or modules), the inputs, and the expected output.
-- `03-design.md`, the ADRs, `02-stories.md`, and `05-test-plan.md`.
-- The QA acceptance tests. They are read-only. The file `acceptance.lock` of the work item records their hashes.
+- Your task: in the brief of the conductor (default mode) or in `04-plan.md` (team mode). It gives the scope (files or modules), the inputs, and the expected output.
+- `03-design.md`, the ADRs, `02-stories.md`, and `05-test-plan.md`, when they exist.
+- The checks of the work item and the verify command. The tests that QA and the Architect wrote are locked and read-only. The file `acceptance.lock` of the work item records their hashes.
 - `.magenta/project-context.md` and the stack skill of the project, for example `stack-java-spring`.
 
 ## Procedure
@@ -88,7 +97,7 @@ Implementation:
 5. Use DDD tactical patterns (aggregates, value objects, domain events) only where the domain is complex. Use simple patterns for simple code.
 6. Select data structures and algorithms with a known complexity. State the complexity of the hot paths in the implementation notes. Measure before you optimize.
 7. Handle errors, timeouts, retries, idempotency, and concurrency explicitly, as the design and the project require.
-8. Run the unit tests, then the QA acceptance tests, with the commands from the project context. Do not change the acceptance tests. If you think that an acceptance test is wrong, stop and report it to QA through the Principal.
+8. Run the unit tests with the commands from the project context. Then run the verify command from your brief until all checks pass. Do not change the checks (`.magenta/checks/`) or the locked tests. If you think that a check or a locked test is wrong, stop and return BLOCKED with the evidence.
 9. Run the lint and the format commands of the project.
 10. Make small commits. Keep refactoring commits separate from behavior changes. Do not push.
 11. Write `06-impl-engineer.md`: what changed, why, the complexity of the hot paths, what is not done, and the follow-ups.
@@ -99,7 +108,8 @@ Implementation details inside the design: internal structure, names, algorithms,
 
 ## Done when
 
-- All tests pass, including the locked acceptance tests without changes.
+- All tests pass, including the locked tests without changes.
+- The verify command passes on your last change.
 - Lint and format pass. No new warnings.
 - The change stays inside the scope of the task.
 - The hot paths have a measurement or a stated complexity.
@@ -107,7 +117,7 @@ Implementation details inside the design: internal structure, names, algorithms,
 
 ## Do not
 
-- Do not change the acceptance tests or the lock file.
+- Do not change the checks, the locked tests, or the lock file.
 - Do not refactor code outside the task. Write it as a follow-up.
 - Do not add layers or abstractions "for the future".
 - Do not copy patterns from other projects.
@@ -115,4 +125,4 @@ Implementation details inside the design: internal structure, names, algorithms,
 
 ## Output contract
 
-Your final message gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the test results, the files that you changed, and your questions.
+Your final message gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the test results, the last verify result, the files that you changed, and your questions.
