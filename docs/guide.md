@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.8.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.9.0
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.8.0"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.9.0"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -163,13 +163,20 @@ checks:
 | `full` | `run --set full`, or `run --set task` when the check belongs to the active task |
 | `manual` | `run --set all` only |
 
-A check runs only after you approve its exact command, set, and work item. If an agent changes an approved check, the check fails until you approve the change. Your approval also seals the locked tests of the task. Approve when Magenta asks: in Claude Code, type the command that Magenta shows after `!`, or run:
+A check runs only after you approve its exact command, set, and work item. If an agent changes an approved check, the check fails until you approve the change. Your approval also seals the locked tests of the task.
+
+**Approve in Claude Code.** At the checks gate, Magenta shows the checks as a table and requests the approval. Claude Code opens its permission dialog for the approve command, with the list of the checks. Select **Yes** to approve them, or **No** to ask for changes. You type nothing. No model can approve: the guard blocks the subagents, and the dialog needs you.
+
+Approve only commands that you trust. A check runs on your computer. Do not select "don't ask again" for the approve command.
+
+`magenta.py init` adds two ask rules to `.claude/settings.local.json`. With them, Claude Code shows the dialog in every permission mode, also with `--dangerously-skip-permissions`. Without them, in that mode, Magenta blocks the approval and shows you the command to run in a terminal.
+
+**Approve in a terminal** (OpenCode, Codex CLI, Gemini CLI, or when you prefer it), in the repository:
 
 ```bash
-python3 ~/.magenta-agents/magenta.py verify approve --repo .
+python3 ~/.magenta-agents/magenta.py verify list      # read the checks
+python3 ~/.magenta-agents/magenta.py verify approve   # approve all new and changed checks
 ```
-
-Approve only commands that you trust. A check runs on your computer.
 
 ## Use one role
 

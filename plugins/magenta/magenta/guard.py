@@ -203,11 +203,20 @@ def main(argv=None) -> int:
     if argv[0] == "--auto":
         agent = agent_id_from_type(event.get("agent_type"))
         if agent is None:  # not a Magenta agent: only the verify state is protected
-            reason = protect.decide(event if isinstance(event, dict) else {})
-            if reason:
-                print(f"Magenta: {reason}", file=sys.stderr)
-                return 2
-            return 0
+            event = event if isinstance(event, dict) else {}
+            kind, reason = protect.evaluate(event)
+            if kind == "ask":
+                try:  # the plugin has verify.py next to this file: show what the human approves
+                    import verify
+                    reason += verify.approval_details(event)
+                except Exception:
+                    pass
+            code, out, err = protect.hook_output(kind, reason)
+            if out:
+                print(out)
+            if err:
+                print(err, file=sys.stderr)
+            return code
     else:
         agent = argv[0]
     try:

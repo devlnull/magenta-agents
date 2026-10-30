@@ -10,7 +10,8 @@ because a check is a command that runs on the computer of the human. The approva
 Commands:
   verify.py run [--set quick|task|full|all] [--only ID,ID]  run the approved checks, record the result
   verify.py list | status                                 show the checks, the active task, the result
-  verify.py approve [ID ...]                              (human only) approve checks and seal test locks
+  verify.py approve [ID ...]                              (human only) approve checks and seal test locks;
+                                                          in Claude Code, the permission dialog is the approval
   verify.py start <work-item> [--session ID] [--force]    (conductor) start or resume a task
   verify.py finish [--force]                              (conductor) close the task; --force: human only
   verify.py lock <work-item> [FILE ...]                   lock the test files of a work item
@@ -648,8 +649,10 @@ def summary(outcome: dict) -> str:
         lines += ["", f"These approved checks or locks were removed: {', '.join(removed)}. "
                       "Only the human confirms a removal."]
     if pending or changed or removed:
-        lines += ["", "The human reviews the commands (`list`) and approves them. In Claude Code, the human types "
-                      "this line after `!`, or runs it in a terminal:", f"  {self_command()} approve"]
+        ids = " ".join([c["id"] for c in pending] + changed + removed)
+        lines += ["", "To approve: show the human the checks (`list`), then run the approve command below. Claude Code "
+                      "asks the human to confirm it. That confirmation is the approval. (In a terminal, the human can "
+                      "run the same command.)", f"  {self_command()} approve {ids}"]
     if outcome.get("changed_files"):
         lines += ["", "The code changed during the run (by a check, or by another process). These results are for "
                       "the code before the run. Run verify again. If a check writes files, add them to .gitignore."]
@@ -678,8 +681,8 @@ def hook(event: dict) -> tuple[int, str]:
     if result["pending_linked"]:
         failing = result["failed"] + result["invalid"]
         return 0, (f"Magenta: {len(result['pending_linked'])} checks of the task {item} wait for your approval: "
-                   f"{', '.join(result['pending_linked'])}. Read them, then approve them with: "
-                   f"{self_command()} approve"
+                   f"{', '.join(result['pending_linked'])}. Say \"approve\" to the agent, then confirm the command "
+                   "in the dialog of Claude Code."
                    + (f"\nThese checks fail on the current code: {', '.join(failing)}." if failing else ""))
     if result["status"] == "NO CHECKS":
         note = " Some checks wait for the approval of the human." if result["pending"] else ""
@@ -753,8 +756,38 @@ def hook_command(mode: str) -> str:
     return f'[ ! -f "{script}" ] || {self_command()} {mode}'
 
 
+def install_rules(repo: Path) -> Path:
+    """Add the ask rules to `.claude/settings.local.json`: Claude Code asks the human before approve or --force,
+    in every permission mode. The rules do not depend on where Magenta is installed (plugin or user level)."""
+    path = repo / SETTINGS
+    data = _settings(path)
+    permissions = data.get("permissions") if isinstance(data.get("permissions"), dict) else {}
+    ask = [r for r in (permissions.get("ask") or []) if isinstance(r, str)]
+    permissions["ask"] = ask + [r for r in protect.ASK_RULES if r not in ask]
+    data["permissions"] = permissions
+    _write_json(path, data)
+    git_exclude(repo, SETTINGS.as_posix())
+    return path
+
+
+def _remove_rules(data: dict) -> int:
+    permissions = data.get("permissions")
+    if not isinstance(permissions, dict) or not isinstance(permissions.get("ask"), list):
+        return 0
+    kept = [r for r in permissions["ask"] if r not in protect.ASK_RULES]
+    removed = len(permissions["ask"]) - len(kept)
+    if kept:
+        permissions["ask"] = kept
+    else:
+        permissions.pop("ask")
+    if not permissions:
+        data.pop("permissions")
+    return removed
+
+
 def install_hook(repo: Path, protect_main: bool = True) -> Path:
-    """Add the Stop hook (and the protect hook) to `.claude/settings.local.json` of the repository."""
+    """Add the Stop hook, the protect hook, and the ask rules to `.claude/settings.local.json` of the repository."""
+    install_rules(repo)
     path = repo / SETTINGS
     data = _settings(path)
     hooks = data.get("hooks") if isinstance(data.get("hooks"), dict) else {}
@@ -782,6 +815,7 @@ def uninstall_hook(repo: Path) -> int:
         data["hooks"] = hooks
     else:
         data.pop("hooks", None)
+    removed += _remove_rules(data)
     _write_json(path, data)
     return removed
 
@@ -828,13 +862,43 @@ def _run_hook(mode: str) -> int:
             print(json.dumps({"systemMessage": text}))
         return code
     try:
-        reason = protect.decide(_read_event())
+        event = _read_event()
+        kind, reason = protect.evaluate(event)
+        if kind == "ask":
+            reason += approval_details(event)
     except Exception:  # a broken guardrail must not block the session
-        reason = None
-    if reason:
-        print(f"Magenta: {reason}", file=sys.stderr)
-        return 2
-    return 0
+        kind, reason = "allow", ""
+    code, out, err = protect.hook_output(kind, reason)
+    if out:
+        print(out)
+    if err:
+        print(err, file=sys.stderr)
+    return code
+
+
+def approval_details(event: dict, limit: int = 12) -> str:
+    """The checks and locks that an approve command approves, for the permission dialog of Claude Code."""
+    command = protect.unquoted(str((event.get("tool_input") or {}).get("command") or ""))
+    if " approve" not in f" {command}":
+        return ""
+    words = command.split()
+    ids = [w for w in words[words.index("approve") + 1:] if not w.startswith("-")] if "approve" in words else []
+    repo = find_repo(Path(event.get("cwd") or os.getcwd()))
+    approved = approvals(repo)
+    checks = load_checks(repo)
+    lines = []
+    for c in checks:
+        status = check_status(c, approved)
+        if (ids and c["id"] in ids) or (not ids and status != "approved"):
+            note = " (CHANGED)" if status == "changed" else ""
+            lines.append(f"- {c['id']}{note} [{c['set']}]: {c['command']}" + (f" (in {c['cwd']})" if c["cwd"] else ""))
+    lines += [f"- {i}: seal the locked tests" for i in ids if i.startswith("lock.")]
+    if not ids:
+        lines += [f"- lock.{n}: seal the locked tests" for n in _lock_files(repo)]
+    if not lines:
+        return ""
+    more = f"\n... and {len(lines) - limit} more" if len(lines) > limit else ""
+    return "\nChecks to approve (each one runs on your computer):\n" + "\n".join(lines[:limit]) + more
 
 
 def _print_list(repo: Path) -> None:

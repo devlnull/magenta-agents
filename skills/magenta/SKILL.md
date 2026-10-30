@@ -11,7 +11,7 @@ argument-hint: "[--team | --lead] <the task in your own words>"
 allowed-tools:
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run*)
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start *)
-  - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" finish*)
+  - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" finish)
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list*)
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" status*)
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" lock *)
@@ -49,7 +49,7 @@ If the request starts with `--lead`, use the default mode, also when a trigger a
 ## Rules for the conductor
 
 1. Do not change production code or tests yourself. The lead changes the code. QA writes the tests. QA, the Architect, and the specialist reviewers (SRE, Security, Database) write the checks that define "done".
-2. Only the human approves checks and closes a task with failing checks. Do not run `approve` or a command with `--force`. Do not write `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, or `acceptance.lock`.
+2. Only the human approves checks and closes a task with failing checks. You may request `approve` or a command with `--force`, but Claude Code asks the human to confirm it: that confirmation is the decision of the human. Never try to avoid the dialog. Do not write `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, or `acceptance.lock`.
 3. Never make a check pass with a change to the check or to a locked test. If a check is wrong, its owner changes it, and the human approves it again.
 4. Use the smallest team that covers the risks. Each agent has a reason.
 5. Each statement in your report has evidence: a verify result, a measurement, or a file reference.
@@ -87,7 +87,11 @@ Make "done" executable before the work starts.
    - `database` (`database.yaml`): migration lint, migration tests, query checks. It also writes the migration plan in `03-data.md` for the lead.
    Collect the test requests of the specialists and give them to `qa`. QA writes these tests before the lock.
 3. Lock the test files that QA and the Architect wrote: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" lock <ID> <file> <file> ...`.
-4. **Checks gate.** Run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list`. Show the human: the success criteria, the new checks with their commands, the locked test files, and the plan in three lines. Ask the human to approve the checks with the approve command that verify shows. In Claude Code, the human types it after `!`. The approval also seals the test lock. Stop and wait. In the default mode, this gate is also the plan gate.
+4. **Checks gate.** Run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list`. Show the human, as a short table: the success criteria, the new checks with their commands, the locked test files, and the plan in three lines. Then request the approval: run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" approve <id> <id> ... lock.<ID>` with the ids of the new checks and the lock. Claude Code shows its permission dialog with the checks. The human confirms or refuses there. In the default mode, this gate is also the plan gate.
+   - If the human confirms, the checks are approved, and the test lock is sealed. Continue.
+   - If the human refuses, stop. Ask what to change. The owner of the check changes it, and you request the approval again.
+   - If the call is blocked because Claude Code cannot ask (bypass mode), show the human the command from the message, and stop. The human runs it in a terminal.
+   - In a tool without a permission dialog (OpenCode, Codex CLI, Gemini CLI), show the human the command, and stop. The human runs it.
 5. After the approval, run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run --set task`. The set `task` has the quick checks and all checks of this work item:
    - The new checks for a bug, a performance target, or new behavior must fail now (red). If one passes, it does not test the problem. Send it back to QA.
    - Characterization tests must pass.
@@ -133,7 +137,7 @@ Give the human:
 
 Then ask for the done gate: merge (the human does it), more work, or stop.
 
-- **Merge or stop:** run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" finish`. It refuses when the code changed and the checks do not pass. Then tell the human. Only the human can close such a task, with the command that `finish` shows.
+- **Merge or stop:** run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" finish`. It refuses when the code changed and the checks do not pass. Then tell the human. If the human wants to close the task anyway, run the `finish --force` command that `finish` shows: Claude Code asks the human to confirm it.
 - **More work:** do not finish. Continue with Step 4.
 
 ## Team mode

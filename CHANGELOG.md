@@ -4,6 +4,13 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-10-30
+
+### Changed
+
+- **Approve checks in the permission dialog of Claude Code.** At the checks gate, the conductor shows the checks and requests `approve` with their ids. Claude Code asks you to confirm, and the dialog lists each check and its command. You do not type a command. The same dialog confirms `--force` (close or replace a failing task). Subagents still cannot request an approval.
+- `magenta.py init` adds ask rules to `.claude/settings.local.json` (also with `--no-hook`), so that Claude Code asks in every permission mode. Without the rules, in bypass mode, Magenta blocks the approval and shows the command to run in a terminal. `unhook` and `uninstall` remove the rules.
+
 ### Fixed
 
 - The guard and the protect hook close shell bypasses: git options that write a file or run a program, a verify path that is not a real `verify.py` outside the project, quoted secret paths, and quoted or abbreviated human-only words. `verify.py` rejects abbreviated options.
@@ -83,7 +90,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/devlnull/magenta-agents/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/devlnull/magenta-agents/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/devlnull/magenta-agents/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/devlnull/magenta-agents/compare/v0.6.0...v0.7.0

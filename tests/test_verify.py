@@ -374,13 +374,14 @@ class HookTest(RepoCase):
         self.assertEqual(stop[0], "echo mine")
         self.assertTrue(stop[1].startswith('[ ! -f "') and stop[1].endswith('verify.py" hook'))
         self.assertEqual(len(data["hooks"]["PreToolUse"]), 1)
-        self.assertEqual(data["permissions"], {"allow": ["Bash(ls:*)"]})
+        self.assertEqual(data["permissions"], {"allow": ["Bash(ls:*)"], "ask": list(protect.ASK_RULES)})
         self.assertEqual(verify.hook_status(self.repo), "installed")
         self.assertIn(".claude/settings.local.json",
                       (self.repo / ".git/info/exclude").read_text(encoding="utf-8").split())
-        self.assertEqual(verify.uninstall_hook(self.repo), 2)
+        self.assertEqual(verify.uninstall_hook(self.repo), 2 + len(protect.ASK_RULES))
         data = json.loads((self.repo / ".claude/settings.local.json").read_text(encoding="utf-8"))
         self.assertEqual(data["hooks"], {"Stop": [{"hooks": [{"type": "command", "command": "echo mine"}]}]})
+        self.assertEqual(data["permissions"], {"allow": ["Bash(ls:*)"]})
         write(self.repo / ".claude/settings.local.json", "{ not json")
         with self.assertRaises(verify.VerifyError):
             verify.install_hook(self.repo)
@@ -533,6 +534,63 @@ class InitAndEvalsTest(RepoCase):
         self.assertIn("| bug | default | 2 | 50% | 0.50 | 2.00 | 20.00 |", report)
         self.assertIn("| all | plain | 1 | 50% | 2.00 | 1.00 | 10.00 |", report)
         self.assertIn("No runs yet", eval_summary.report([]))
+
+
+
+class ApprovalDialogTest(RepoCase):
+    """Approve and --force: the main session gets the permission dialog of Claude Code; subagents are blocked."""
+
+    def event(self, command, mode="default"):
+        return {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(self.repo), "permission_mode": mode}
+
+    def run_protect(self, script, event, *args):
+        out = subprocess.run([sys.executable, str(ROOT / "adapters" / script), *args], input=json.dumps(event),
+                             capture_output=True, text=True, cwd=self.repo)
+        return out.returncode, out.stdout, out.stderr
+
+    def test_main_session_gets_the_dialog(self):
+        self.checks("qa.yaml", [{"id": "qa.b", "command": self.has_b()}])
+        approve = f'"{Path(sys.executable).as_posix()}" "/x/verify.py" approve qa.b'
+        kind, _ = protect.evaluate(self.event(approve))
+        self.assertEqual(kind, "ask")
+        self.assertEqual(protect.evaluate(self.event('"/p" "/x/verify.py" finish --force'))[0], "ask")
+        self.assertEqual(protect.evaluate(self.event('"/p" "/x/verify.py" uninstall-hook'))[0], "deny")
+        self.assertEqual(protect.evaluate(self.event('"/p" "/x/verify.py" run'))[0], "allow")
+        for script, args in (("verify.py", ["protect"]), ("guard.py", ["--auto"])):
+            code, out, err = self.run_protect(script, self.event(approve), *args)
+            self.assertEqual(code, 0, (script, err))
+            decision = json.loads(out)["hookSpecificOutput"]
+            self.assertEqual(decision["permissionDecision"], "ask")
+            self.assertIn("qa.b", decision["permissionDecisionReason"])  # the dialog lists the checks
+        self.assertIsNotNone(protect.decide(self.event(approve)))  # subagents: blocked
+
+    def test_bypass_mode_needs_the_ask_rules(self):
+        approve = '"/p" "/x/verify.py" approve'
+        kind, reason = protect.evaluate(self.event(approve, "bypassPermissions"))
+        self.assertEqual(kind, "deny")
+        self.assertIn("terminal", reason)
+        verify.install_rules(self.repo)
+        self.assertEqual(protect.evaluate(self.event(approve, "bypassPermissions"))[0], "ask")
+        data = json.loads((self.repo / ".claude/settings.local.json").read_text(encoding="utf-8"))
+        self.assertEqual(data["permissions"]["ask"], list(protect.ASK_RULES))
+        verify.install_rules(self.repo)  # idempotent
+        data = json.loads((self.repo / ".claude/settings.local.json").read_text(encoding="utf-8"))
+        self.assertEqual(len(data["permissions"]["ask"]), len(protect.ASK_RULES))
+
+    def test_init_adds_the_ask_rules_also_without_hooks(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            created = magenta.init_repo(self.repo, home=Path(tmp), hook=False, rules=True)
+            self.assertTrue(any("ask rules" in c for c in created), created)
+            self.assertTrue(protect._ask_rules_installed(self.repo))
+            magenta.unhook_all(Path(tmp))
+            self.assertFalse(protect._ask_rules_installed(self.repo))
+
+    def test_conductor_requests_the_approval(self):
+        body = (ROOT / "skills" / "magenta" / "SKILL.md").read_text(encoding="utf-8")
+        meta, _ = split_front_matter(body)
+        self.assertFalse(any("approve" in t or t.rstrip(")").endswith("*") and "finish" in t
+                             for t in meta["allowed-tools"]))
+        self.assertIn("approve <id> <id> ... lock.<ID>", body)
 
 
 if __name__ == "__main__":

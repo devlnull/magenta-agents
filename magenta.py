@@ -154,11 +154,10 @@ The template `checks` in the skill `magenta-templates` shows the format.
 | database.yaml | Database Engineer (migration lint, migration and query tests) |
 | human.yaml | you |
 
-A check runs only after you approve its exact command:
+A check runs only after you approve its exact command. In Claude Code, the conductor requests the
+approval, and Claude Code asks you in its permission dialog. In a terminal, in the repository:
 
-    python3 magenta.py verify approve --repo <repo>
-
-In Claude Code, the conductor shows the approve command. Type it after `!`.
+    python3 magenta.py verify approve
 """
 
 
@@ -199,7 +198,7 @@ def unhook_all(home: Path) -> list[str]:
     return done
 
 
-def init_repo(repo: Path, home: Path | None = None, hook: bool = False) -> list[str]:
+def init_repo(repo: Path, home: Path | None = None, hook: bool = False, rules: bool = False) -> list[str]:
     if not repo.is_dir():
         raise SystemExit(f"error: {repo} is not a folder")
     base = repo / ".magenta"
@@ -226,6 +225,14 @@ def init_repo(repo: Path, home: Path | None = None, hook: bool = False) -> list[
             with exclude.open("a", encoding="utf-8") as f:
                 f.write(("" if current.endswith("\n") or not current else "\n") + ".magenta/\n")
             created.append(f"{exclude} (+ .magenta/)")
+    if rules:  # the approval dialog of Claude Code in all permission modes (plugin and user level)
+        try:
+            checks_verify.install_rules(repo)
+            remember_hooked_repo(home or Path.home(), repo)
+            created.append(f"{repo / '.claude' / 'settings.local.json'} (ask rules: Claude Code asks you before "
+                           "approve and --force)")
+        except checks_verify.VerifyError as exc:
+            created.append(f"note: the ask rules were not added: {exc}")
     if hook:
         script = installed_verify(home or Path.home())
         if not script.exists():
@@ -520,7 +527,7 @@ def main(argv=None) -> int:
         print("The acceptance tests agree with the lock.")
         return 0
     if args.cmd == "init":
-        created = init_repo(args.repo.resolve(), home=args.home, hook=not args.no_hook)
+        created = init_repo(args.repo.resolve(), home=args.home, hook=not args.no_hook, rules=True)
         for c in created:
             print(c if c.startswith("note:") else f"created {c}")
         print("Next: cd into the repository, start Claude Code, and type: /magenta <task>. "

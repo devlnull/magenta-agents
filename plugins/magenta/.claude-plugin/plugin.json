@@ -1,6 +1,6 @@
 {
   "name": "magenta",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Magenta: a team of role-based AI agents (product, architecture, engineering, QA, SRE, platform, security, database, docs). The rules become checks, and a task is done when the checks pass.",
   "author": {
     "name": "AMQ",

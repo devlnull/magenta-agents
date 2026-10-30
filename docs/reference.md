@@ -19,10 +19,10 @@ All commands run with `python3 magenta.py <command>` from the Magenta folder (fo
 
 | Command | Effect |
 |---|---|
-| `init <repo> [--no-hook]` | Make `.magenta/`, keep it out of git, and add the Claude Code hooks. |
+| `init <repo> [--no-hook]` | Make `.magenta/`, keep it out of git, add the ask rules for the approval dialog, and add the Claude Code hooks (not with `--no-hook`). |
 | `unhook <repo>` | Remove the Claude Code hooks of Magenta. |
 | `verify list --repo <repo>` | Show the checks, the test locks, and their approval. |
-| `verify approve [ID ...] --repo <repo>` | Approve new and changed checks, and seal the test locks. Only the human runs it. |
+| `verify approve [ID ...] --repo <repo>` | Approve new and changed checks, and seal the test locks. Only the human decides: in Claude Code, through the permission dialog; otherwise in a terminal. |
 | `verify run [--set quick\|task\|full\|all] [--only ID,ID] --repo <repo>` | Run the approved checks and record the result. |
 | `verify status --repo <repo>` | Show the active task and the result for the current code. |
 | `lock <repo> <work-item> [--files FILE ...]` | Lock the tests of a work item. |
@@ -79,7 +79,7 @@ The guard blocks:
 - writes outside the files of the agent,
 - access to secret paths (`.env`, keys, `secrets/`),
 - shell commands outside the allowlist of the agent, and all shell operators (`;`, `|`, `>`, and more),
-- the approve command and `--force`,
+- for subagents: the approve command and `--force` (in the main session, Claude Code asks you instead),
 - writes to `.magenta/policy.json`, `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, `acceptance.lock`, `.claude/`, and `.git/`.
 
 The guard and the hooks are guardrails against mistakes. They are not a sandbox. The OpenCode, Codex CLI, and Gemini CLI adapters get bug fixes, but no new features ([ADR-0012](adr/0012-verify-first.md)).

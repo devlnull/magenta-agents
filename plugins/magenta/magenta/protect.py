@@ -7,11 +7,15 @@ This rule stops the model in the main session from:
   2. naming these files in a shell command, or deleting `.magenta/` (rm, git clean -x),
   3. running the commands that only the human runs: approve, --force, and the removal of the hooks.
 
-The human can still approve checks: in a terminal, or with `!` in Claude Code (a command that
-the human types does not go through the hooks). This rule is a guardrail, not a sandbox.
+`approve` and `--force` are decisions of the human. In the main session, `evaluate` answers "ask" for them:
+Claude Code shows its permission dialog, and the human confirms or refuses there. Subagents never get the
+dialog (`decide` blocks them). When Claude Code cannot ask (bypass mode without the ask rules of
+`magenta.py init`), the call is blocked, and the human approves in a terminal.
+This rule is a guardrail, not a sandbox.
 """
 from __future__ import annotations
 
+import json
 import re
 import shlex
 import sys
@@ -25,6 +29,10 @@ _STATE_IN_SHELL = re.compile(r"\.magenta[/\\][^\s'\";|&<>]*?(" + "|".join(re.esc
                              re.IGNORECASE if CASE_INSENSITIVE else 0)
 _HUMAN_ONLY = re.compile(r"(verify\.py|magenta\.py)\b.*(?:^|\s)(approve|uninstall-hook|unhook|uninstall|--fo(?:r(?:ce?)?)?)"
                          r"(?:\s|=|$)")
+_ASK_WORDS = {"approve"}  # and --force with its abbreviations; the other human-only words are always blocked
+# Permission rules that `magenta.py init` adds. Claude Code asks for a matching command in every mode.
+ASK_RULES = ("Bash(*verify.py*approve*)", "Bash(*verify.py*--force*)", "Bash(*magenta.py*approve*)",
+             "Bash(*magenta.py*--force*)")
 _DELETE_STATE = re.compile(r"(\brm\b[^|;&]*\.magenta(?:[/\\\s'\"]|$))|(\bgit\s+clean\b[^|;&]*\s-[A-Za-z]*[xX])")
 
 
@@ -53,16 +61,62 @@ def _uses_magenta(cwd) -> bool:
         return False
 
 
+def _ask_rules_installed(cwd) -> bool:
+    """True if the settings of the project or the user have the ask rules of Magenta."""
+    try:
+        here = Path(cwd or ".").resolve()
+    except OSError:
+        return False
+    folders = [here, *list(here.parents)[:8]]
+    files = [f / ".claude" / n for f in folders for n in ("settings.local.json", "settings.json")]
+    files.append(Path.home() / ".claude" / "settings.json")
+    for path in files:
+        try:
+            rules = json.loads(path.read_text(encoding="utf-8")).get("permissions", {}).get("ask", [])
+        except (OSError, ValueError, AttributeError):
+            continue
+        if isinstance(rules, list) and ASK_RULES[0] in rules:
+            return True
+    return False
+
+
+def evaluate(event: dict) -> tuple[str, str]:
+    """For the main session: ("allow" | "ask" | "deny", reason). Approve and --force ask the human."""
+    tool_input = event.get("tool_input") or {}
+    if event.get("tool_name") == "Bash":
+        human = _HUMAN_ONLY.search(unquoted(str(tool_input.get("command") or "")))
+        if human and (human.group(2) in _ASK_WORDS or human.group(2).startswith("--fo")):
+            word = "approve the checks" if human.group(2) == "approve" else f"run `{human.group(2)}`"
+            if event.get("permission_mode") == "bypassPermissions" and not _ask_rules_installed(event.get("cwd")):
+                return "deny", (f"only the human can {word}, and Claude Code runs without permission prompts, so it "
+                                "cannot ask the human. Show the human this command to run in a terminal. To get the "
+                                "approval dialog in all modes, the human runs `magenta.py init` for this repository "
+                                "one time.")
+            return "ask", f"Magenta: only you can {word}. Allow this command only if you agree."
+    reason = decide(event)
+    return ("deny", reason) if reason else ("allow", "")
+
+
+def hook_output(kind: str, reason: str) -> tuple[int, str, str]:
+    """(exit code, stdout, stderr) for a Claude Code PreToolUse hook."""
+    if kind == "ask":
+        return 0, json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
+                                                     "permissionDecisionReason": reason}}), ""
+    if kind == "deny":
+        return 2, "", f"Magenta: {reason}"
+    return 0, "", ""
+
+
 def decide(event: dict) -> str | None:
-    """Return a reason to block the tool call, or None."""
+    """Return a reason to block the tool call, or None. For subagents: they never approve or force."""
     tool = event.get("tool_name", "")
     tool_input = event.get("tool_input") or {}
     if tool == "Bash":
         command = str(tool_input.get("command") or "")
         human = _HUMAN_ONLY.search(unquoted(command))
         if human:
-            return (f"only the human runs `{human.group(2)}`. Show the human the command and ask the human to run it "
-                    "(in a terminal, or with `!` in Claude Code).")
+            return (f"only the human runs `{human.group(2)}`. Return the command to the conductor, which asks the "
+                    "human to confirm it.")
         if _DELETE_STATE.search(command) and _uses_magenta(event.get("cwd")):
             return ("do not delete `.magenta/` or run `git clean -x`. It holds the checks, the approvals, and the "
                     "work items. Ask the human.")

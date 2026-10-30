@@ -48,7 +48,7 @@ The conductor asks QA (and the Architect, when the structure is at risk) to writ
 ## 5. Your duties as the human
 
 - Approve or reject each gate. Only you can approve a gate.
-- Read the checks that the agents propose, then approve them. Only you can approve a check. In Claude Code, type the approve command that Magenta shows after `!`, or run `python3 ~/.magenta-agents/magenta.py verify approve --repo .`. Approve only commands that you trust: a check runs on your computer.
+- Read the checks that the agents propose, then approve them. Only you can approve a check. In Claude Code, Magenta requests the approval, and Claude Code shows a permission dialog: select **Yes** or **No**. In a terminal: `python3 ~/.magenta-agents/magenta.py verify approve`. Approve only commands that you trust: a check runs on your computer.
 - Read the final review before you merge. The agents do not push or merge.
 - Report wrong behavior: add a line to `.magenta/lessons.md` or open an issue in the magenta-agents repository.
 
