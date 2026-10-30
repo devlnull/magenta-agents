@@ -13,6 +13,7 @@ the human types does not go through the hooks). This rule is a guardrail, not a 
 from __future__ import annotations
 
 import re
+import shlex
 import sys
 from pathlib import Path, PurePath
 
@@ -22,8 +23,17 @@ PATH_KEYS = ("file_path", "notebook_path", "path")
 CASE_INSENSITIVE = sys.platform in ("darwin", "win32")
 _STATE_IN_SHELL = re.compile(r"\.magenta[/\\][^\s'\";|&<>]*?(" + "|".join(re.escape(n) for n in STATE_NAMES) + ")",
                              re.IGNORECASE if CASE_INSENSITIVE else 0)
-_HUMAN_ONLY = re.compile(r"(verify\.py|magenta\.py)\b.*(?:^|\s)(approve|uninstall-hook|unhook|--force)(?:\s|=|$)")
+_HUMAN_ONLY = re.compile(r"(verify\.py|magenta\.py)\b.*(?:^|\s)(approve|uninstall-hook|unhook|uninstall|--fo(?:r(?:ce?)?)?)"
+                         r"(?:\s|=|$)")
 _DELETE_STATE = re.compile(r"(\brm\b[^|;&]*\.magenta(?:[/\\\s'\"]|$))|(\bgit\s+clean\b[^|;&]*\s-[A-Za-z]*[xX])")
+
+
+def unquoted(command: str) -> str:
+    """The command with the quotes removed, so that `'approve'` is `approve`. A parse error removes the quote marks."""
+    try:
+        return " ".join(shlex.split(command))
+    except ValueError:
+        return command.replace('"', " ").replace("'", " ")
 
 
 def _is_state_path(raw: str) -> bool:
@@ -49,7 +59,7 @@ def decide(event: dict) -> str | None:
     tool_input = event.get("tool_input") or {}
     if tool == "Bash":
         command = str(tool_input.get("command") or "")
-        human = _HUMAN_ONLY.search(command)
+        human = _HUMAN_ONLY.search(unquoted(command))
         if human:
             return (f"only the human runs `{human.group(2)}`. Show the human the command and ask the human to run it "
                     "(in a terminal, or with `!` in Claude Code).")

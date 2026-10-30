@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import argparse
 import datetime as dt
+import functools
 import hashlib
 import json
 import os
@@ -883,11 +884,12 @@ def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else list(argv)
     if argv in (["hook"], ["protect"]):  # hooks never go through argparse: its errors exit with 2 (block)
         return _run_hook(argv[0])
-    parser = argparse.ArgumentParser(prog="verify", description="Magenta checks: run, approve, and enforce them")
+    parser = argparse.ArgumentParser(prog="verify", description="Magenta checks: run, approve, and enforce them",
+                                     allow_abbrev=False)
     parser.add_argument("--repo", type=Path, default=None, help="the repository (default: the git root of this folder)")
     shared = argparse.ArgumentParser(add_help=False)
     shared.add_argument("--repo", type=Path, default=argparse.SUPPRESS, help="the repository")
-    sub = parser.add_subparsers(dest="cmd")
+    sub = parser.add_subparsers(dest="cmd", parser_class=functools.partial(argparse.ArgumentParser, allow_abbrev=False))
     p_run = sub.add_parser("run", parents=[shared], help="run the approved checks")
     p_run.add_argument("--set", choices=RUN_SETS, default="quick")
     p_run.add_argument("--only", default="", help="comma-separated check ids")

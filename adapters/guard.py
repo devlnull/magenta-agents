@@ -20,8 +20,9 @@ import fnmatch
 import json
 import os
 import re
+import shlex
 import sys
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import path_matches  # noqa: E402
@@ -33,6 +34,7 @@ WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PATH_KEYS = ("file_path", "notebook_path", "path")
 HARD_DENY_WRITES = [".magenta/policy.json", "**/acceptance.lock", ".magenta/checks.lock", ".magenta/verify-state.json",
                     ".magenta/active.json", ".claude/**", ".git/**", ".opencode/**"]
+PYTHON = re.compile(r"(python3?(\.\d+)?|py)(\.exe)?")
 SHELL_OPERATORS = (";", "&", "|", ">", "<", "`", "$(", "\n")
 # macOS and Windows file systems ignore case by default: compare paths without case there.
 CASE_INSENSITIVE = sys.platform in ("darwin", "win32")
@@ -55,6 +57,45 @@ def agent_id_from_type(agent_type) -> str | None:
         name = name[len(PLUGIN_SCOPE):]
         return name[len(PREFIX):] if name.startswith(PREFIX) else name
     return name[len(PREFIX):] if name.startswith(PREFIX) else None
+
+
+def _long_option(token: str, option: str, shortest: int = 4) -> bool:
+    """True if the token is the long option, or an abbreviation of it that git accepts, with or without `=value`."""
+    name = token.split("=", 1)[0]
+    return token.startswith("--") and len(name) >= shortest and option.startswith(name)
+
+
+def _unsafe_git_option(tokens) -> str | None:
+    """Return the git option that writes a file or starts a program, or None. The git read commands stay allowed."""
+    if len(tokens) < 2 or tokens[0] != "git":
+        return None
+    sub, options = tokens[1], tokens[2:]
+    if sub == "difftool":
+        return sub
+    for token in options:
+        short = token.startswith("-") and not token.startswith("--")
+        if _long_option(token, "--output-directory"):
+            return token
+        if sub == "format-patch" and short and "o" in token:
+            return token
+        if sub == "grep" and (_long_option(token, "--open-files-in-pager") or (short and "O" in token)):
+            return token
+    return None
+
+
+def _is_verify_command(tokens, cwd: Path) -> bool:
+    """True for `<python> <path>/verify.py <command> ...` when the script is outside the project folder."""
+    if len(tokens) < 3 or not PYTHON.fullmatch(re.split(r"[\\/]", tokens[0])[-1].lower()):
+        return False
+    script = tokens[1]
+    if re.split(r"[\\/]", script)[-1].lower() != "verify.py":
+        return False
+    if PureWindowsPath(script).drive and os.name != "nt":
+        return True
+    target = Path(script).expanduser()
+    target = _norm((target if target.is_absolute() else cwd / target).resolve().as_posix())
+    root = _norm(cwd.as_posix()).rstrip("/")
+    return not (target == root or target.startswith(root + "/"))
 
 
 def ordered_allow(path: str, patterns) -> bool:
@@ -101,12 +142,24 @@ def decide(agent: str, policy: dict, event: dict):
             return f"{me} can run only one simple command, without shell operators: {command!r}"
         if any(fnmatch.fnmatchcase(command, p) for p in shell_deny):
             return f"{me} cannot run {command!r}: the command is denied"
-        if not any(fnmatch.fnmatchcase(command, p) for p in shell):
+        allowing = [p for p in shell if fnmatch.fnmatchcase(command, p)]
+        if not allowing:
             return f"{me} cannot run {command!r}. Allowed commands: {shell or 'none'}"
-        for token in re.split(r"[\s:=]+", command):
-            token = token[2:] if token.startswith("./") else token
-            if token and (_matches(token, denies) or _matches(Path(token).name, denies)):
-                return f"{me} cannot access the secret path {token!r}"
+        try:
+            tokens = shlex.split(command)
+        except ValueError:
+            return f"{me} cannot run {command!r}: the quotes are not valid"
+        if all("verify.py" in p for p in allowing) and not _is_verify_command(tokens, cwd):
+            return (f"{me} cannot run {command!r}. The verify script runs as: <python> <path>/verify.py <command>, "
+                    "and the script is outside the project.")
+        unsafe = _unsafe_git_option(tokens)
+        if unsafe:
+            return f"{me} cannot run {command!r}: the git option {unsafe!r} writes a file or runs a program"
+        for word in tokens:
+            for token in re.split(r"[\s:=]+", word):
+                token = token[2:] if token.startswith("./") else token
+                if token and (_matches(token, denies) or _matches(Path(token).name, denies)):
+                    return f"{me} cannot access the secret path {token!r}"
         return None
 
     raw = next((tool_input[k] for k in PATH_KEYS if tool_input.get(k)), None)

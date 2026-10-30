@@ -4,6 +4,10 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Fixed
+
+- The guard and the protect hook close shell bypasses: git options that write a file or run a program, a verify path that is not a real `verify.py` outside the project, quoted secret paths, and quoted or abbreviated human-only words. `verify.py` rejects abbreviated options.
+
 ## [0.8.0] - 2026-10-30
 
 ### Added
