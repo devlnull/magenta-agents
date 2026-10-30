@@ -3,6 +3,8 @@
 #
 # CI/CD variables (masked):
 #   ANTHROPIC_API_KEY       key for the claude engine (or ANTHROPIC_BASE_URL for a gateway such as LiteLLM)
+#   CLAUDE_CODE_VERSION     required: the pinned Claude Code version, for example 2.1.0
+#   MAGENTA_REF             optional: the Magenta release tag (default below)
 #   MAGENTA_REPO_URL        optional: git URL of the magenta-agents repository (default: GitHub)
 #   MAGENTA_GITLAB_TOKEN    optional: a project access token (api scope) to post the report as a note
 
@@ -13,10 +15,11 @@ magenta-pr-review:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
   variables:
     GIT_DEPTH: "0"
+    MAGENTA_REF: "v0.8.0"
   before_script:
     - apt-get update -qq && apt-get install -y -qq python3 git curl > /dev/null
-    - npm install -g @anthropic-ai/claude-code > /dev/null
-    - git clone --depth 1 "${MAGENTA_REPO_URL:-https://github.com/devlnull/magenta-agents.git}" /opt/magenta
+    - npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION:?set the CLAUDE_CODE_VERSION variable}" > /dev/null
+    - git clone --depth 1 --branch "$MAGENTA_REF" "${MAGENTA_REPO_URL:-https://github.com/devlnull/magenta-agents.git}" /opt/magenta
     - python3 /opt/magenta/magenta.py build && python3 /opt/magenta/magenta.py install
   script:
     - python3 /opt/magenta/magenta.py run pr-review --repo . --base "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" --budget-usd 3 --output magenta-review.md

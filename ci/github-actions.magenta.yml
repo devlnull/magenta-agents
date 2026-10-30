@@ -1,6 +1,8 @@
 # Magenta PR review panel for GitHub pull requests.
 # Copy to .github/workflows/magenta-review.yml.
-# Secrets: ANTHROPIC_API_KEY. Optional variable: MAGENTA_REPO_URL (default: GitHub).
+# Secrets: ANTHROPIC_API_KEY.
+# Variables: CLAUDE_CODE_VERSION (required: the pinned Claude Code version, for example 2.1.0),
+# MAGENTA_REF (optional: the Magenta release tag), MAGENTA_REPO_URL (optional, default: GitHub).
 name: magenta-review
 on:
   pull_request:
@@ -11,6 +13,12 @@ jobs:
   review:
     runs-on: ubuntu-latest
     continue-on-error: true   # advisory: findings do not fail the pipeline
+    env:
+      MAGENTA_REPO_URL: ${{ vars.MAGENTA_REPO_URL || 'https://github.com/devlnull/magenta-agents.git' }}
+      MAGENTA_REF: ${{ vars.MAGENTA_REF || 'v0.8.0' }}
+      CLAUDE_CODE_VERSION: ${{ vars.CLAUDE_CODE_VERSION }}
+      BASE_REF: ${{ github.base_ref }}
+      PR_NUMBER: ${{ github.event.pull_request.number }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -18,13 +26,13 @@ jobs:
       - uses: actions/setup-node@v5
         with:
           node-version: 22
-      - run: npm install -g @anthropic-ai/claude-code
-      - run: git clone --depth 1 "${{ vars.MAGENTA_REPO_URL || 'https://github.com/devlnull/magenta-agents.git' }}" /opt/magenta
-      - run: python3 /opt/magenta/magenta.py build && python3 /opt/magenta/magenta.py install
-      - run: python3 /opt/magenta/magenta.py run pr-review --repo . --base "origin/${{ github.base_ref }}" --budget-usd 3 --output magenta-review.md
+      - run: npm install -g "@anthropic-ai/claude-code@${CLAUDE_CODE_VERSION:?set the CLAUDE_CODE_VERSION variable}"
+      - run: git clone --depth 1 --branch "$MAGENTA_REF" "$MAGENTA_REPO_URL" "$RUNNER_TEMP/magenta"
+      - run: python3 "$RUNNER_TEMP/magenta/magenta.py" build && python3 "$RUNNER_TEMP/magenta/magenta.py" install
+      - run: python3 "$RUNNER_TEMP/magenta/magenta.py" run pr-review --repo . --base "origin/$BASE_REF" --budget-usd 3 --output magenta-review.md
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
       - if: always()
-        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file magenta-review.md
+        run: gh pr comment "$PR_NUMBER" --body-file magenta-review.md
         env:
           GH_TOKEN: ${{ github.token }}
