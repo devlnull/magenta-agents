@@ -1,0 +1,14 @@
+{
+  "name": "magenta-marketplace",
+  "description": "Magenta agents for the team",
+  "owner": {
+    "name": "AMQ"
+  },
+  "plugins": [
+    {
+      "name": "magenta",
+      "source": "./plugins/magenta",
+      "description": "Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End) with gates and guards."
+    }
+  ]
+}

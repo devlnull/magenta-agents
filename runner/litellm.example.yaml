@@ -1,0 +1,15 @@
+# Example LiteLLM proxy configuration (one gateway for keys, budgets, logs, and fallbacks; ADR-0004).
+# Start: litellm --config runner/litellm.example.yaml
+# Claude engine: set ANTHROPIC_BASE_URL to the proxy URL. OpenCode: add the proxy as a provider.
+# Replace each <...> with a model that you have access to.
+model_list:
+  - model_name: reasoning-high
+    litellm_params: { model: "anthropic/<model-id>", api_key: "os.environ/ANTHROPIC_API_KEY" }
+  - model_name: reviewer-alt
+    litellm_params: { model: "openai/<model-id>", api_key: "os.environ/OPENAI_API_KEY" }
+  - model_name: reviewer-alt-gemini
+    litellm_params: { model: "gemini/<model-id>", api_key: "os.environ/GEMINI_API_KEY" }
+  - model_name: reviewer-alt-grok
+    litellm_params: { model: "xai/<model-id>", api_key: "os.environ/XAI_API_KEY" }
+  - model_name: local-private
+    litellm_params: { model: "openai/<model-id>", api_base: "https://llm.internal/v1", api_key: "os.environ/LOCAL_LLM_KEY" }

@@ -1,0 +1,27 @@
+---
+name: stack-php-laravel
+description: Default guidance for PHP code, including legacy monoliths and Laravel or Symfony. Use it when the project uses PHP. The project context always wins over this skill.
+---
+
+# Stack: PHP
+
+The project context wins. Use these defaults only where the project has no convention.
+
+## Legacy code
+
+- Change legacy code in small, safe steps. First add characterization tests around the code that you change.
+- Use the seams of the code: extract a method or a class, then test it.
+- When you extract a capability to a new service, keep the old path behind a feature flag (Strangler Fig). Do not delete the old path in the same change.
+
+## Code
+
+- Use strict types (`declare(strict_types=1);`) in new files if the project does.
+- Use the framework conventions of the project (Laravel or Symfony): container, configuration, and validation.
+- Use the database layer of the project. Do not mix query styles in one module.
+- Use prepared statements or the query builder. Never build SQL from strings.
+
+## Tests
+
+- Use PHPUnit or Pest, as the project does.
+- Run the tests with the command of the project (for example `vendor/bin/phpunit` or `php artisan test`).
+- Run the static analysis of the project (for example PHPStan or Psalm).

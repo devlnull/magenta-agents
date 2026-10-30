@@ -1,0 +1,35 @@
+{
+  "agent": "qa",
+  "writes": [
+    ".magenta/work/*/05-test-plan.md",
+    ".magenta/work/*/07-qa-report.md",
+    ".magenta/work/*/acceptance/**"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**"
+  ],
+  "shell": [
+    "git status*",
+    "git log*",
+    "git diff*",
+    "git show*",
+    "git rev-parse*",
+    "ls*",
+    "./gradlew test*",
+    "./gradlew check*",
+    "./mvnw test*",
+    "./mvnw verify*",
+    "mvn test*",
+    "mvn verify*",
+    "npm test*",
+    "npm run test*",
+    "npx playwright test*",
+    "pytest*",
+    "dotnet test*",
+    "go test*"
+  ],
+  "shell_deny": []
+}

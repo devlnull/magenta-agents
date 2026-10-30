@@ -1,0 +1,39 @@
+---
+name: frontend-quality
+description: Quality checklist for client code - performance budgets, accessibility (WCAG 2.2 AA), RTL and locale, UI states, and client security. Use it for each front-end task.
+---
+
+# Front-end quality
+
+## Performance
+
+- Core Web Vitals targets (p75): LCP ≤ 2.5 s, INP ≤ 200 ms, CLS ≤ 0.1. Use the targets of the project if they exist.
+- Keep the bundle budget of the project. Load heavy code on demand (code splitting).
+- Use the image component or the image pipeline of the project. Give each image a size.
+- Select the rendering strategy (SSR, SSG, CSR, streaming) that the design and the project use.
+
+## Accessibility (WCAG 2.2 AA)
+
+- Use semantic HTML first. Use ARIA only when no native element exists.
+- Each control has a label. Each image has an alt text (empty for decoration).
+- All functions work with the keyboard. The focus is visible.
+- Color contrast: 4.5:1 for text, 3:1 for large text and UI parts.
+- Run the accessibility checks of the project (for example axe in the tests).
+
+## RTL and locale
+
+- Use logical CSS properties (`margin-inline-start`, not `margin-left`).
+- Check the layout in RTL (`dir="rtl"`). Mirror the icons that show direction.
+- Format numbers, dates, and money with the locale functions of the project. Support Persian digits and Jalali dates when the product needs them.
+- Do not put text in images. Leave space for long translations.
+
+## UI states
+
+- Each data view has these states: loading, empty, error, and success.
+- Errors tell the user what to do next.
+
+## Client security
+
+- Do not insert raw HTML from data. If necessary, sanitize it.
+- Do not store tokens in `localStorage` unless the project already does and has accepted the risk.
+- Follow the CSP of the project.

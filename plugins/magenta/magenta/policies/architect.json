@@ -1,0 +1,24 @@
+{
+  "agent": "architect",
+  "writes": [
+    ".magenta/work/*/03-design.md",
+    "docs/adr/**",
+    "docs/rfc/**",
+    "docs/architecture/**"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**"
+  ],
+  "shell": [
+    "git status*",
+    "git log*",
+    "git diff*",
+    "git show*",
+    "git rev-parse*",
+    "ls*"
+  ],
+  "shell_deny": []
+}

@@ -1,0 +1,191 @@
+"""Claude Code adapter: build user-level agents and skills from the canonical source, and install them.
+
+Output (dist/claude-code/):
+  agents/magenta-<id>.md       subagent files with tools, model, skills, and a guard hook
+  skills/magenta-<name>/       Agent Skills, including magenta-workflow and magenta-templates
+  magenta/                     guard.py, common.py, and policies/<id>.json
+"""
+from __future__ import annotations
+
+import json
+import shutil
+import sys
+from pathlib import Path
+
+import source
+from source import MARKER, USER_NAMING, Naming, SourceError
+
+TOOL_MAP = {
+    "read": ["Read"],
+    "search": ["Grep", "Glob"],
+    "write-own-files": ["Write", "Edit"],
+    "delegate": ["Agent"],
+    "shell": ["Bash"],
+    "web": ["WebFetch", "WebSearch"],
+    "skill": ["Skill"],
+}
+GUARDED_TOOLS = "Read|Write|Edit|MultiEdit|NotebookEdit|Glob|Grep|Bash"
+# The build writes this token. The install replaces it with the real Python and guard paths of the machine.
+GUARD_TOKEN = "MAGENTA_GUARD_COMMAND"
+BuildError = SourceError
+# Re-exported for older callers.
+load_config, skill_names, GENERATED_SKILLS = source.load_config, source.skill_names, source.GENERATED_SKILLS
+
+
+def claude_tools(agent_id: str, agent: dict) -> list[str]:
+    tools: list[str] = []
+    for tool in agent["meta"]["magenta"].get("tools", []):
+        if tool not in TOOL_MAP:
+            raise BuildError(f"{agent_id}: unknown tool {tool!r}")
+        tools += [t for t in TOOL_MAP[tool] if t not in tools]
+    if "Skill" not in tools:
+        tools.append("Skill")
+    return tools
+
+
+def front_matter(agent_id: str, agent: dict, cfg: dict, naming: Naming, guard_command: str | None) -> str:
+    mg = agent["meta"]["magenta"]
+    profile = cfg["profiles"].get(mg["model_profile"])
+    if not profile or "claude-code" not in profile:
+        raise BuildError(f"{agent_id}: model profile {mg['model_profile']!r} has no claude-code mapping")
+    fm = ["---", f"name: {naming.file(agent_id)}", f"description: {source.yaml_str(source.description(agent))}",
+          f"tools: {', '.join(claude_tools(agent_id, agent))}", f"model: {profile['claude-code']}"]
+    if profile.get("effort"):
+        fm.append(f"effort: {profile['effort']}")
+    fm.append(f"maxTurns: {int(mg.get('max_turns') or cfg.get('default_max_turns') or 60)}")
+    skills = [naming.ref(s[len('magenta-'):] if s.startswith('magenta-') else s) for s in agent["meta"].get("skills", [])]
+    if skills:
+        fm.append("skills:")
+        fm += [f"  - {s}" for s in skills]
+    if guard_command:
+        fm += ["hooks:", "  PreToolUse:", f"    - matcher: {source.yaml_str(GUARDED_TOOLS)}", "      hooks:",
+               "        - type: command", "          command: " + source.yaml_str(guard_command)]
+    fm.append("---")
+    return "\n".join(fm) + "\n"
+
+
+def write_skills(root: Path, cfg: dict, naming: Naming, skills_dir: Path) -> list[str]:
+    names = source.all_names(root, cfg)
+    written = []
+    for name in source.skill_names(root):
+        dst = skills_dir / naming.file(name)
+        shutil.copytree(root / "skills" / name, dst)
+        desc, body = source.canonical_skill(root, name, naming, names)
+        (dst / "SKILL.md").write_text(source.skill_file(naming.ref(name) if not naming.file_prefix == "" else name,
+                                                        desc, body), encoding="utf-8")
+        written.append(dst.name)
+    for name, desc, body in (("templates", source.TEMPLATES_DESCRIPTION, source.templates_body(root)),
+                             ("workflow", source.WORKFLOW_DESCRIPTION, source.workflow_body(root, naming, names))):
+        dst = skills_dir / naming.file(name)
+        dst.mkdir(parents=True)
+        skill_name = naming.ref(name) if naming.file_prefix else name
+        (dst / "SKILL.md").write_text(source.skill_file(skill_name, desc, body), encoding="utf-8")
+        written.append(dst.name)
+    return written
+
+
+def copy_guard(dst: Path, root: Path, cfg: dict, agents: dict) -> None:
+    (dst / "policies").mkdir(parents=True, exist_ok=True)
+    adapters = Path(__file__).resolve().parent
+    shutil.copy2(adapters / "guard.py", dst / "guard.py")
+    shutil.copy2(adapters / "common.py", dst / "common.py")
+    for agent_id, agent in agents.items():
+        (dst / "policies" / f"{agent_id}.json").write_text(json.dumps(source.policy(agent_id, agent), indent=2),
+                                                           encoding="utf-8")
+
+
+def _reset(out: Path) -> None:
+    if out.exists():
+        shutil.rmtree(out)
+
+
+def build(root: Path, out: Path) -> dict:
+    cfg = source.load_config(root)
+    agents = source.load_agents(root, cfg.get("agents_enabled") or [])
+    _reset(out)
+    (out / "agents").mkdir(parents=True)
+    (out / "skills").mkdir()
+    for agent_id, agent in agents.items():
+        command = f"{GUARD_TOKEN} {agent_id}"
+        text = front_matter(agent_id, agent, cfg, USER_NAMING, command) + \
+            source.instructions(root, cfg, agents, agent_id, USER_NAMING)
+        (out / "agents" / f"{USER_NAMING.file(agent_id)}.md").write_text(text, encoding="utf-8")
+    skills = write_skills(root, cfg, USER_NAMING, out / "skills")
+    copy_guard(out / "magenta", root, cfg, agents)
+    return {"agents": sorted(agents), "skills": sorted(skills)}
+
+
+def _is_generated(path: Path) -> bool:
+    target = path / "SKILL.md" if path.is_dir() else path
+    try:
+        return MARKER in target.read_text(encoding="utf-8")
+    except OSError:
+        return False
+
+
+def guard_command(python: str, guard: Path) -> str:
+    """A hook command that works in the shells of macOS, Linux, and Windows (Git Bash): forward slashes, quoted."""
+    return f'"{Path(python).as_posix()}" "{guard.as_posix()}"'
+
+
+def install(dist: Path, home: Path, force: bool = False, python: str | None = None) -> list[str]:
+    if not (dist / "agents").exists():
+        raise BuildError("dist/claude-code does not exist. Run: python3 magenta.py build")
+    claude = home / ".claude"
+    plan = [(p, claude / "agents" / p.name) for p in sorted((dist / "agents").glob("*.md"))]
+    plan += [(p, claude / "skills" / p.name) for p in sorted((dist / "skills").iterdir())]
+    installed = _copy_plan(plan, claude / "magenta", dist / "magenta", force)
+    command = guard_command(python or sys.executable, claude / "magenta" / "guard.py")
+    escaped = command.replace('"', '\\"')  # the value sits in a YAML double-quoted string
+    for agent in sorted((claude / "agents").glob("magenta-*.md")):
+        text = agent.read_text(encoding="utf-8")
+        if GUARD_TOKEN in text:
+            agent.write_text(text.replace(GUARD_TOKEN, escaped), encoding="utf-8")
+    return installed
+
+
+def _copy_plan(plan, support_dst: Path, support_src: Path | None, force: bool) -> list[str]:
+    conflicts = [str(dst) for _, dst in plan if dst.exists() and not _is_generated(dst)]
+    if conflicts and not force:
+        raise BuildError("these files exist and Magenta did not generate them (use --force to replace):\n  "
+                         + "\n  ".join(conflicts))
+    installed = []
+    for src, dst in plan:
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        if dst.is_dir():
+            shutil.rmtree(dst)
+        if src.is_dir():
+            shutil.copytree(src, dst)
+        else:
+            shutil.copy2(src, dst)
+        installed.append(str(dst))
+    support_dst.mkdir(parents=True, exist_ok=True)
+    if support_src is not None:
+        for item in support_src.iterdir():
+            target = support_dst / item.name
+            if target.is_dir():
+                shutil.rmtree(target)
+            (shutil.copytree if item.is_dir() else shutil.copy2)(item, target)
+    manifest = support_dst / "manifest.json"
+    previous = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else []
+    record = sorted(set(previous) | set(installed) | {str(support_dst)})
+    manifest.write_text(json.dumps(record, indent=2), encoding="utf-8")
+    return installed + [str(support_dst)]
+
+
+def uninstall(home: Path) -> list[str]:
+    removed = []
+    for manifest in (home / ".claude" / "magenta" / "manifest.json",
+                     home / ".config" / "opencode" / "magenta" / "manifest.json",
+                     home / ".codex" / "magenta" / "manifest.json"):
+        if not manifest.exists():
+            continue
+        items = json.loads(manifest.read_text(encoding="utf-8"))
+        for item in sorted(items, key=len, reverse=True):
+            path = Path(item)
+            if path.is_dir():
+                shutil.rmtree(path)
+            elif path.exists():
+                path.unlink()
+            removed.append(item)
+    return removed

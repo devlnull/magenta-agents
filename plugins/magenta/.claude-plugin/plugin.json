@@ -1,0 +1,5 @@
+{
+  "name": "magenta",
+  "version": "0.5.0",
+  "description": "Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End) with gates and guards."
+}

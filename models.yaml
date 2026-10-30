@@ -1,0 +1,47 @@
+# Model profiles (RFC-0001, section 8; ADR-0004).
+# Agents name a profile, never a vendor model. To change a model, change one line here.
+#
+# Keys of a profile:
+#   claude-code  Claude Code model alias or full ID (opus, sonnet, haiku, fable, or claude-...).
+#   effort       Reasoning effort for Claude Code (low, medium, high, xhigh, max).
+#   opencode     OpenCode model as provider/model[#variant]. Optional. Without it, the agent
+#                uses the model of the OpenCode session.
+#   runner       Headless runner engine for this profile: {engine: <name in engines>, model: <optional>}.
+#
+# Phase 3 (ADR-0004): put real model IDs for OpenAI, Gemini, Grok, or a self-hosted model in the
+# commented lines, then run: python3 magenta.py build. Use only models that you have access to.
+
+profiles:
+  reasoning-high:
+    claude-code: opus
+    effort: high
+    # opencode: anthropic/<model-id>
+    runner: {engine: claude}
+  coding:
+    claude-code: sonnet
+    effort: medium
+    # opencode: anthropic/<model-id>
+    runner: {engine: claude}
+  fast:
+    claude-code: haiku
+    runner: {engine: claude}
+  reviewer-alt:
+    # A model of another family, for independent review (QA and final review).
+    claude-code: opus
+    effort: high
+    # opencode: openai/<model-id>        # or google/<model-id>, or xai/<model-id>
+    runner: {engine: claude}
+    # runner: {engine: opencode, model: "openai/<model-id>"}
+  local-private:
+    # An OpenAI-compatible endpoint for confidential code (for example vLLM or Ollama).
+    # Configure the provider in OpenCode, then set: opencode: <provider>/<model-id>
+    claude-code: sonnet
+    runner: {engine: claude}
+
+# Command templates for the headless runner. {prompt}, {agent}, {model}, and {max_turns} are
+# replaced. An argument that contains {model} is dropped when the profile has no model.
+engines:
+  # acceptEdits lets the agent write its own artifacts. The guard hook still blocks all other paths.
+  claude: ["claude", "-p", "{prompt}", "--agent", "{agent}", "--output-format", "json", "--max-turns", "{max_turns}", "--permission-mode", "acceptEdits", "--model", "{model}"]
+  # --auto approves what the agent permissions do not deny.
+  opencode: ["opencode", "run", "--agent", "{agent}", "--format", "json", "--auto", "--model", "{model}", "{prompt}"]

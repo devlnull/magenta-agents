@@ -1,0 +1,45 @@
+{
+  "agent": "frontend",
+  "writes": [
+    "**",
+    "!.magenta/**",
+    ".magenta/work/*/06-impl-frontend.md",
+    "!docs/adr/**",
+    "!docs/rfc/**",
+    "!**/acceptance/**"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**"
+  ],
+  "shell": [
+    "git status*",
+    "git diff*",
+    "git log*",
+    "git show*",
+    "git add *",
+    "git commit *",
+    "git rev-parse*",
+    "ls*",
+    "npm *",
+    "npx *",
+    "pnpm *",
+    "yarn *",
+    "./gradlew *",
+    "flutter *",
+    "dart *",
+    "xcodebuild *"
+  ],
+  "shell_deny": [
+    "git push*",
+    "*publish*",
+    "*deploy*",
+    "*--force*",
+    "rm *",
+    "git reset --hard*",
+    "git checkout -- *",
+    "git clean*"
+  ]
+}

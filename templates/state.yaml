@@ -1,0 +1,10 @@
+work_item: <ID>-<slug>
+lane: <lite|standard|full>
+step: <current step>
+gates:
+  # Only the human approves a gate. The Principal records the approval from the conversation.
+  prd-go:           { status: pending, by: null, at: null, note: null }
+  scope-and-design: { status: pending, by: null, at: null, note: null }
+  merge:            { status: pending, by: null, at: null, note: null }
+  release:          { status: pending, by: null, at: null, note: null }
+open_questions: []

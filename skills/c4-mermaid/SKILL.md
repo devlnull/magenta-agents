@@ -1,0 +1,34 @@
+---
+name: c4-mermaid
+description: Draw architecture diagrams in Mermaid inside Markdown (C4 context, container, component, sequence, state, ER). Use it for each diagram in a design, RFC, or ADR.
+---
+
+# Diagrams in Mermaid
+
+## Rules
+
+- Use Mermaid code blocks only. Do not use images or ASCII art.
+- One diagram shows one idea. Keep it under about 20 nodes.
+- Use flowcharts with subgraphs for the C4 levels. Some viewers do not show the Mermaid C4 syntax.
+- Give each element a name and a short responsibility. Label each arrow with the interaction (for example "HTTPS, JSON" or "Kafka event").
+- Keep the diagram and the text in agreement.
+
+## C4 container example
+
+```mermaid
+flowchart LR
+  user(["Customer"]) -->|HTTPS| web["Web app<br/>React"]
+  subgraph sys["Order system"]
+    web -->|"REST, JSON"| api["Order API<br/>Spring Boot"]
+    api -->|JDBC| db[("Orders DB<br/>PostgreSQL")]
+    api -->|"OrderPlaced event"| bus[["Kafka"]]
+  end
+  bus --> wms["Warehouse system"]
+```
+
+## Other diagram types
+
+- Interactions in time: `sequenceDiagram`.
+- Life cycles (for example an order): `stateDiagram-v2`.
+- Data models: `erDiagram`.
+- Bounded contexts: a flowchart with one subgraph for each context. Label each relation with the DDD pattern (for example ACL, OHS, conformist).

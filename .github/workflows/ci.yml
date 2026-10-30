@@ -1,0 +1,78 @@
+name: ci
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        python: ["3.9", "3.13"]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Configure git for the tests
+        run: |
+          git config --global user.email "ci@example.com"
+          git config --global user.name "ci"
+      - name: Validate the source
+        run: python magenta.py validate
+      - name: Unit tests
+        run: python -m unittest discover -s tests -v
+      - name: The committed plugin is current
+        run: python magenta.py check
+      - name: Build all targets
+        run: python magenta.py build
+      - name: Install into a temporary home (all targets)
+        shell: bash
+        run: |
+          HOME_DIR="$RUNNER_TEMP/home"
+          python magenta.py install --home "$HOME_DIR"
+          python magenta.py install --home "$HOME_DIR" --target opencode
+          python magenta.py install --home "$HOME_DIR" --target codex
+          test -f "$HOME_DIR/.claude/agents/magenta-principal.md"
+          python magenta.py uninstall --home "$HOME_DIR"
+
+  installer:
+    name: installer on ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    env:
+      PYTHONUTF8: "1"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: install.sh from this commit
+        if: runner.os != 'Windows'
+        run: |
+          git branch -f ci-install HEAD
+          HOME="$RUNNER_TEMP/home" MAGENTA_REPO="$GITHUB_WORKSPACE" MAGENTA_REF=ci-install sh install.sh
+          test -f "$RUNNER_TEMP/home/.claude/agents/magenta-qa.md"
+          grep -q 'guard.py" qa' "$RUNNER_TEMP/home/.claude/agents/magenta-qa.md"
+      - name: install.ps1 from this commit
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          git branch -f ci-install HEAD
+          $env:MAGENTA_REPO = $env:GITHUB_WORKSPACE
+          $env:MAGENTA_REF = "ci-install"
+          $env:MAGENTA_HOME = Join-Path $env:RUNNER_TEMP "magenta-src"
+          ./install.ps1
+          if (-not (Test-Path (Join-Path $HOME ".claude/agents/magenta-qa.md"))) { throw "agent not installed" }

@@ -1,0 +1,15 @@
+{
+  "agent": "product-manager",
+  "writes": [
+    ".magenta/work/*/01-prd-review.md",
+    ".magenta/work/*/02-stories.md"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**"
+  ],
+  "shell": [],
+  "shell_deny": []
+}

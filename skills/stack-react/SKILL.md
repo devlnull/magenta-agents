@@ -1,0 +1,23 @@
+---
+name: stack-react
+description: Default guidance for React and Next.js client code. Use it when the project uses React. The project context always wins over this skill.
+---
+
+# Stack: React and Next.js
+
+The project context wins. Use these defaults only where the project has no convention.
+
+## Code
+
+- Use function components and hooks.
+- Keep components small. Separate data loading from presentation where the project does.
+- Use the server-state library of the project (for example TanStack Query) for remote data. Keep local UI state in the component.
+- Use TypeScript types for props and API data. Generate the API types from the contract if the project does.
+- In Next.js, follow the router of the project (App Router or Pages Router). Use server components only where the project does.
+- Use the styling solution of the project. Use logical CSS properties for RTL.
+
+## Tests
+
+- Component tests: Testing Library. Query by role and label, not by class.
+- E2E tests: Playwright, if the project uses it.
+- Run the tests with the scripts in `package.json` (for example `npm test`).

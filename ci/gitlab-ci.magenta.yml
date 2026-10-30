@@ -1,0 +1,33 @@
+# Magenta PR review panel for GitLab merge requests (phase 4).
+# Include this file in .gitlab-ci.yml, or copy the job.
+#
+# CI/CD variables (masked):
+#   ANTHROPIC_API_KEY       key for the claude engine (or ANTHROPIC_BASE_URL for a gateway such as LiteLLM)
+#   MAGENTA_REPO_URL        optional: git URL of the magenta-agents repository (default: GitHub)
+#   MAGENTA_GITLAB_TOKEN    optional: a project access token (api scope) to post the report as a note
+
+magenta-pr-review:
+  stage: test
+  image: node:22
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+  variables:
+    GIT_DEPTH: "0"
+  before_script:
+    - apt-get update -qq && apt-get install -y -qq python3 git curl > /dev/null
+    - npm install -g @anthropic-ai/claude-code > /dev/null
+    - git clone --depth 1 "${MAGENTA_REPO_URL:-https://github.com/devlnull/magenta-agents.git}" /opt/magenta
+    - python3 /opt/magenta/magenta.py build && python3 /opt/magenta/magenta.py install
+  script:
+    - python3 /opt/magenta/magenta.py run pr-review --repo . --base "origin/$CI_MERGE_REQUEST_TARGET_BRANCH_NAME" --budget-usd 3 --output magenta-review.md
+  after_script:
+    - |
+      if [ -n "$MAGENTA_GITLAB_TOKEN" ] && [ -f magenta-review.md ]; then
+        curl -sS --request POST --header "PRIVATE-TOKEN: $MAGENTA_GITLAB_TOKEN" \
+          --data-urlencode "body@magenta-review.md" \
+          "$CI_API_V4_URL/projects/$CI_PROJECT_ID/merge_requests/$CI_MERGE_REQUEST_IID/notes" > /dev/null
+      fi
+  artifacts:
+    when: always
+    paths: [magenta-review.md, .magenta/runs/]
+  allow_failure: true   # advisory in the pilot; remove when the team trusts the panel

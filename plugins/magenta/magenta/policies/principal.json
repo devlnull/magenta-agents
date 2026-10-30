@@ -1,0 +1,29 @@
+{
+  "agent": "principal",
+  "writes": [
+    ".magenta/project-context.md",
+    ".magenta/lessons.md",
+    ".magenta/work/*/00-request.md",
+    ".magenta/work/*/04-plan.md",
+    ".magenta/work/*/07-review.md",
+    ".magenta/work/*/08-retro.md",
+    ".magenta/work/*/decisions/**",
+    ".magenta/work/*/state.yaml"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**"
+  ],
+  "shell": [
+    "git status*",
+    "git log*",
+    "git diff*",
+    "git show*",
+    "git rev-parse*",
+    "git branch*",
+    "ls*"
+  ],
+  "shell_deny": []
+}

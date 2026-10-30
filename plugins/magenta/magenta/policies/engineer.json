@@ -1,0 +1,54 @@
+{
+  "agent": "engineer",
+  "writes": [
+    "**",
+    "!.magenta/**",
+    ".magenta/work/*/06-impl-engineer.md",
+    "!docs/adr/**",
+    "!docs/rfc/**",
+    "!**/acceptance/**"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**"
+  ],
+  "shell": [
+    "git status*",
+    "git diff*",
+    "git log*",
+    "git show*",
+    "git add *",
+    "git commit *",
+    "git rev-parse*",
+    "ls*",
+    "./gradlew *",
+    "./mvnw *",
+    "mvn *",
+    "dotnet *",
+    "go *",
+    "npm *",
+    "npx *",
+    "pnpm *",
+    "yarn *",
+    "composer *",
+    "php *",
+    "vendor/bin/*",
+    "pytest*",
+    "python -m pytest*",
+    "python3 -m pytest*",
+    "cargo *",
+    "make *"
+  ],
+  "shell_deny": [
+    "git push*",
+    "*publish*",
+    "*deploy*",
+    "*--force*",
+    "rm *",
+    "git reset --hard*",
+    "git checkout -- *",
+    "git clean*"
+  ]
+}

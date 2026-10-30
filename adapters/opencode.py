@@ -1,0 +1,106 @@
+"""OpenCode adapter: build agents with permission rules (no hook is necessary) and install them.
+
+Output (dist/opencode/):
+  agents/magenta-<id>.md    OpenCode v2 agents: description, mode, optional model, ordered permissions
+  skills/                   the same Agent Skills as for Claude Code
+
+OpenCode permission rules are ordered; the last matching rule wins.
+"""
+from __future__ import annotations
+
+import shutil
+from pathlib import Path
+
+import claude_code
+import source
+from source import USER_NAMING, SourceError
+
+READ_ONLY_TOOLS = {"read", "search", "skill"}
+
+
+def permissions(agent_id: str, agent: dict) -> list[dict]:
+    mg = agent["meta"]["magenta"]
+    tools = set(mg.get("tools") or [])
+    rules: list[dict] = []
+
+    def rule(action, resource, effect):
+        rules.append({"action": action, "resource": resource, "effect": effect})
+
+    # Files: deny all writes, then the ordered write rules of the agent.
+    rule("edit", "*", "deny")
+    if "write-own-files" in tools:
+        for pattern in mg.get("writes") or []:
+            if pattern.startswith("!"):
+                rule("edit", pattern[1:], "deny")
+            else:
+                rule("edit", pattern, "allow")
+    for pattern in [".magenta/policy.json", "**/acceptance.lock", ".git/**", ".claude/**", ".opencode/**"]:
+        rule("edit", pattern, "deny")
+    for pattern in mg.get("denies") or []:
+        rule("read", pattern, "deny")
+        rule("edit", pattern, "deny")
+
+    # Shell: deny all, allow the allowlist, then deny the denied commands.
+    rule("shell", "*", "deny")
+    if "shell" in tools:
+        for pattern in mg.get("shell") or []:
+            rule("shell", pattern, "allow")
+        for pattern in mg.get("shell_deny") or []:
+            rule("shell", pattern, "deny")
+
+    # Web and delegation.
+    for action in ("webfetch", "websearch"):
+        rule(action, "*", "allow" if "web" in tools else "deny")
+    rule("subagent", "*", "deny")
+    if "delegate" in tools:
+        rule("subagent", "magenta-*", "allow")
+    rule("external_directory", "*", "deny")
+    return rules
+
+
+def _yaml_permissions(rules: list[dict]) -> list[str]:
+    out = ["permissions:"]
+    for r in rules:
+        out += [f"  - action: {r['action']}", f"    resource: {source.yaml_str(r['resource'])}",
+                f"    effect: {r['effect']}"]
+    return out
+
+
+def agent_file(root: Path, cfg: dict, agents: dict, agent_id: str) -> str:
+    agent = agents[agent_id]
+    mg = agent["meta"]["magenta"]
+    profile = cfg["profiles"].get(mg["model_profile"]) or {}
+    fm = ["---", f"description: {source.yaml_str(source.description(agent))}", "mode: all"]
+    model = profile.get("opencode")
+    if model and "<" not in str(model):
+        fm.append(f"model: {model}")
+    fm += _yaml_permissions(permissions(agent_id, agent))
+    fm.append("---")
+    return "\n".join(fm) + "\n" + source.instructions(root, cfg, agents, agent_id, USER_NAMING)
+
+
+def build(root: Path, out: Path) -> dict:
+    cfg = source.load_config(root)
+    agents = source.load_agents(root, cfg.get("agents_enabled") or [])
+    if out.exists():
+        shutil.rmtree(out)
+    (out / "agents").mkdir(parents=True)
+    for agent_id in agents:
+        (out / "agents" / f"{USER_NAMING.file(agent_id)}.md").write_text(
+            agent_file(root, cfg, agents, agent_id), encoding="utf-8")
+    skills = claude_code.write_skills(root, cfg, USER_NAMING, out / "skills")
+    without_model = [a for a in agents if not (cfg["profiles"].get(agents[a]["meta"]["magenta"]["model_profile"]) or {}).get("opencode")]
+    return {"agents": sorted(agents), "skills": sorted(skills), "agents_without_model": without_model}
+
+
+def install(dist: Path, home: Path, force: bool = False) -> list[str]:
+    if not (dist / "agents").exists():
+        raise SourceError("dist/opencode does not exist. Run: python3 magenta.py build")
+    config = home / ".config" / "opencode"
+    plan = [(p, config / "agents" / p.name) for p in sorted((dist / "agents").glob("*.md"))]
+    claude_skills = home / ".claude" / "skills"
+    for skill in sorted((dist / "skills").iterdir()):
+        # OpenCode also reads ~/.claude/skills. Do not install the same skill two times.
+        if not (claude_skills / skill.name).exists():
+            plan.append((skill, config / "skills" / skill.name))
+    return claude_code._copy_plan(plan, config / "magenta", None, force)

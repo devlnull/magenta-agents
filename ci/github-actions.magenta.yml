@@ -1,0 +1,30 @@
+# Magenta PR review panel for GitHub pull requests (phase 4).
+# Copy to .github/workflows/magenta-review.yml.
+# Secrets: ANTHROPIC_API_KEY. Optional variable: MAGENTA_REPO_URL (default: GitHub).
+name: magenta-review
+on:
+  pull_request:
+permissions:
+  contents: read
+  pull-requests: write
+jobs:
+  review:
+    runs-on: ubuntu-latest
+    continue-on-error: true   # advisory in the pilot
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install -g @anthropic-ai/claude-code
+      - run: git clone --depth 1 "${{ vars.MAGENTA_REPO_URL || 'https://github.com/devlnull/magenta-agents.git' }}" /opt/magenta
+      - run: python3 /opt/magenta/magenta.py build && python3 /opt/magenta/magenta.py install
+      - run: python3 /opt/magenta/magenta.py run pr-review --repo . --base "origin/${{ github.base_ref }}" --budget-usd 3 --output magenta-review.md
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+      - if: always()
+        run: gh pr comment "${{ github.event.pull_request.number }}" --body-file magenta-review.md
+        env:
+          GH_TOKEN: ${{ github.token }}
