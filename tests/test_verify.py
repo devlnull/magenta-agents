@@ -282,7 +282,9 @@ class TaskTest(RepoCase):
         self.assertEqual((again["base_fingerprint"], again["session"]), (first["base_fingerprint"], "S1"))
         with self.assertRaises(verify.VerifyError):  # the same session cannot leave a failing task
             verify.start(self.repo, "T2-y", session="S1")
-        other = verify.start(self.repo, "T2-y", session="S2")  # a new session can
+        with self.assertRaises(verify.VerifyError):  # nor can another session
+            verify.start(self.repo, "T2-y", session="S2")
+        other = verify.start(self.repo, "T2-y", session="S2", force=True)  # only the human can
         self.assertIn("another session", other["note"])
         forced = verify.start(self.repo, "T3-z", session="S2", force=True)
         self.assertEqual(forced["previous"], "T2-y")

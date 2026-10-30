@@ -370,25 +370,24 @@ def _blocks_close(repo: Path, data: dict) -> str | None:
 
 def start(repo: Path, item: str, session=None, force: bool = False) -> dict:
     """Start a task, or resume it when it is already active (the base fingerprint does not change).
-    A task of the same session that changed code and does not pass cannot be replaced without --force."""
+    A task that changed code and does not pass cannot be replaced, and cannot be taken over by another session,
+    without --force."""
     session = _clean_session(session)
     data = active(repo)
     current = data.get("work_item")
+    owner = data.get("session") or ""
+    other_session = bool(owner and session and owner != session)
+    if current and not force and (current != item or other_session):
+        status = _blocks_close(repo, data)
+        if status:
+            raise VerifyError(f"the task {current} is active, changed the code, and its checks do not pass "
+                              f"({status}). Finish it first. Only the human can replace it: "
+                              f"{self_command()} start {item} --force")
     if current == item:
-        data.update(session=session or data.get("session") or "", resumed_at=_now())
+        data.update(session=session or owner, resumed_at=_now())
         _write_json(_mdir(repo) / "active.json", data)
         return data
-    note = ""
-    if current:
-        owner = data.get("session") or ""
-        if owner and session and owner != session:
-            note = f"replaced the task {current} of another session"
-        elif not force:
-            status = _blocks_close(repo, data)
-            if status:
-                raise VerifyError(f"the task {current} is active, changed the code, and its checks do not pass "
-                                  f"({status}). Finish it first. Only the human can replace it: "
-                                  f"{self_command()} start {item} --force")
+    note = f"replaced the task {current} of another session" if current and other_session else ""
     data = {"work_item": item, "session": session, "base_fingerprint": fingerprint(repo), "started_at": _now(),
             "blocks": 0, "previous": current or data.get("last"), "note": note}
     _write_json(_mdir(repo) / "active.json", data)
