@@ -12,6 +12,9 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 - The YAML parser keeps the indentation and the final newline of block scalars, keeps the empty lines of folded blocks, drops a comment after an apostrophe, and accepts CRLF front matter. CI runs the PyYAML cross-check.
 - `validate` rejects overlapping write paths of two agents and finds more unknown skill names. Each path has one owner: nested deployment files belong to the Platform Engineer, `runbooks/` to the SRE, and `docs/architecture/` to the Architect.
 - QA and the SRE can run the test and lint commands that their steps need. The engineer can run `python3 -m unittest`.
+- The runner refuses an existing work item id for `prd-review`, reads the cost from stdout only, checks the budget before each step, and `--fail-on-blocker` matches BLOCKER findings, not count rows.
+- The CI templates clone into a writable folder, pin the Magenta release (`MAGENTA_REF`) and the Claude Code version (`CLAUDE_CODE_VERSION`), and pass values through `env`. Only the publish job of the release workflow can write.
+- `install` removes the Magenta agents and skills that a new release no longer has. An apostrophe in the home path gives valid YAML. The installers update from `--repo` or `MAGENTA_REPO`, `install.sh --help` works through `curl | sh`, and `install.ps1` finds Python on Windows PowerShell 5.1. `metrics` skips bad lines, and `lock` rejects a file outside the repository with a clear error.
 - The workflows, templates, and docs agree with the 0.8.0 team: the PRD steps of the standard lane apply to features only, and the full lane names the correct readiness step.
 
 ## [0.8.0] - 2026-10-30
