@@ -21,7 +21,7 @@ claude plugin marketplace add devlnull/magenta-agents
 claude plugin install magenta@magenta-marketplace
 ```
 
-The agents are `magenta:principal`, `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, and `magenta:frontend`. To update: `claude plugin marketplace update magenta-marketplace`.
+The agents are `magenta:principal`, `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, `magenta:frontend`, `magenta:sre`, `magenta:platform`, `magenta:security`, `magenta:database`, and `magenta:writer`. To update: `claude plugin marketplace update magenta-marketplace`.
 
 ### Option 2: installer script
 
@@ -114,8 +114,8 @@ To select the mode yourself, start the request with `--team` or `--lead`.
 | improvement | "remove the duplicated price rules in checkout" | QA: characterization tests. Architect: target rules. Lead: Engineer. | Architect, QA, Engineer, Principal |
 | investigation | "why does the stock sync job run twice?" | No checks. The experts answer. | The experts that the question needs |
 | review | "review my branch against main" | The review panel. | QA, Architect, Principal |
-| incident | "payments fail since the last deploy" | Lead: Engineer. A check for the failure, when there is time. | Principal, Engineer, QA |
-| security | "fix CVE-2026-1234 in our JWT library use" | Always team mode. | Principal, Architect, Engineer, QA |
+| incident | "payments fail since the last deploy" | Lead: Engineer. A check for the failure, when there is time. | SRE, Principal, Engineer, QA |
+| security | "fix CVE-2026-1234 in our JWT library use" | Always team mode. | Security, Principal, Engineer, QA |
 | upgrade | "upgrade Spring Boot from 3.3 to 3.5" | Project checks and smoke tests. Lead: Engineer. | Engineer, QA, Principal |
 | tests | "fix the flaky OrderCancelTest" | Project checks. Lead: QA. | QA, Engineer |
 | design | "design the retry strategy for the shipping events" | Lead: Architect. | Architect, Principal |

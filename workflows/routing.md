@@ -11,7 +11,7 @@ The conductor (skill `magenta`) and the Principal use these tables. First select
 | improvement | refactor, clean up, simplify, tech debt, readability, duplication | `refactor` | `architect`, `qa`, `engineer`, `principal` | `frontend`: client code. |
 | feature | a PRD, a new capability, a user story | `standard` or `full` | `product-manager`, `architect`, `qa`, `engineer`, `principal` | `frontend`: client work. `database`: a schema change. `security`: authentication, money, or personal data. `sre`: a new endpoint, remote call, or rollout risk. `writer`: user documentation. |
 | investigation | why, how does, explain, find out, "where is", analyze (without a change) | `investigation` | `principal` and the experts that the question needs | Add only the roles that the question needs. |
-| review | review this PR, diff, design, RFC, or ADR | `pr-review` or `design-review` | `qa`, `architect`, `principal` | `product-manager`: user-facing scope. |
+| review | review this PR, diff, design, RFC, or ADR | `pr-review` or `design-review` | `qa`, `architect`, `principal` | `product-manager`: user-facing scope. `sre`, `security`, `database`: by the lens table. |
 | incident | production is down or degraded, urgent, hotfix | `incident` | `sre`, `principal`, `engineer`, `qa` | `architect`: after the mitigation, for the root cause. `platform`: a deployment or infrastructure cause. |
 | security | vulnerability, CVE, authentication, authorization, secrets | `security-fix` | `security`, `principal`, `engineer`, `qa` | `architect`: a structural fix. `platform`: a pipeline, image, or infrastructure fix. |
 | upgrade | upgrade a library, a framework, or a runtime | `upgrade` | `engineer`, `qa`, `principal` | `architect`: a major version or a breaking change. `security`: the upgrade fixes a CVE. `platform`: a runtime or base image upgrade. |
@@ -38,7 +38,7 @@ Use the default mode for most tasks. Use team mode only when a team trigger appl
 | incident | `engineer` | QA: a test for the failure mode, when there is time. | SRE, Principal |
 | feature (small and clear) | `engineer` or `frontend` | QA: acceptance tests (red). Architect: the contracts. | QA, Architect, Principal |
 | investigation | None. The conductor or `principal` answers, read-only. | None. | None. |
-| review | None. | None. | The review panel: QA, Architect, Principal. |
+| review | None. | None. | The review panel: QA, Architect, Principal. SRE, Security, and Database by the lens table. |
 | design | `architect` | None. | Principal |
 | infrastructure | `platform` | SRE: the lint and validate commands of the changed files (red when they find the problem). | SRE. Security, for secrets, permissions, or exposure. |
 | reliability | `engineer` (code) or `platform` (alerts, dashboards, manifests) | SRE: the rule as a check. QA: a test for the failure behavior. | SRE, QA |
@@ -112,6 +112,9 @@ Each task has a constraint ledger in `00-brief.md` (team mode: `04-plan.md`). It
 | Architect | ADRs, module boundaries, dependency rules, data ownership, consistency rules, API and event contracts, fitness functions |
 | QA | All tests pass. Locked acceptance tests do not change. No new flaky tests. Performance thresholds. Edge cases covered. |
 | Principal | Rollback, feature flag when necessary, observability, resilience, capacity, security |
+| SRE | SLOs, timeouts and retries, observability, capacity, runbooks for new alerts |
+| Security | Access control, input validation, secrets, dependencies without high or critical vulnerabilities |
+| Database | Reversible migrations, no blocking locks, compatibility of the old and the new code, indexes for new queries |
 | Project | The conventions in the project context, lint, format |
 | Human | The constraints in the request |
 

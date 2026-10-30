@@ -3,10 +3,10 @@
 Use it for new behavior inside one bounded context.
 
 1. `principal`: triage, create the work item, record `00-request.md`.
-2. `product-manager`: PRD review. Write `01-prd-review.md`.
-3. Gate 1, PRD go (human).
+2. For a feature only: `product-manager`: PRD review. Write `01-prd-review.md`.
+3. For a feature only: Gate 1, PRD go (human).
 4. Three Amigos: `product-manager` writes `02-stories.md`. `qa` reviews it for testability and writes the Gherkin scenarios in `05-test-plan.md`. `engineer` gives feasibility notes in its final message (read-only).
-5. `architect`: design note. Write `03-design.md` and ADRs if needed.
+5. `architect`: design note. Write `03-design.md` and ADRs if needed. For a schema or data change, `database` writes the migration plan in `03-data.md` before Gate 2. `security`, `sre`, and `writer` join by the lens table of `routing.md`.
 6. Gate 2, scope and design (human): the stories, the acceptance criteria, and the design.
 7. `principal`: plan. Write `04-plan.md`. Give each maker task one scope.
 8. `qa`: write the acceptance tests first (red), and their checks in `.magenta/checks/qa.yaml`.

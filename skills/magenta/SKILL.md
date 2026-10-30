@@ -85,6 +85,7 @@ Make "done" executable before the work starts.
    - `sre` (`sre.yaml`): operations rules, lint of alerts, pipelines, and manifests;
    - `security` (`security.yaml`): scanner rules and security tests;
    - `database` (`database.yaml`): migration lint, migration tests, query checks. It also writes the migration plan in `03-data.md` for the lead.
+   Collect the test requests of the specialists and give them to `qa`. QA writes these tests before the lock.
 3. Lock the test files that QA and the Architect wrote: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" lock <ID> <file> <file> ...`.
 4. **Checks gate.** Run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list`. Show the human: the success criteria, the new checks with their commands, the locked test files, and the plan in three lines. Ask the human to approve the checks with the approve command that verify shows. In Claude Code, the human types it after `!`. The approval also seals the test lock. Stop and wait. In the default mode, this gate is also the plan gate.
 5. After the approval, run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run --set task`. The set `task` has the quick checks and all checks of this work item:

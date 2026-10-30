@@ -3,7 +3,7 @@
 {{header}}
 
 ## Task
-- Task type: <bug | performance | improvement | feature | investigation | review | incident | security | upgrade | tests | design>
+- Task type: <bug | performance | improvement | feature | investigation | review | incident | security | upgrade | infrastructure | reliability | data | docs | tests | design>
 - Mode: <default | team>. Reason (the team trigger, or `--lead`):
 - Playbook (team mode): <name>
 - Lane: <lite | standard | full>. Reason:

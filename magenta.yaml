@@ -25,7 +25,7 @@ default_max_turns: 60
 
 lanes:
   lite:
-    gates: [merge]
+    gates: [checks, done]
   standard:
     gates: [prd-go, scope-and-design, merge]
   full:

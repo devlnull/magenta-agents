@@ -13,7 +13,7 @@ claude plugin marketplace add devlnull/magenta-agents
 claude plugin install magenta@magenta-marketplace
 ```
 
-The plugin gives the agents `magenta:principal`, `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, and `magenta:frontend`. Do not also install the user-level files (`python3 magenta.py install`). Use one of the two.
+The plugin gives the agents `magenta:principal`, `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, `magenta:frontend`, `magenta:sre`, `magenta:platform`, `magenta:security`, `magenta:database`, and `magenta:writer`. Do not also install the user-level files (`python3 magenta.py install`). Use one of the two.
 
 ## 3. Prepare your repository (one time)
 

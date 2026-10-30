@@ -23,7 +23,7 @@ The conductor (skill `magenta`) and the Principal use these tables. First select
 | improvement | refactor, clean up, simplify, tech debt, readability, duplication | `refactor` | `magenta:architect`, `magenta:qa`, `magenta:engineer`, `magenta:principal` | `magenta:frontend`: client code. |
 | feature | a PRD, a new capability, a user story | `standard` or `full` | `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, `magenta:principal` | `magenta:frontend`: client work. `magenta:database`: a schema change. `magenta:security`: authentication, money, or personal data. `magenta:sre`: a new endpoint, remote call, or rollout risk. `magenta:writer`: user documentation. |
 | investigation | why, how does, explain, find out, "where is", analyze (without a change) | `investigation` | `magenta:principal` and the experts that the question needs | Add only the roles that the question needs. |
-| review | review this PR, diff, design, RFC, or ADR | `pr-review` or `design-review` | `magenta:qa`, `magenta:architect`, `magenta:principal` | `magenta:product-manager`: user-facing scope. |
+| review | review this PR, diff, design, RFC, or ADR | `pr-review` or `design-review` | `magenta:qa`, `magenta:architect`, `magenta:principal` | `magenta:product-manager`: user-facing scope. `magenta:sre`, `magenta:security`, `magenta:database`: by the lens table. |
 | incident | production is down or degraded, urgent, hotfix | `incident` | `magenta:sre`, `magenta:principal`, `magenta:engineer`, `magenta:qa` | `magenta:architect`: after the mitigation, for the root cause. `magenta:platform`: a deployment or infrastructure cause. |
 | security | vulnerability, CVE, authentication, authorization, secrets | `security-fix` | `magenta:security`, `magenta:principal`, `magenta:engineer`, `magenta:qa` | `magenta:architect`: a structural fix. `magenta:platform`: a pipeline, image, or infrastructure fix. |
 | upgrade | upgrade a library, a framework, or a runtime | `upgrade` | `magenta:engineer`, `magenta:qa`, `magenta:principal` | `magenta:architect`: a major version or a breaking change. `magenta:security`: the upgrade fixes a CVE. `magenta:platform`: a runtime or base image upgrade. |
@@ -50,7 +50,7 @@ Use the default mode for most tasks. Use team mode only when a team trigger appl
 | incident | `magenta:engineer` | QA: a test for the failure mode, when there is time. | SRE, Principal |
 | feature (small and clear) | `magenta:engineer` or `magenta:frontend` | QA: acceptance tests (red). Architect: the contracts. | QA, Architect, Principal |
 | investigation | None. The conductor or `magenta:principal` answers, read-only. | None. | None. |
-| review | None. | None. | The review panel: QA, Architect, Principal. |
+| review | None. | None. | The review panel: QA, Architect, Principal. SRE, Security, and Database by the lens table. |
 | design | `magenta:architect` | None. | Principal |
 | infrastructure | `magenta:platform` | SRE: the lint and validate commands of the changed files (red when they find the problem). | SRE. Security, for secrets, permissions, or exposure. |
 | reliability | `magenta:engineer` (code) or `magenta:platform` (alerts, dashboards, manifests) | SRE: the rule as a check. QA: a test for the failure behavior. | SRE, QA |
@@ -124,6 +124,9 @@ Each task has a constraint ledger in `00-brief.md` (team mode: `04-plan.md`). It
 | Architect | ADRs, module boundaries, dependency rules, data ownership, consistency rules, API and event contracts, fitness functions |
 | QA | All tests pass. Locked acceptance tests do not change. No new flaky tests. Performance thresholds. Edge cases covered. |
 | Principal | Rollback, feature flag when necessary, observability, resilience, capacity, security |
+| SRE | SLOs, timeouts and retries, observability, capacity, runbooks for new alerts |
+| Security | Access control, input validation, secrets, dependencies without high or critical vulnerabilities |
+| Database | Reversible migrations, no blocking locks, compatibility of the old and the new code, indexes for new queries |
 | Project | The conventions in the project context, lint, format |
 | Human | The constraints in the request |
 
@@ -145,10 +148,10 @@ Use it for a bug fix or a small change in one module, with low risk, that is eas
 Use it for new behavior inside one bounded context.
 
 1. `magenta:principal`: triage, create the work item, record `00-request.md`.
-2. `magenta:product-manager`: PRD review. Write `01-prd-review.md`.
-3. Gate 1, PRD go (human).
+2. For a feature only: `magenta:product-manager`: PRD review. Write `01-prd-review.md`.
+3. For a feature only: Gate 1, PRD go (human).
 4. Three Amigos: `magenta:product-manager` writes `02-stories.md`. `magenta:qa` reviews it for testability and writes the Gherkin scenarios in `05-test-plan.md`. `magenta:engineer` gives feasibility notes in its final message (read-only).
-5. `magenta:architect`: design note. Write `03-design.md` and ADRs if needed.
+5. `magenta:architect`: design note. Write `03-design.md` and ADRs if needed. For a schema or data change, `magenta:database` writes the migration plan in `03-data.md` before Gate 2. `magenta:security`, `magenta:sre`, and `magenta:writer` join by the lens table of `routing.md`.
 6. Gate 2, scope and design (human): the stories, the acceptance criteria, and the design.
 7. `magenta:principal`: plan. Write `04-plan.md`. Give each maker task one scope.
 8. `magenta:qa`: write the acceptance tests first (red), and their checks in `.magenta/checks/qa.yaml`.
@@ -174,7 +177,7 @@ All steps of the standard lane, with these changes:
 - Step 5: `magenta:architect` writes a full RFC with two or three options.
 - Before Gate 2: run the Design Review Board (workflow "design review").
 - For flows with money or personal data: the skill `magenta:threat-model-stride`.
-- Step 11: the full production readiness review (all items) and a rollout plan.
+- Step 12: the full production readiness review (all items) and a rollout plan.
 - After Gate 3: Gate 4, release (human).
 
 ## Playbook: bugfix
@@ -307,6 +310,7 @@ Use it for a pull request or a local diff.
    - `magenta:qa`: tests, edge cases, and acceptance criteria coverage.
    - `magenta:architect`: structure, boundaries, contracts, and conventions.
    - `magenta:principal` (a new instance): operability, security, and production readiness.
+   - Add `magenta:security`, `magenta:sre`, and `magenta:database` by the lens table of `routing.md`.
 3. Each reviewer returns findings with severity, file and line, risk, and fix in its final message.
 4. `magenta:principal` merges the findings into one report, removes duplicates, and writes `07-review.md` if a work item exists. If not, it gives the report in the conversation.
 

@@ -41,7 +41,7 @@ One-way door / two-way door. Reason:
 | <ID>-<slug> | <step> | <agent> | DRAFT / DONE / BLOCKED / NEEDS-HUMAN | <files> @ <sha> |
 
 ## Task
-- Task type: <bug | performance | improvement | feature | investigation | review | incident | security | upgrade | tests | design>
+- Task type: <bug | performance | improvement | feature | investigation | review | incident | security | upgrade | infrastructure | reliability | data | docs | tests | design>
 - Mode: <default | team>. Reason (the team trigger, or `--lead`):
 - Playbook (team mode): <name>
 - Lane: <lite | standard | full>. Reason:
@@ -233,7 +233,7 @@ flowchart LR
 - Lane: <lite|standard|full>. Reason:
 
 ## Constraint ledger
-| ID | Source (Architect, QA, Principal, Project, Human) | Constraint | How we verify |
+| ID | Source (Architect, QA, Principal, SRE, Security, Database, Project, Human) | Constraint | How we verify |
 |---|---|---|---|
 | C1 | | | |
 
@@ -686,8 +686,11 @@ lane: <lite|standard|full>
 step: <current step>
 gates:
   # Only the human approves a gate. The Principal records the approval from the conversation.
+  checks:           { status: pending, by: null, at: null, note: null }
+  plan:             { status: pending, by: null, at: null, note: null }
   prd-go:           { status: pending, by: null, at: null, note: null }
   scope-and-design: { status: pending, by: null, at: null, note: null }
+  done:             { status: pending, by: null, at: null, note: null }
   merge:            { status: pending, by: null, at: null, note: null }
   release:          { status: pending, by: null, at: null, note: null }
 open_questions: []
