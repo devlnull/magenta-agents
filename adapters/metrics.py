@@ -17,10 +17,11 @@ def collect(repos: list[Path]) -> dict:
             for line in log.read_text(encoding="utf-8").splitlines():
                 try:
                     entry = json.loads(line)
-                    entry["repo"] = repo.name
-                    data["runs"].append(entry)
                 except ValueError:
                     continue
+                if isinstance(entry, dict):
+                    entry["repo"] = repo.name
+                    data["runs"].append(entry)
         work = repo / ".magenta" / "work"
         for folder in sorted(p for p in work.iterdir() if p.is_dir()) if work.is_dir() else []:
             item = {"repo": repo.name, "item": folder.name, "lane": "?", "gates": {}, "review": None,
@@ -59,7 +60,8 @@ def report(data: dict) -> str:
         g = groups[(r.get("workflow"), r.get("agent"), r.get("engine"))]
         g["steps"] += 1
         g["failed"] += 0 if r.get("status") == "OK" else 1
-        g["cost"] += r.get("cost_usd") or 0.0
+        cost = r.get("cost_usd")
+        g["cost"] += cost if isinstance(cost, (int, float)) else 0.0
         g["turns"] += r.get("turns") or 0
         g["time"] += r.get("duration_s") or 0.0
     out += ["| Workflow | Agent | Engine | Steps | Failed | Cost (USD) | Turns | Time (s) |", "|---|---|---|---|---|---|---|---|"]

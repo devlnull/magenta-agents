@@ -23,7 +23,9 @@ foreach ($candidate in @("py -3", "python", "python3")) {
   $parts = $candidate -split " "
   if (Get-Command $parts[0] -ErrorAction SilentlyContinue) {
     $checkArgs = @($parts | Select-Object -Skip 1) + @("-c", "import sys; sys.exit(0 if sys.version_info >= (3, 9) else 1)")
+    $ErrorActionPreference = "Continue"
     & $parts[0] @checkArgs 2>$null | Out-Null
+    $ErrorActionPreference = "Stop"
     if ($LASTEXITCODE -eq 0) { $Python = $parts; break }
   }
 }
@@ -39,6 +41,7 @@ function Run-Python([string[]]$Arguments) {
 
 if (Test-Path (Join-Path $Dir ".git")) {
   Write-Host "magenta: updating $Dir to $Ref"
+  if ($env:MAGENTA_REPO) { git -C $Dir remote set-url origin $Repo; if ($LASTEXITCODE -ne 0) { Fail "git remote set-url failed" } }
   git -C $Dir fetch --quiet --depth 1 origin $Ref; if ($LASTEXITCODE -ne 0) { Fail "git fetch failed" }
   git -C $Dir checkout --quiet --force FETCH_HEAD; if ($LASTEXITCODE -ne 0) { Fail "git checkout failed" }
 } else {

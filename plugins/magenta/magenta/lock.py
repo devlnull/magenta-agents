@@ -91,7 +91,10 @@ def lock(repo: Path, item: str, files: list[str] | None = None) -> Path:
         path = (repo / name).resolve()
         if not path.is_file():
             raise LockError(f"the file {name!r} does not exist")
-        rel = path.relative_to(repo.resolve()).as_posix()
+        try:
+            rel = path.relative_to(repo.resolve()).as_posix()
+        except ValueError:
+            raise LockError(f"the file {name!r} is outside the repository {repo}") from None
         globs.append(re.sub(r"([*?\[\]])", "?", rel))  # an exact path (a glob character matches itself)
     files = hash_files(repo, globs)
     if not files:

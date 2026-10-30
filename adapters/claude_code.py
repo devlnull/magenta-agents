@@ -113,7 +113,9 @@ def render_conductor(skill_dir: Path, python: str) -> bool:
         return False
     command = f'"{Path(python).as_posix()}" "{(skill_dir / "scripts" / "verify.py").as_posix()}"'
     text = target.read_text(encoding="utf-8")
-    target.write_text(text.replace(source.VERIFY_TOKEN, command), encoding="utf-8")
+    lines = [line.replace(source.VERIFY_TOKEN, command.replace("'", "''") if line.startswith("  - '") else command)
+             for line in text.split("\n")]
+    target.write_text("\n".join(lines), encoding="utf-8")
     return source.VERIFY_TOKEN in text
 
 
@@ -174,7 +176,10 @@ def install(dist: Path, home: Path, force: bool = False, python: str | None = No
     claude = home / ".claude"
     plan = [(p, claude / "agents" / p.name) for p in sorted((dist / "agents").glob("*.md"))]
     plan += [(p, claude / "skills" / p.name) for p in sorted((dist / "skills").iterdir())]
+    manifest = claude / "magenta" / "manifest.json"
+    previous = json.loads(manifest.read_text(encoding="utf-8")) if manifest.exists() else []
     installed = _copy_plan(plan, claude / "magenta", dist / "magenta", force)
+    _remove_stale(claude, previous, installed, manifest)
     render_conductor(claude / "skills" / source.CONDUCTOR, python or sys.executable)
     command = guard_command(python or sys.executable, claude / "magenta" / "guard.py")
     escaped = command.replace('"', '\\"')  # the value sits in a YAML double-quoted string
@@ -183,6 +188,23 @@ def install(dist: Path, home: Path, force: bool = False, python: str | None = No
         if GUARD_TOKEN in text:
             agent.write_text(text.replace(GUARD_TOKEN, escaped), encoding="utf-8")
     return installed
+
+
+def _remove_stale(claude: Path, previous: list[str], installed: list[str], manifest: Path) -> None:
+    """Remove agents and skills of an earlier install that the new build does not have. Keep user files."""
+    keep = set(installed)
+    stale = {Path(p) for p in previous if Path(p).parent in (claude / "agents", claude / "skills")}
+    for folder, pattern in (("agents", "magenta*.md"), ("skills", "magenta*")):
+        stale |= {p for p in (claude / folder).glob(pattern) if _is_generated(p)}
+    gone = []
+    for path in sorted(p for p in stale if str(p) not in keep):
+        if path.is_dir():
+            shutil.rmtree(path)
+        elif path.exists():
+            path.unlink()
+        gone.append(str(path))
+    record = [p for p in json.loads(manifest.read_text(encoding="utf-8")) if p not in gone]
+    manifest.write_text(json.dumps(record, indent=2), encoding="utf-8")
 
 
 def _copy_plan(plan, support_dst: Path, support_src: Path | None, force: bool) -> list[str]:

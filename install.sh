@@ -11,6 +11,7 @@
 #   --repo <git URL>                      (MAGENTA_REPO)
 set -eu
 
+REPO_GIVEN="${MAGENTA_REPO:-}"
 REPO="${MAGENTA_REPO:-https://github.com/devlnull/magenta-agents.git}"
 REF="${MAGENTA_REF:-main}"
 DIR="${MAGENTA_HOME:-$HOME/.magenta-agents}"
@@ -21,8 +22,18 @@ while [ $# -gt 0 ]; do
     --target) TARGET="$2"; shift 2 ;;
     --ref) REF="$2"; shift 2 ;;
     --dir) DIR="$2"; shift 2 ;;
-    --repo) REPO="$2"; shift 2 ;;
-    -h|--help) sed -n '2,12p' "$0" 2>/dev/null || true; exit 0 ;;
+    --repo) REPO="$2"; REPO_GIVEN="$2"; shift 2 ;;
+    -h|--help)
+      cat <<USAGE
+Magenta Agents installer for macOS and Linux (also works in Git Bash on Windows).
+
+Options (or environment variables):
+  --target claude-code|opencode|codex|gemini   (MAGENTA_TARGET, default claude-code)
+  --ref <branch or tag>                 (MAGENTA_REF, default main)
+  --dir <folder for the source>         (MAGENTA_HOME, default ~/.magenta-agents)
+  --repo <git URL>                      (MAGENTA_REPO)
+USAGE
+      exit 0 ;;
     *) echo "magenta: unknown option: $1" >&2; exit 1 ;;
   esac
 done
@@ -41,6 +52,7 @@ command -v git >/dev/null 2>&1 || fail "git is necessary."
 
 if [ -d "$DIR/.git" ]; then
   echo "magenta: updating $DIR to $REF"
+  [ -z "${REPO_GIVEN:-}" ] || git -C "$DIR" remote set-url origin "$REPO"
   git -C "$DIR" fetch --quiet --depth 1 origin "$REF"
   git -C "$DIR" checkout --quiet --force FETCH_HEAD
 else
