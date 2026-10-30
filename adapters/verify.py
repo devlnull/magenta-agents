@@ -52,6 +52,8 @@ SET_SELECTION = {"quick": ("quick",), "full": ("quick", "full"), "all": ("quick"
 RUN_SETS = ("quick", "task", "full", "all")
 DEFAULT_TIMEOUT = 600
 MAX_BLOCKS = 2  # Stop hook: the maximum number of blocks in one turn of the human
+AGENT_TTL = 6 * 3600  # a subagent record older than this is stale (its SubagentStop did not come)
+MAKERS = {"engineer", "frontend", "platform", "writer"}  # makers verify before they return to the conductor
 HOOK_TIMEOUT = 120
 PASS = "PASS"
 OK_TO_CLOSE = (PASS, "NO CHECKS")
@@ -661,6 +663,85 @@ def summary(outcome: dict) -> str:
 
 # ----- Claude Code hooks -----
 
+def _magenta_agent(agent_type) -> str | None:
+    """'magenta-engineer', 'magenta:engineer', and 'magenta:magenta-engineer' give 'engineer'."""
+    name = str(agent_type or "")
+    if name.startswith("magenta:"):
+        name = name[len("magenta:"):]
+        return (name[len("magenta-"):] if name.startswith("magenta-") else name) or None
+    return name[len("magenta-"):] or None if name.startswith("magenta-") else None
+
+
+def _task_of_session(event: dict):
+    """(repo, active data) when the event belongs to the session of the active task, else (repo, None)."""
+    repo = find_repo(Path(event.get("cwd") or os.getcwd()))
+    if not _mdir(repo).is_dir():
+        return repo, None  # not a Magenta repository: never create .magenta/
+    data = active(repo)
+    session = data.get("session")
+    if not data.get("work_item") or not session or session != event.get("session_id"):
+        return repo, None
+    return repo, data
+
+
+def _agent_file(repo: Path, session: str, agent_id: str) -> Path:
+    safe = lambda v: re.sub(r"[^A-Za-z0-9._-]", "_", str(v))[:80] or "_"  # noqa: E731
+    return _mdir(repo) / "agents" / safe(session) / f"{safe(agent_id)}.json"
+
+
+def running_agents(repo: Path, session: str) -> list[dict]:
+    """The subagents of the session that started and did not stop. Stale records are removed."""
+    folder = _agent_file(repo, session, "x").parent
+    found = []
+    for path in sorted(folder.glob("*.json")) if folder.is_dir() else []:
+        record = _read_json(path, {})
+        try:
+            age = time.time() - path.stat().st_mtime
+        except OSError:
+            continue
+        if age > AGENT_TTL:
+            path.unlink(missing_ok=True)
+            continue
+        found.append(record)
+    return found
+
+
+def subagent_start(event: dict) -> None:
+    """SubagentStart hook: record a subagent of the session of the active task."""
+    repo, data = _task_of_session(event)
+    if data is None or not event.get("agent_id"):
+        return
+    _write_json(_agent_file(repo, data["session"], event["agent_id"]),
+                {"agent_id": event["agent_id"], "agent_type": event.get("agent_type"), "started_at": _now(),
+                 "blocks": 0})
+
+
+def subagent_stop(event: dict) -> tuple[int, str]:
+    """SubagentStop hook. A maker that changed the code does not return until the checks of the task pass
+    (two blocks at most). Then the record of the subagent is removed. Return (exit code, reason)."""
+    repo, data = _task_of_session(event)
+    if data is None or not event.get("agent_id"):
+        return 0, ""
+    path = _agent_file(repo, data["session"], event["agent_id"])
+    record = _read_json(path, {})
+    agent = _magenta_agent(event.get("agent_type"))
+    if agent in MAKERS and fingerprint(repo) != data.get("base_fingerprint"):
+        result = evaluate(repo)
+        if result["status"] in ("FAIL", "NOT VERIFIED") and not result["pending_linked"]:
+            blocks = int(record.get("blocks") or 0) + 1
+            if blocks <= MAX_BLOCKS:
+                _write_json(path, dict(record, agent_id=event["agent_id"], agent_type=event.get("agent_type"),
+                                       blocks=blocks))
+                bad = result["failed"] + result["invalid"]
+                what = (f"these checks fail: {', '.join(bad)}" if bad
+                        else f"these checks did not run on your last change: {', '.join(result['not_run'])}")
+                return 2, (f"Magenta: before you return, the checks of the task must pass: {what}. "
+                           f"Run: {self_command()} run --set task. Fix the code, not the checks or the locked tests. "
+                           "If a check or a locked test is wrong, return BLOCKED with the evidence.")
+    path.unlink(missing_ok=True)
+    return 0, ""
+
+
 def hook(event: dict) -> tuple[int, str]:
     """Stop hook. Return (exit code, text). Exit 2 blocks the stop; the text goes to the agent.
     Exit 0 with text: the text goes to the human as a system message."""
@@ -672,6 +753,8 @@ def hook(event: dict) -> tuple[int, str]:
     if not event.get("stop_hook_active") and data.get("blocks"):
         data["blocks"] = 0  # a new turn of the human
         _write_json(_mdir(repo) / "active.json", data)
+    if running_agents(repo, session):
+        return 0, ""  # a subagent still works (for example in the background); the check comes when it returns
     current = fingerprint(repo)
     if current is None or current == data.get("base_fingerprint"):
         return 0, ""  # not a git repository, or the code did not change
@@ -792,8 +875,9 @@ def install_hook(repo: Path, protect_main: bool = True) -> Path:
     data = _settings(path)
     hooks = data.get("hooks") if isinstance(data.get("hooks"), dict) else {}
     _remove_ours(hooks)
-    hooks.setdefault("Stop", []).append(
-        {"hooks": [{"type": "command", "command": hook_command("hook"), "timeout": HOOK_TIMEOUT}]})
+    for event_name in ("Stop", "SubagentStop", "SubagentStart"):
+        hooks.setdefault(event_name, []).append(
+            {"hooks": [{"type": "command", "command": hook_command("hook"), "timeout": HOOK_TIMEOUT}]})
     if protect_main:
         hooks.setdefault("PreToolUse", []).append(
             {"matcher": "Bash|Write|Edit|MultiEdit|NotebookEdit",
@@ -852,15 +936,28 @@ def _read_event() -> dict:
 
 def _run_hook(mode: str) -> int:
     if mode == "hook":
+        event = _read_event()
+        name = event.get("hook_event_name") or "Stop"
         try:
-            code, text = hook(_read_event())
+            if name == "SubagentStart":
+                subagent_start(event)
+                return 0
+            if name == "SubagentStop":
+                code, text = subagent_stop(event)
+                if code == 2:
+                    print(text, file=sys.stderr)  # exit 2 sends the subagent back to work
+                return code
+            code, text = hook(event)
         except Exception as exc:  # a broken hook must not trap the session
             code, text = 0, f"Magenta verify hook error: {exc}"
-        if code == 2:
-            print(text, file=sys.stderr)
-        elif text:
+        if code == 2:  # a structured block: the reason goes to Claude, a short message to the human
+            print(json.dumps({"decision": "block", "reason": text,
+                              "systemMessage": "Magenta: the approved checks do not pass on the current code yet. "
+                                               "Claude continues the task."}))
+            return 0
+        if text:
             print(json.dumps({"systemMessage": text}))
-        return code
+        return 0
     try:
         event = _read_event()
         kind, reason = protect.evaluate(event)

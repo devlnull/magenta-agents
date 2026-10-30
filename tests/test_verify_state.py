@@ -71,9 +71,18 @@ class StateCase(unittest.TestCase):
                               capture_output=True, text=True, encoding="utf-8", errors="replace")
 
     def hook(self, session):
+        """Run the Stop hook. A structured block (exit 0 with {"decision": "block"}) counts as exit code 2,
+        because Claude Code blocks the stop in both cases."""
         event = json.dumps({"session_id": session, "cwd": str(self.repo)})
-        return subprocess.run([sys.executable, str(VERIFY), "hook"], input=event, cwd=self.repo,
-                              capture_output=True, text=True, encoding="utf-8", errors="replace")
+        out = subprocess.run([sys.executable, str(VERIFY), "hook"], input=event, cwd=self.repo,
+                             capture_output=True, text=True, encoding="utf-8", errors="replace")
+        try:
+            decision = json.loads(out.stdout or "{}")
+            if out.returncode == 0 and decision.get("decision") == "block":
+                out.returncode, out.stderr = 2, decision.get("reason", "")  # what Claude gets
+        except ValueError:
+            pass
+        return out
 
     def result(self):
         out = self.cli("status")

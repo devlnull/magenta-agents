@@ -33,7 +33,7 @@ PLUGIN_SCOPE = "magenta:"
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PATH_KEYS = ("file_path", "notebook_path", "path")
 HARD_DENY_WRITES = [".magenta/policy.json", "**/acceptance.lock", ".magenta/checks.lock", ".magenta/verify-state.json",
-                    ".magenta/active.json", ".claude/**", ".git/**", ".opencode/**"]
+                    ".magenta/active.json", ".magenta/agents/**", ".claude/**", ".git/**", ".opencode/**"]
 PYTHON = re.compile(r"(python3?(\.\d+)?|py)(\.exe)?")
 SHELL_OPERATORS = (";", "&", "|", ">", "<", "`", "$(", "\n")
 # macOS and Windows file systems ignore case by default: compare paths without case there.

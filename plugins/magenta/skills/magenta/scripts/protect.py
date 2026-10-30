@@ -25,8 +25,8 @@ STATE_NAMES = ("checks.lock", "verify-state.json", "active.json", "acceptance.lo
 WRITE_TOOLS = {"Write", "Edit", "MultiEdit", "NotebookEdit"}
 PATH_KEYS = ("file_path", "notebook_path", "path")
 CASE_INSENSITIVE = sys.platform in ("darwin", "win32")
-_STATE_IN_SHELL = re.compile(r"\.magenta[/\\][^\s'\";|&<>]*?(" + "|".join(re.escape(n) for n in STATE_NAMES) + ")",
-                             re.IGNORECASE if CASE_INSENSITIVE else 0)
+_STATE_IN_SHELL = re.compile(r"\.magenta[/\\][^\s'\";|&<>]*?(" + "|".join(re.escape(n) for n in STATE_NAMES)
+                             + r"|agents(?=[/\\\s'\"]|$))", re.IGNORECASE if CASE_INSENSITIVE else 0)
 _HUMAN_ONLY = re.compile(r"(verify\.py|magenta\.py)\b.*(?:^|\s)(approve|uninstall-hook|unhook|uninstall|--fo(?:r(?:ce?)?)?)"
                          r"(?:\s|=|$)")
 _ASK_WORDS = {"approve"}  # and --force with its abbreviations; the other human-only words are always blocked
@@ -49,6 +49,8 @@ def _is_state_path(raw: str) -> bool:
     parts = [p.lower() if CASE_INSENSITIVE else p for p in path.parts]
     name = parts[-1] if parts else ""
     names = [n.lower() if CASE_INSENSITIVE else n for n in STATE_NAMES]
+    if ".magenta" in parts and parts.index(".magenta") + 1 < len(parts) and parts[parts.index(".magenta") + 1] == "agents":
+        return True  # the records of the running subagents (the Stop hook trusts them)
     return ".magenta" in parts and name in names
 
 

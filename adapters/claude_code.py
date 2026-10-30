@@ -107,16 +107,25 @@ def copy_scripts(dst: Path, names=source.CONDUCTOR_SCRIPTS) -> None:
 
 
 def render_conductor(skill_dir: Path, python: str) -> bool:
-    """Write the real Python and the real script path into an installed conductor skill."""
+    """Write the real Python and the real script path into an installed conductor skill, and into the command
+    skills next to it (run-checks, task-status, approve-checks) that use the same script."""
     target = skill_dir / "SKILL.md"
     if not target.exists():
         return False
     command = f'"{Path(python).as_posix()}" "{(skill_dir / "scripts" / "verify.py").as_posix()}"'
-    text = target.read_text(encoding="utf-8")
-    lines = [line.replace(source.VERIFY_TOKEN, command.replace("'", "''") if line.startswith("  - '") else command)
-             for line in text.split("\n")]
-    target.write_text("\n".join(lines), encoding="utf-8")
-    return source.VERIFY_TOKEN in text
+    found = False
+    siblings = [p / "SKILL.md" for p in sorted(skill_dir.parent.iterdir()) if p.is_dir() and p != skill_dir]
+    for path, token in [(target, source.VERIFY_TOKEN)] + [(p, source.SIBLING_VERIFY_TOKEN) for p in siblings]:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if token not in text:
+            continue
+        found = found or path == target
+        lines = [line.replace(token, command.replace("'", "''") if line.startswith("  - '") else command)
+                 for line in text.split("\n")]
+        path.write_text("\n".join(lines), encoding="utf-8")
+    return found
 
 
 def _yaml_value(value) -> str:

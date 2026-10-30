@@ -69,7 +69,7 @@ A repository can extend the rules of an agent. Only you change this file. A patt
 | Tool | Rules of the agents | Checks |
 |---|---|---|
 | Claude Code (user level) | A guard hook in each agent | The verify script, and the Stop and protect hooks from `init` |
-| Claude Code (plugin) | One plugin guard hook for all sessions | The verify script, and the Stop hook of the plugin |
+| Claude Code (plugin) | One plugin guard hook for all sessions | The verify script, and the Stop, SubagentStart, and SubagentStop hooks of the plugin |
 | OpenCode | Ordered permission rules in each agent | The verify script, run by the conductor |
 | Codex CLI | Rules as instructions, plus the Codex sandbox and approvals | The verify script, run by the conductor |
 | Gemini CLI | Rules as instructions, plus the Gemini approvals | The verify script, run by the conductor |

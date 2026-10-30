@@ -3,7 +3,7 @@
 version: 1
 
 # The release version. The release workflow checks that the tag agrees with it.
-release: 0.9.0
+release: 0.10.0
 
 # Owner of the plugin marketplace.
 owner: AMQ

@@ -177,11 +177,15 @@ When a task of this session is active and the code changed, the Stop hook does n
 
 - If the hook blocks you, run verify. Fix the failures through the lead.
 - At the checks gate, the checks of the task wait for approval. Then the hook lets you stop, and it reminds the human to approve them.
+- While a subagent of the task still runs (for example the lead in the background), the hook lets you stop. Wait for it. When it returns, run verify, and the hook checks again.
+- A maker (`engineer`, `frontend`, `platform`, `writer`) that changed the code cannot return until the checks of the task pass, or until it was sent back two times. Then it must return BLOCKED with the evidence.
 - If the checks cannot pass, say so in the report. Do not change a check to make it pass.
 
 Exit codes of `run`: 0 pass, 1 fail (or the code changed during the run), 2 configuration error, 3 some checks wait for approval, 4 no checks exist.
 
 ## Notes for each tool
+
+- **Commands for the human (Claude Code):** the skill `run-checks` runs the checks now, the skill `task-status` shows the task and the checks, and the skill `approve-checks` approves the checks that wait. The human types them after `/`.
 
 - **Long checks:** set the timeout of the shell tool to its maximum (Claude Code: 600000 ms). If the checks need more time, run verify in the background and wait for it.
 - **Claude Code:** the agents are subagents with the names in the roster. Use worktree isolation for a tournament.

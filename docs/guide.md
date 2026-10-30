@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.9.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.10.0
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.9.0"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.10.0"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -165,7 +165,7 @@ checks:
 
 A check runs only after you approve its exact command, set, and work item. If an agent changes an approved check, the check fails until you approve the change. Your approval also seals the locked tests of the task.
 
-**Approve in Claude Code.** At the checks gate, Magenta shows the checks as a table and requests the approval. Claude Code opens its permission dialog for the approve command, with the list of the checks. Select **Yes** to approve them, or **No** to ask for changes. You type nothing. No model can approve: the guard blocks the subagents, and the dialog needs you.
+**Approve in Claude Code.** At the checks gate, Magenta shows the checks as a table and requests the approval. You can also type `/magenta:approve-checks` (plugin) at any time. Claude Code opens its permission dialog for the approve command, with the list of the checks. Select **Yes** to approve them, or **No** to ask for changes. You type nothing. No model can approve: the guard blocks the subagents, and the dialog needs you.
 
 Approve only commands that you trust. A check runs on your computer. Do not select "don't ask again" for the approve command.
 
@@ -177,6 +177,24 @@ Approve only commands that you trust. A check runs on your computer. Do not sele
 python3 ~/.magenta-agents/magenta.py verify list      # read the checks
 python3 ~/.magenta-agents/magenta.py verify approve   # approve all new and changed checks
 ```
+
+## Commands in Claude Code
+
+You can check and approve from the prompt of Claude Code. You do not need a terminal.
+
+| Command (plugin) | Command (user-level install) | What it does |
+|---|---|---|
+| `/magenta:task-status` | `/magenta-task-status` | Shows the active task, the checks and their approval, and the result for the current code |
+| `/magenta:run-checks [task\|quick\|full\|all]` | `/magenta-run-checks` | Runs the checks now and shows the result table |
+| `/magenta:approve-checks` | `/magenta-approve-checks` | Shows the checks that wait, and asks you to approve them in the permission dialog |
+
+Only you can start `approve-checks`: the model cannot start it.
+
+## While the agents work
+
+- **A background agent.** The conductor can start the lead in the background. While a subagent of the task still works, the Stop hook lets the conductor wait. When the subagent returns, the conductor runs the checks, and the Stop hook checks again.
+- **Makers verify before they return.** A maker (Engineer, Front-End, Platform, Writer) that changed the code cannot return to the conductor until the checks of the task pass. After two tries, it returns and reports the problem.
+- **When the checks do not pass**, Claude Code shows a short note from Magenta, and Claude continues the task. After two blocks in one turn, Claude can stop, and its report says that the checks do not pass.
 
 ## Use one role
 

@@ -65,6 +65,8 @@ With the plugin, add `--no-hook`: the plugin has its own hooks.
 I need p95 at or below 5 ms; p99 can be 10 ms.
 ```
 
+To see the task and the checks at any time, type `/magenta:task-status`. To run the checks now, type `/magenta:run-checks`.
+
 The first task asks to learn your repository (discover-project). Then QA writes a load test with the thresholds, and the Architect writes the structural rules. You approve them. The Engineer profiles and changes the code until all checks pass. The reviewers check the result, and you get a report with the evidence.
 
 ## The agents

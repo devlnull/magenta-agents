@@ -13,6 +13,8 @@ CONDUCTOR = "magenta"  # the /magenta skill keeps its plain name in every tool
 # The conductor skill runs the verify script with this command. Claude Code replaces ${CLAUDE_SKILL_DIR}.
 # A user-level install writes the real Python and the real path (also into the allowed-tools patterns).
 VERIFY_TOKEN = '"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py"'
+# The command skills (run-checks, task-status, approve-checks) use the scripts of the conductor next to them.
+SIBLING_VERIFY_TOKEN = '"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py"'
 CONDUCTOR_SCRIPTS = ("verify.py", "lock.py", "common.py", "protect.py")
 GENERATED_SKILLS = ("workflow", "templates")
 WORKFLOW_ORDER = ("routing", "lite", "standard", "full", "bugfix", "performance", "refactor", "investigation",

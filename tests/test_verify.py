@@ -374,11 +374,13 @@ class HookTest(RepoCase):
         self.assertEqual(stop[0], "echo mine")
         self.assertTrue(stop[1].startswith('[ ! -f "') and stop[1].endswith('verify.py" hook'))
         self.assertEqual(len(data["hooks"]["PreToolUse"]), 1)
+        for event_name in ("SubagentStart", "SubagentStop"):
+            self.assertEqual(len(data["hooks"][event_name]), 1, event_name)
         self.assertEqual(data["permissions"], {"allow": ["Bash(ls:*)"], "ask": list(protect.ASK_RULES)})
         self.assertEqual(verify.hook_status(self.repo), "installed")
         self.assertIn(".claude/settings.local.json",
                       (self.repo / ".git/info/exclude").read_text(encoding="utf-8").split())
-        self.assertEqual(verify.uninstall_hook(self.repo), 2 + len(protect.ASK_RULES))
+        self.assertEqual(verify.uninstall_hook(self.repo), 4 + len(protect.ASK_RULES))
         data = json.loads((self.repo / ".claude/settings.local.json").read_text(encoding="utf-8"))
         self.assertEqual(data["hooks"], {"Stop": [{"hooks": [{"type": "command", "command": "echo mine"}]}]})
         self.assertEqual(data["permissions"], {"allow": ["Bash(ls:*)"]})
@@ -591,6 +593,94 @@ class ApprovalDialogTest(RepoCase):
         self.assertFalse(any("approve" in t or t.rstrip(")").endswith("*") and "finish" in t
                              for t in meta["allowed-tools"]))
         self.assertIn("approve <id> <id> ... lock.<ID>", body)
+
+
+
+class SubagentTest(RepoCase):
+    """While a subagent of the task works, the Stop hook waits. A maker verifies before it returns."""
+
+    def setUp(self):
+        super().setUp()
+        self.checks("qa.yaml", [{"id": "qa.b", "command": self.has_b(), "work_item": "T1-x"}])
+        verify.approve(self.repo, [])
+        verify.start(self.repo, "T1-x", session="S1")
+
+    def event(self, name, agent_id="a1", agent_type="magenta:engineer", session="S1"):
+        return {"hook_event_name": name, "session_id": session, "cwd": str(self.repo), "agent_id": agent_id,
+                "agent_type": agent_type}
+
+    def cli_hook(self, event):
+        out = subprocess.run([sys.executable, str(ROOT / "adapters" / "verify.py"), "hook"], input=json.dumps(event),
+                             capture_output=True, text=True, cwd=self.repo)
+        return out.returncode, out.stdout, out.stderr
+
+    def test_the_stop_hook_waits_for_a_running_subagent(self):
+        write(self.repo / "a.txt", "a\nc\n")  # the background engineer changed the code
+        verify.subagent_start(self.event("SubagentStart"))
+        self.assertEqual(len(verify.running_agents(self.repo, "S1")), 1)
+        self.assertEqual(self.hook(session_id="S1"), (0, ""))  # quiet while it works
+        self.assertEqual(verify.subagent_stop(self.event("SubagentStop", agent_type="magenta:qa")), (0, ""))
+        self.assertEqual(verify.running_agents(self.repo, "S1"), [])
+        self.assertEqual(self.hook(session_id="S1")[0], 2)  # now the checks count again
+
+    def test_a_maker_verifies_before_it_returns(self):
+        write(self.repo / "a.txt", "a\nc\n")
+        verify.subagent_start(self.event("SubagentStart"))
+        code, reason = verify.subagent_stop(self.event("SubagentStop"))
+        self.assertEqual(code, 2)
+        self.assertIn("before you return", reason)
+        self.assertEqual(verify.subagent_stop(self.event("SubagentStop"))[0], 2)
+        self.assertEqual(verify.subagent_stop(self.event("SubagentStop"))[0], 0)  # two blocks at most
+        self.assertEqual(verify.running_agents(self.repo, "S1"), [])
+        verify.subagent_start(self.event("SubagentStart", agent_id="a2"))
+        write(self.repo / "a.txt", "a\nb\n")
+        verify.run(self.repo, "task")
+        self.assertEqual(verify.subagent_stop(self.event("SubagentStop", agent_id="a2")), (0, ""))  # verified
+
+    def test_other_sessions_and_other_repositories_are_not_tracked(self):
+        verify.subagent_start(self.event("SubagentStart", session="S2"))
+        self.assertEqual(verify.running_agents(self.repo, "S2"), [])
+        with tempfile.TemporaryDirectory() as tmp:
+            verify.subagent_start(dict(self.event("SubagentStart"), cwd=tmp))
+            self.assertFalse((Path(tmp) / ".magenta").exists())  # never create .magenta/ in other repositories
+
+    def test_the_cli_blocks_with_a_structured_decision(self):
+        write(self.repo / "a.txt", "a\nc\n")
+        code, out, _ = self.cli_hook({"hook_event_name": "Stop", "session_id": "S1", "cwd": str(self.repo)})
+        decision = json.loads(out)
+        self.assertEqual((code, decision["decision"]), (0, "block"))
+        self.assertIn("did not run", decision["reason"])
+        self.assertIn("systemMessage", decision)
+        self.assertEqual(self.cli_hook(self.event("SubagentStart"))[0], 0)
+        code, _, err = self.cli_hook(self.event("SubagentStop"))
+        self.assertEqual(code, 2)  # the subagent goes back to work
+        self.assertIn("before you return", err)
+
+    def test_the_records_are_protected(self):
+        self.assertIsNotNone(protect.decide({"tool_name": "Write", "tool_input": {"file_path": ".magenta/agents/S1/x.json"}}))
+        self.assertIsNotNone(protect.decide({"tool_name": "Bash", "tool_input": {"command": "rm .magenta/agents/S1/x.json"}}))
+
+
+class CommandSkillsTest(unittest.TestCase):
+    def test_the_command_skills_use_the_script_of_the_conductor(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            out = Path(tmp) / "dist"
+            claude_code.build(ROOT, out)
+            home = Path(tmp) / "home"
+            claude_code.install(out, home, python="/opt/py/bin/python3")
+            skills = home / ".claude" / "skills"
+            command = f'"/opt/py/bin/python3" "{(skills / "magenta" / "scripts" / "verify.py").as_posix()}"'
+            for name in ("magenta-run-checks", "magenta-task-status", "magenta-approve-checks"):
+                text = (skills / name / "SKILL.md").read_text(encoding="utf-8")
+                self.assertNotIn(source.SIBLING_VERIFY_TOKEN, text, name)
+                self.assertIn(command, text, name)
+            meta, body = split_front_matter((skills / "magenta-approve-checks" / "SKILL.md").read_text(encoding="utf-8"))
+            self.assertIs(meta["disable-model-invocation"], True)
+            self.assertFalse(any("approve" in t for t in meta["allowed-tools"]))
+            self.assertIn(f"!`{command} list`", body)
+        hooks = json.loads((ROOT / "plugins/magenta/hooks/hooks.json").read_text(encoding="utf-8"))["hooks"]
+        for event_name in ("Stop", "SubagentStart", "SubagentStop"):
+            self.assertIn("verify.py hook", hooks[event_name][0]["hooks"][0]["command"])
 
 
 if __name__ == "__main__":

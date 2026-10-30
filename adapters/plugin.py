@@ -68,8 +68,9 @@ def build(root: Path, out: Path) -> dict:
     hooks = {"hooks": {
         "PreToolUse": [{"matcher": claude_code.GUARDED_TOOLS, "hooks": [
             {"type": "command", "command": 'sh "${CLAUDE_PLUGIN_ROOT}/magenta/guard.sh" --auto'}]}],
-        "Stop": [{"hooks": [
+        # One command for the three events; verify.py reads hook_event_name.
+        **{event: [{"hooks": [
             {"type": "command", "command": 'sh "${CLAUDE_PLUGIN_ROOT}/magenta/py.sh" --fail-open verify.py hook',
-             "timeout": 120}]}]}}
+             "timeout": 120}]}] for event in ("Stop", "SubagentStop", "SubagentStart")}}}
     (plugin / "hooks" / "hooks.json").write_text(json.dumps(hooks, indent=2) + "\n", encoding="utf-8")
     return {"agents": sorted(agents), "skills": sorted(skills), "version": version}

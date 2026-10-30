@@ -1,0 +1,19 @@
+---
+name: run-checks
+description: Run the Magenta checks of the active task on the current code and show the result. Use it when the user types the run-checks command of Magenta, or asks to run or verify the Magenta checks now.
+argument-hint: "[quick | task | full | all]"
+allowed-tools:
+  - Bash("python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" run*)
+  - Bash("python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" status*)
+---
+
+# Run the checks
+
+The verify command is `"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py"`. If your tool did not replace `${CLAUDE_SKILL_DIR}`, use `../magenta/scripts/verify.py` next to this skill.
+
+1. Run `"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" status`. If a Magenta agent still changes the code (for example a background agent of the active task), tell the human, and wait until it returns. A run while the code changes gives no valid result.
+2. Select the set: `$ARGUMENTS` when it is `quick`, `task`, `full`, or `all`. Otherwise use `task`: the quick checks and all checks of the active task.
+3. Run `"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" run --set <set>`. Set the timeout of the shell tool to its maximum (600000 ms). If the checks need more time, run the command in the background and wait for it.
+4. Show the result table. For each failed check, show the last lines of its output and the path of its log.
+5. Exit code 3: some checks wait for the approval of the human. Say so, and suggest the skill `approve-checks` (the human types it after `/`). Exit code 4: no check exists yet.
+6. Do not change code, checks, or tests in this command. Do not start agents.

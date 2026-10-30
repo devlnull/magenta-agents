@@ -4,6 +4,19 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-30
+
+### Added
+
+- Commands in Claude Code: `/magenta:run-checks` runs the checks now, `/magenta:task-status` shows the task and the checks, and `/magenta:approve-checks` approves the waiting checks through the permission dialog (only the human can start it). User-level installs: `/magenta-run-checks`, `/magenta-task-status`, `/magenta-approve-checks`.
+- SubagentStart and SubagentStop hooks (plugin, and `magenta.py init`). Magenta knows which subagents of the task still work.
+- A maker (Engineer, Front-End, Platform, Writer) that changed the code cannot return to the conductor until the checks of the task pass (two blocks at most).
+
+### Changed
+
+- The Stop hook does not block while a subagent of the task still works, for example the lead in the background. It checks again when the subagent returns.
+- The Stop hook blocks with a structured decision: the reason goes to Claude, and the human sees a short note, not a "Stop hook error" with a command line.
+
 ## [0.9.0] - 2026-10-30
 
 ### Changed
@@ -90,7 +103,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.9.0...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.0...HEAD
+[0.10.0]: https://github.com/devlnull/magenta-agents/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/devlnull/magenta-agents/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/devlnull/magenta-agents/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/devlnull/magenta-agents/compare/v0.7.0...v0.7.1

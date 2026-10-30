@@ -1,0 +1,24 @@
+---
+name: approve-checks
+description: Review and approve the Magenta checks that wait for approval. Only the user starts it. Claude shows the checks, and Claude Code asks the user to confirm the approval in its permission dialog.
+disable-model-invocation: true
+allowed-tools:
+  - Bash("python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" list*)
+---
+
+# Approve the checks
+
+## Checks now
+
+!`"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" list`
+
+## Steps
+
+If the output above is empty, run `"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" list` yourself.
+
+1. Find the rows with the approval WAITS, CHANGED, or REMOVED. If there are none, say "Nothing waits for approval." and stop.
+2. Show them to the human as a short table: id, owner (source), set, work item, and command. For each one, say in one short sentence what it tests.
+3. Run `"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" approve <id> <id> ...` with these ids (also `lock.<work item>` rows). Claude Code asks the human to confirm the command. That confirmation is the approval.
+4. If the human refuses, ask what to change. Do not change a check yourself: its owner changes it.
+5. If the call is blocked because Claude Code cannot ask (bypass mode), show the human the command, so that the human runs it in a terminal.
+6. After the approval, offer to run the checks (skill `run-checks`).

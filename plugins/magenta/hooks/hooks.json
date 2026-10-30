@@ -21,6 +21,28 @@
           }
         ]
       }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/magenta/py.sh\" --fail-open verify.py hook",
+            "timeout": 120
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh \"${CLAUDE_PLUGIN_ROOT}/magenta/py.sh\" --fail-open verify.py hook",
+            "timeout": 120
+          }
+        ]
+      }
     ]
   }
 }

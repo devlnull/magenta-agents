@@ -1,0 +1,30 @@
+---
+name: task-status
+description: Show the Magenta task of this repository - the active work item, the checks and their approval, and the result for the current code. Use it when the user types the task-status command of Magenta, or asks for the status of Magenta.
+allowed-tools:
+  - Bash("python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" status*)
+  - Bash("python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" list*)
+---
+
+# Task status
+
+## Status now
+
+!`"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" status`
+
+## Checks now
+
+!`"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" list`
+
+## Your answer
+
+If the output above is empty, run the two commands yourself: `"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" status` and `"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py" list`.
+
+Explain the status to the human in three to five short sentences:
+
+1. The active task, or the last task and its result.
+2. The result for the current code: PASS, FAIL, NOT VERIFIED, or NO CHECKS, with the failed checks.
+3. The checks that wait for approval.
+4. The next step: run the checks (skill `run-checks`), approve the checks (skill `approve-checks`), or continue the task (skill `magenta`).
+
+Do not change files. Do not run other commands.
