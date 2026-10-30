@@ -56,9 +56,10 @@ PASS = "PASS"
 OK_TO_CLOSE = (PASS, "NO CHECKS")
 # Untracked files in these folders, or with these endings, are build or test outputs, not code. Tracked files
 # always count. (Most repositories ignore them in .gitignore already.)
-ARTIFACT_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox", "htmlcov", "coverage",
-                 "node_modules", "build", "target", "out", "dist", ".gradle", "bin", "obj", ".next", "test-results",
-                 "playwright-report"}
+ARTIFACT_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".tox", ".nox", "htmlcov",
+                 "node_modules", ".gradle", ".next", "test-results", "playwright-report"}
+# These names are common in source paths (src/bin/tool.py), so they are outputs only at the repository root.
+ROOT_ARTIFACT_DIRS = {"coverage", "build", "target", "out", "dist", "bin", "obj"}
 ARTIFACT_ENDINGS = (".pyc", ".pyo", ".class", ".coverage", "coverage.xml", ".log")
 SETTINGS = Path(".claude") / "settings.local.json"
 
@@ -163,7 +164,7 @@ def load_checks(repo: Path) -> list[dict]:
     for path in sorted(folder.glob("*.yaml")) if folder.is_dir() else []:
         try:
             data = parse_yaml(path.read_text(encoding="utf-8")) or {}
-        except YamlError as exc:
+        except (YamlError, UnicodeDecodeError) as exc:
             raise VerifyError(f"{path.name}: {exc}") from exc
         if not isinstance(data, dict) or not isinstance(data.get("checks") or [], list):
             raise VerifyError(f"{path.name}: the file must be a map with a 'checks' list")
@@ -292,6 +293,11 @@ def _tree_fingerprint(repo: Path) -> str | None:
         if index is not None and index.is_file():
             shutil.copyfile(index, temp_index)
         env = dict(os.environ, GIT_INDEX_FILE=str(temp_index))
+        hidden = [e[2:] for e in (_git(repo, "ls-files", "-v", "-z", env=env) or b"").split(b"\0")
+                  if e[:1].islower() or e[:1] == b"S"]  # assume-unchanged and skip-worktree files
+        for flag in ("--no-assume-unchanged", "--no-skip-worktree") if hidden else ():
+            subprocess.run(["git", "update-index", flag, "-z", "--stdin"], cwd=repo, env=env,
+                           input=b"\0".join(hidden) + b"\0", capture_output=True)
         untracked = _git(repo, "ls-files", "--others", "--exclude-standard", "-z")
         # No pathspec here: git add exits with 1 when a pathspec names an ignored path (.magenta/ usually is).
         if _git(repo, "add", "-A", env=env) is None or untracked is None:
@@ -311,7 +317,8 @@ def _tree_fingerprint(repo: Path) -> str | None:
 
 def _is_artifact(path: str) -> bool:
     parts = path.split("/")
-    return any(p in ARTIFACT_DIRS for p in parts[:-1]) or parts[-1].endswith(ARTIFACT_ENDINGS)
+    return (any(p in ARTIFACT_DIRS for p in parts[:-1]) or (len(parts) > 1 and parts[0] in ROOT_ARTIFACT_DIRS)
+            or parts[-1].endswith(ARTIFACT_ENDINGS))
 
 
 def _diff_fingerprint(repo: Path) -> str:
@@ -669,9 +676,11 @@ def hook(event: dict) -> tuple[int, str]:
     if result["status"] == PASS:
         return 0, ""
     if result["pending_linked"]:
+        failing = result["failed"] + result["invalid"]
         return 0, (f"Magenta: {len(result['pending_linked'])} checks of the task {item} wait for your approval: "
                    f"{', '.join(result['pending_linked'])}. Read them, then approve them with: "
-                   f"{self_command()} approve")
+                   f"{self_command()} approve"
+                   + (f"\nThese checks fail on the current code: {', '.join(failing)}." if failing else ""))
     if result["status"] == "NO CHECKS":
         note = " Some checks wait for the approval of the human." if result["pending"] else ""
         return 0, f"Magenta: the task {item} changed the code, but no approved check exists, so nothing enforces the rules.{note}"
