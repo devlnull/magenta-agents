@@ -16,12 +16,15 @@ import json
 import re
 import shutil
 import subprocess
+import threading
 import time
 import uuid
 from dataclasses import dataclass, field
 from pathlib import Path
 
 import source
+
+_LOG_LOCK = threading.Lock()
 
 HEADLESS_NOTE = ("You run headless. Nobody can answer questions now. Do not wait for a human. "
                  "Put your questions and assumptions in your output.")
@@ -131,7 +134,7 @@ class Run:
                  "engine": r.engine, "model": r.model, "command": cmd[0] if cmd else None,
                  "returncode": r.returncode, "status": r.status, "cost_usd": r.cost_usd, "turns": r.turns,
                  "duration_s": r.duration_s, "at": dt.datetime.now(dt.timezone.utc).isoformat(timespec="seconds")}
-        with (self.repo / ".magenta" / "runs" / "runs.jsonl").open("a", encoding="utf-8") as f:
+        with _LOG_LOCK, (self.repo / ".magenta" / "runs" / "runs.jsonl").open("a", encoding="utf-8") as f:
             f.write(json.dumps(entry) + "\n")
 
 

@@ -1,4 +1,5 @@
 """Tests for phases 2 to 5: makers and lock, OpenCode and AGENTS.md adapters, runner, plugin, metrics."""
+import concurrent.futures as futures
 import json
 import shutil
 import subprocess
@@ -259,6 +260,15 @@ class RunnerTest(unittest.TestCase):
                               "--base", "HEAD~1", "--dry-run"], capture_output=True, text=True)
         self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
         self.assertIn("review-qa", out.stdout)
+
+    def test_parallel_steps_keep_every_log_record(self):
+        run = runner.Run(ROOT, self.repo, "pr-review", executor=self.fake(cost=0.25))
+        result = runner.StepResult("s", "qa", "claude", None, 0, "", 0.25, 1, 0.0, "OK")
+        with futures.ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(lambda _: run.log(result, ["claude"]), range(400)))
+        lines = (self.repo / ".magenta" / "runs" / "runs.jsonl").read_text(encoding="utf-8").splitlines()
+        self.assertEqual(len(lines), 400)
+        self.assertTrue(all(json.loads(line)["agent"] == "qa" for line in lines))
 
     def test_metrics(self):
         run = runner.Run(ROOT, self.repo, "pr-review", executor=self.fake(cost=0.25))
