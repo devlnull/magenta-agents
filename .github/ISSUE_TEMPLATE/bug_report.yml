@@ -1,0 +1,45 @@
+name: Bug report
+description: Something does not work as the documentation says.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What did you do, what did you expect, and what happened?
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. python3 magenta.py ...
+        2. /magenta ...
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Magenta version
+      placeholder: "0.7.1 (see release in magenta.yaml)"
+    validations:
+      required: true
+  - type: dropdown
+    id: tool
+    attributes:
+      label: Tool
+      options: [Claude Code (plugin), Claude Code (user level), OpenCode, Codex CLI, Gemini CLI, Other]
+    validations:
+      required: true
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and Python version
+      placeholder: "macOS 15, Python 3.13"
+  - type: textarea
+    id: logs
+    attributes:
+      label: Output or logs
+      description: Remove secrets and private code first.
+      render: text

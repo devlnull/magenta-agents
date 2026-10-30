@@ -1,5 +1,20 @@
 {
   "name": "magenta",
   "version": "0.7.1",
-  "description": "Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End) with gates and guards."
+  "description": "Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End). The rules become checks, and a task is done when the checks pass.",
+  "author": {
+    "name": "AMQ",
+    "url": "https://github.com/devlnull"
+  },
+  "homepage": "https://github.com/devlnull/magenta-agents",
+  "repository": "https://github.com/devlnull/magenta-agents",
+  "license": "MIT",
+  "keywords": [
+    "agents",
+    "subagents",
+    "code-review",
+    "qa",
+    "architecture",
+    "verification"
+  ]
 }

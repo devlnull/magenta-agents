@@ -1,4 +1,4 @@
-"""Team distribution (phase 5): a Claude Code plugin and a marketplace, committed to the repository.
+"""Team distribution: a Claude Code plugin and a marketplace, committed to the repository.
 
 GitHub users install it with:
   claude plugin marketplace add devlnull/magenta-agents
@@ -42,9 +42,15 @@ def build(root: Path, out: Path) -> dict:
     (plugin / "hooks").mkdir()
 
     version = str(cfg.get("release") or "0.1.0")
-    description = "Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End) with gates and guards."
+    description = ("Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End). "
+                   "The rules become checks, and a task is done when the checks pass.")
+    homepage = "https://github.com/devlnull/magenta-agents"
     (plugin / ".claude-plugin" / "plugin.json").write_text(json.dumps(
-        {"name": PLUGIN, "version": version, "description": description}, indent=2) + "\n", encoding="utf-8")
+        {"name": PLUGIN, "version": version, "description": description,
+         "author": {"name": cfg.get("owner") or "Magenta maintainers", "url": "https://github.com/devlnull"},
+         "homepage": homepage, "repository": homepage, "license": "MIT",
+         "keywords": ["agents", "subagents", "code-review", "qa", "architecture", "verification"]},
+        indent=2) + "\n", encoding="utf-8")
     owner = cfg.get("owner") or "Magenta maintainers"
     (out / ".claude-plugin" / "marketplace.json").write_text(json.dumps(
         {"name": MARKETPLACE, "description": "Magenta agents for the team", "owner": {"name": owner},

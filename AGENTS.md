@@ -1,6 +1,6 @@
 # Working in the magenta-agents repository
 
-This repository is the canonical source of the Magenta agents (RFC-0001, option C).
+This repository is the canonical source of the Magenta agents (RFC-0001, option C). Human contributors: read [CONTRIBUTING.md](CONTRIBUTING.md). The same rules apply to you.
 
 ## Rules for changes
 
@@ -23,7 +23,7 @@ python3 magenta.py install           # install into ~/.claude
 
 After a change to the rules, the agents, or the model mapping, run the evals (`evals/README.md`).
 
-## More commands (phases 2 to 7)
+## More commands
 
 ```bash
 python3 magenta.py install --target opencode   # or codex, or gemini (frozen: bug fixes only, ADR-0012)

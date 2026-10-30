@@ -1,4 +1,4 @@
-# Headless runner (phase 4)
+# Headless runner
 
 The runner runs fixed workflows without a user interface, for example in CI. It calls existing harnesses as workers. It does not run workflows with human gates; those stay interactive.
 

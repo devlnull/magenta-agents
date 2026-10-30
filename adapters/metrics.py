@@ -1,4 +1,4 @@
-"""Metrics (RFC-0001, section 12; phase 5): read the run logs and the work items of repositories."""
+"""Metrics (RFC-0001, section 12): read the run logs and the work items of repositories."""
 from __future__ import annotations
 
 import json

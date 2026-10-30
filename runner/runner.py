@@ -1,4 +1,4 @@
-"""Magenta headless runner (RFC-0001, option C layer 3; phase 4).
+"""Magenta headless runner (RFC-0001, option C layer 3).
 
 It runs fixed workflows without a user interface. It calls existing harnesses as workers (for example
 `claude -p` or `opencode run`). It keeps the state, the budget, and a JSONL log. It does not run

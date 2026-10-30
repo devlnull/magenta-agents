@@ -321,7 +321,7 @@ def package(out: Path) -> list[Path]:
 
 
 def _extra_builds():
-    """The team plugin and marketplace (phase 5)."""
+    """The team plugin and marketplace."""
     def build_plugin():
         result = team_plugin.build(ROOT, ROOT)
         return (f"plugin:      magenta {result['version']}: {len(result['agents'])} agents, "

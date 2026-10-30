@@ -1,4 +1,4 @@
-# Magenta PR review panel for GitHub pull requests (phase 4).
+# Magenta PR review panel for GitHub pull requests.
 # Copy to .github/workflows/magenta-review.yml.
 # Secrets: ANTHROPIC_API_KEY. Optional variable: MAGENTA_REPO_URL (default: GitHub).
 name: magenta-review
@@ -10,12 +10,12 @@ permissions:
 jobs:
   review:
     runs-on: ubuntu-latest
-    continue-on-error: true   # advisory in the pilot
+    continue-on-error: true   # advisory: findings do not fail the pipeline
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
       - run: npm install -g @anthropic-ai/claude-code

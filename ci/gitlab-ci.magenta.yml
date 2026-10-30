@@ -1,4 +1,4 @@
-# Magenta PR review panel for GitLab merge requests (phase 4).
+# Magenta PR review panel for GitLab merge requests.
 # Include this file in .gitlab-ci.yml, or copy the job.
 #
 # CI/CD variables (masked):
@@ -30,4 +30,4 @@ magenta-pr-review:
   artifacts:
     when: always
     paths: [magenta-review.md, .magenta/runs/]
-  allow_failure: true   # advisory in the pilot; remove when the team trusts the panel
+  allow_failure: true   # advisory: findings do not fail the pipeline; remove when the team trusts the panel

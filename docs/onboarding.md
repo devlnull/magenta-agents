@@ -1,6 +1,6 @@
-# Magenta onboarding (pilot team, phase 5)
+# Team guide
 
-This guide is for an engineer who joins the Magenta pilot. Read it in 15 minutes.
+This guide is for an engineer in a team that uses Magenta. Read it in 15 minutes.
 
 ## 1. What Magenta is
 
@@ -60,8 +60,8 @@ The conductor asks QA (and the Architect, when the structure is at risk) to writ
 - No model approves checks or writes the verify state.
 - While a task is active and the code changed, the Stop hook does not let the agent finish until the approved checks pass. After two tries in one turn, it lets the agent stop and tells you.
 
-If the guard blocks an agent, the agent reports it. Do not turn off the guard. If a rule is wrong for your repository, ask the maintainer to add it to `.magenta/policy.json`.
+If the guard blocks an agent, the agent reports it. Do not turn off the guard. If a rule is wrong for your repository, ask the owner of the repository to add it to `.magenta/policy.json`.
 
 ## 7. Feedback and metrics
 
-Each month, the maintainer runs `python3 magenta.py metrics <repos>` and reviews the costs, the gate results, and the lessons with the team.
+Each month, the team lead runs `python3 magenta.py metrics <repos>` and reviews the costs, the gate results, and the lessons with the team.
