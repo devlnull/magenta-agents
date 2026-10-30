@@ -7,7 +7,7 @@
 
 **A team of role-based AI agents for software engineering, where "done" means "the checks pass".**
 
-Magenta gives your coding agent six roles: Product Manager, Software Architect, Senior Principal Engineer, QA Engineer, Software Engineer, and Front-End Engineer. You type one command, `/magenta <task>`. Magenta turns your success criteria and the rules of the roles into **checks**: commands that a machine runs. You approve the checks. One agent does the work until the checks pass, and the other roles review the result.
+Magenta gives your coding agent a team of eleven roles: product, architecture, engineering, QA, reliability (SRE), platform (DevOps), security, database, and documentation. You type one command, `/magenta <task>`. Magenta turns your success criteria and the rules of the roles into **checks**: commands that a machine runs. You approve the checks. One agent does the work until the checks pass, and the other roles review the result.
 
 It works best with [Claude Code](https://code.claude.com). OpenCode, Codex CLI, and Gemini CLI are also supported.
 
@@ -77,6 +77,13 @@ The first task asks to learn your repository (discover-project). Then QA writes 
 | QA Engineer | Writes the checks and the tests that define "done", finds edge cases, and gives the quality verdict. |
 | Software Engineer | Implements server-side changes with TDD, in the patterns of your project. |
 | Front-End Engineer | Implements client-side changes with performance, accessibility, and locale support. |
+| Site Reliability Engineer | Defines SLOs and alerts, reviews resilience and rollout, leads incidents, and writes runbooks and postmortems. |
+| Platform Engineer (DevOps) | Changes CI/CD pipelines, containers, Kubernetes and Helm, and Terraform. Never applies or deploys. |
+| Security Engineer | Makes threat models, reviews code for security, triages CVEs, and keeps the scanners as checks. |
+| Database Engineer | Plans zero-downtime migrations, tunes queries with evidence, and writes migration and query checks. |
+| Technical Writer | Keeps the documentation, the changelog, and the release notes in agreement with the code. |
+
+Most tasks use only a few of them. The [team page](docs/team.md) shows when each role joins and which files it owns.
 
 ## Documentation
 
@@ -84,6 +91,7 @@ The first task asks to learn your repository (discover-project). Then QA writes 
 |---|---|
 | [User guide](docs/guide.md) | Install options, modes, task types, gates, checks, and daily use |
 | [Reference](docs/reference.md) | Commands, configuration files, enforcement, and model profiles |
+| [The team](docs/team.md) | The roles, when each one joins a task, and the files that each one owns |
 | [Team guide](docs/onboarding.md) | A 15-minute introduction for an engineer in a team |
 | [Architecture](docs/architecture.md) | How the source becomes the files of each tool |
 | [Design (RFC-0001)](docs/rfc/RFC-0001-magenta-agents.md) and [decisions (ADRs)](docs/adr/) | The full design and the decision records |

@@ -4,6 +4,21 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-10-30
+
+### Added
+
+- Five new roles ([ADR-0013](docs/adr/0013-extended-team.md)): Site Reliability Engineer (`sre`), Platform Engineer (`platform`), Security Engineer (`security`), Database Engineer (`database`), and Technical Writer (`writer`).
+- Skills: `slo-observability`, `resilience-review`, `ci-cd-pipeline`, `containers-kubernetes`, `infrastructure-as-code`, `secure-code-review`, `dependency-security`, `zero-downtime-migration`, `query-optimization`, `technical-writing`.
+- Templates: `reliability`, `security`, `data`, `runbook`, `postmortem`.
+- Task types `infrastructure`, `reliability`, `data`, and `docs`, with playbooks. SRE, Security, and Database lenses.
+- [docs/team.md](docs/team.md): the roles, when each one joins, and the files that each one owns.
+
+### Changed
+
+- The SRE leads incidents. The Security Engineer leads security tasks.
+- The Engineer and the Front-End Engineer can no longer change CI pipelines, container and deployment files, infrastructure code, alert rules, scanner configuration, runbooks, or postmortems.
+
 ## [0.7.1] - 2026-10-30
 
 The first published release.
@@ -55,7 +70,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.7.1...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/devlnull/magenta-agents/compare/v0.7.1...v0.8.0
 [0.7.1]: https://github.com/devlnull/magenta-agents/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/devlnull/magenta-agents/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/devlnull/magenta-agents/compare/832c22a...v0.6.0

@@ -1,0 +1,50 @@
+{
+  "agent": "writer",
+  "writes": [
+    "**/docs/**",
+    "**/README*.md",
+    "CHANGELOG.md",
+    "CONTRIBUTING.md",
+    "!**/docs/adr/**",
+    "!**/docs/rfc/**",
+    "!**/docs/architecture/**",
+    "!**/docs/runbooks/**",
+    "!**/docs/postmortems/**",
+    "!.magenta/**",
+    ".magenta/work/*/06-impl-docs.md"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**"
+  ],
+  "shell": [
+    "git status*",
+    "git diff*",
+    "git log*",
+    "git show*",
+    "git add *",
+    "git commit *",
+    "git rev-parse*",
+    "git grep *",
+    "ls*",
+    "markdownlint*",
+    "npx markdownlint-cli2*",
+    "vale *",
+    "lychee *",
+    "mmdc *",
+    "\"*\" \"*/verify.py\" run*",
+    "\"*\" \"*/verify.py\" list*",
+    "\"*\" \"*/verify.py\" status*"
+  ],
+  "shell_deny": [
+    "git push*",
+    "*publish*",
+    "*--force*",
+    "rm *",
+    "git reset --hard*",
+    "git checkout -- *",
+    "git clean*"
+  ]
+}

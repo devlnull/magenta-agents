@@ -2,7 +2,8 @@
 """Magenta verify: the rules of a repository as commands (ADR-0012).
 
 Checks are in `.magenta/checks/*.yaml`. Each agent writes only its own file: `qa.yaml` (QA),
-`architect.yaml` (Architect), or `project.yaml` (Principal). The human can write any file.
+`architect.yaml` (Architect), `project.yaml` (Principal), `sre.yaml` (SRE), `security.yaml` (Security),
+or `database.yaml` (Database). The human can write any file.
 A check runs only after the human approves its exact command, set, and work item (`.magenta/checks.lock`),
 because a check is a command that runs on the computer of the human. The approval also seals the test locks.
 
@@ -680,7 +681,7 @@ def hook(event: dict) -> tuple[int, str]:
     run_cmd = f"{self_command()} run" + (" --set task" if result["full"] else "")
     if result["status"] == "ERROR":
         reason = (f"Magenta: the checks configuration has an error: {result['error']}. "
-                  "The owner of the file must fix it (QA: qa.yaml, Architect: architect.yaml, Principal: project.yaml).")
+                  "The owner of the file must fix it: the file name is the role (qa.yaml: QA, project.yaml: Principal).")
     elif result["invalid"]:
         reason = (f"Magenta: these checks or locks changed after the human approved them: {', '.join(result['invalid'])}. "
                   "Restore them, or ask the human to approve the change.")

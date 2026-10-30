@@ -100,7 +100,7 @@ One-way door / two-way door. Reason:
 
 ````yaml
 # .magenta/checks/<owner>.yaml. Owners: qa.yaml (QA), architect.yaml (Architect), project.yaml (Principal),
-# human.yaml (human). A check is a command that tests one rule. Exit code 0 means PASS.
+# sre.yaml (SRE), security.yaml (Security), database.yaml (Database), human.yaml (human). A check is a command that tests one rule. Exit code 0 means PASS.
 # A check runs only after the human approves its exact command (verify.py approve). If the command changes,
 # the check fails until the human approves it again.
 checks:
@@ -121,6 +121,52 @@ checks:
     command: ./gradlew test
     cwd: ""                               # optional: the folder of the command, from the repository root
     why: "CI runs it"
+````
+
+## Template: data
+
+````markdown
+# Data: <title>
+
+| Work item | Step | Owner | Status | Inputs (commit SHA) |
+|---|---|---|---|---|
+| <ID>-<slug> | <step> | <agent> | DRAFT / DONE / BLOCKED / NEEDS-HUMAN | <files> @ <sha> |
+
+## Current state
+- Tables and size (rows, growth):
+- Read and write rate:
+- Migration tool and engine version:
+
+## Target state
+<schema change, with the data ownership from 03-design.md>
+
+## Migration plan
+| Step | Release | Change (SQL or migration) | Lock and duration | Verification | Rollback |
+|---|---|---|---|---|---|
+| 1 Expand | | | | | |
+
+## Backfill
+- Batch size and pause:
+- Resume key:
+- Stop condition (replication lag, load):
+
+## Queries and indexes
+| Query (hot path) | Plan before | Plan after | Index | Write cost |
+|---|---|---|---|---|
+
+## One-way doors
+<drops, renames, type changes; each needs the approval of the human>
+
+## Checks
+| Check | What it tests | Set |
+|---|---|---|
+
+## Handoff
+
+- Done:
+- Open:
+- Next owner:
+- What to check:
 ````
 
 ## Template: decision-note
@@ -207,6 +253,45 @@ flowchart LR
 - Open:
 - Next owner:
 - What to check:
+````
+
+## Template: postmortem
+
+````markdown
+# Postmortem: <title>
+
+| Field | Value |
+|---|---|
+| Date | |
+| Duration | <start> to <end> (<minutes>) |
+| Severity | |
+| Authors | |
+| Status | DRAFT / REVIEWED |
+
+This postmortem is blameless. It is about systems and processes, not people.
+
+## Impact
+<users affected, requests failed, money, error budget used>
+
+## Timeline (UTC)
+| Time | Event |
+|---|---|
+
+## Root cause
+<the chain of causes; use five whys or a cause tree>
+
+```mermaid
+flowchart TD
+  trigger["Trigger"] --> cause["Cause"] --> impact["Impact"]
+```
+
+## What went well
+## What went badly
+## Where we were lucky
+
+## Action items
+| Action | Type (prevent, detect, mitigate) | Owner | Due date | Check |
+|---|---|---|---|---|
 ````
 
 ## Template: prd-review
@@ -367,6 +452,53 @@ Method: tool, load profile, warm-up, duration, samples, runs, environment.
 - What to check:
 ````
 
+## Template: reliability
+
+````markdown
+# Reliability: <title>
+
+| Work item | Step | Owner | Status | Inputs (commit SHA) |
+|---|---|---|---|---|
+| <ID>-<slug> | <step> | <agent> | DRAFT / DONE / BLOCKED / NEEDS-HUMAN | <files> @ <sha> |
+
+## User journeys and SLOs
+| Journey | SLI | SLO | Current value (source) | Effect of the change |
+|---|---|---|---|---|
+
+## Failure modes
+| Dependency or part | Failure | Effect on the user | Timeout, retry, fallback |
+|---|---|---|---|
+
+## Capacity
+| Resource | Expected load | Use for each request | Limit | Headroom |
+|---|---|---|---|---|
+
+## Observability changes
+- Logs:
+- Metrics:
+- Traces:
+- Alerts (each with a runbook):
+
+## Rollout and rollback
+- Rollout: <feature flag, canary, or rolling>
+- Stop condition: <for example: SLO burn rate above 6 for 30 minutes>
+- Rollback: <steps>
+
+## Checks
+| Check | What it tests | Set |
+|---|---|---|
+
+## Verdict
+READY / READY WITH RISKS / NOT READY. Risks:
+
+## Handoff
+
+- Done:
+- Open:
+- Next owner:
+- What to check:
+````
+
 ## Template: request
 
 ````markdown
@@ -454,6 +586,89 @@ APPROVED / CHANGES REQUESTED. Open BLOCKER: <n>. Open MAJOR: <n>.
 ## Fitness functions
 ## Risks, objections, open questions
 ## Decisions that need an ADR
+
+## Handoff
+
+- Done:
+- Open:
+- Next owner:
+- What to check:
+````
+
+## Template: runbook
+
+````markdown
+# Runbook: <alert or failure>
+
+| Field | Value |
+|---|---|
+| Service | |
+| Alert | <name and link> |
+| SLO affected | |
+| Owner | <team> |
+| Last review | <date> |
+
+## What it means
+<the symptom that users feel, in one or two sentences>
+
+## Check first
+1. <dashboard link>: <what to look at>
+2. <recent deployments or feature flags>
+3. <the status of the dependencies>
+
+## Mitigate
+| Cause | Action | Who can do it |
+|---|---|---|
+| A recent deployment | Roll back: <steps> | On-call engineer |
+| A dependency is slow | <turn off the feature flag, or use the fallback> | |
+
+## Escalate
+- When: <for example: no mitigation after 30 minutes>
+- To: <team or person>
+
+## After the incident
+Write a postmortem with the template `postmortem`.
+````
+
+## Template: security-review
+
+````markdown
+# Security review: <title>
+
+| Work item | Step | Owner | Status | Inputs (commit SHA) |
+|---|---|---|---|---|
+| <ID>-<slug> | <step> | <agent> | DRAFT / DONE / BLOCKED / NEEDS-HUMAN | <files> @ <sha> |
+
+## Scope
+- Flows and entry points:
+- Data: <personal data, payment data, secrets>
+- Trust boundaries:
+
+## Data flow
+```mermaid
+flowchart LR
+  user["User"] -->|"HTTPS"| api["Service"]
+  api --> db[("Database")]
+```
+
+## Threats (STRIDE)
+| Element | Threat | Risk (likelihood x impact) | Mitigation | Status |
+|---|---|---|---|---|
+
+## Findings
+| Severity | File:line | Finding | Fix | Check |
+|---|---|---|---|---|
+
+## Dependencies
+| Package and version | Advisory | Reachable | Decision |
+|---|---|---|---|
+
+## Risks for the human
+| Risk | Why it remains | Decision (accept, fix, defer) and date |
+|---|---|---|
+
+## Verdict
+PASS / PASS WITH RISKS / FAIL
 
 ## Handoff
 

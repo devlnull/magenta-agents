@@ -16,7 +16,7 @@ VERIFY_TOKEN = '"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py"'
 CONDUCTOR_SCRIPTS = ("verify.py", "lock.py", "common.py", "protect.py")
 GENERATED_SKILLS = ("workflow", "templates")
 WORKFLOW_ORDER = ("routing", "lite", "standard", "full", "bugfix", "performance", "refactor", "investigation",
-                  "incident", "upgrade", "security", "tests", "design", "design-review", "pr-review")
+                  "incident", "upgrade", "security-fix", "tests", "design", "design-review", "pr-review")
 TEMPLATES_DESCRIPTION = ("Templates for all Magenta artifacts (PRD review, stories, design note, RFC, plan, test plan, "
                          "QA report, review, retro, ADR, CDR, decision note, project context, product context, state). "
                          "Use it before you write an artifact.")

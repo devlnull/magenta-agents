@@ -7,14 +7,18 @@ The conductor (skill `magenta`) and the Principal use these tables. First select
 | Task type | Signals in the request | Playbook | Core team | Add these agents when |
 |---|---|---|---|---|
 | bug | error, exception, wrong result, "does not work", a failing test, a bug ticket | `bugfix` | `qa`, `engineer`, `principal` | `architect`: the root cause is structural or crosses a boundary. `frontend`: the bug is in client code. |
-| performance | latency, p95, p99, slow, throughput, memory, CPU, cost of a query, Core Web Vitals | `performance` | `qa`, `engineer`, `architect`, `principal` | `frontend`: the target is a client metric. |
+| performance | latency, p95, p99, slow, throughput, memory, CPU, cost of a query, Core Web Vitals | `performance` | `qa`, `engineer`, `architect`, `principal` | `frontend`: the target is a client metric. `database`: a slow query or an index. `sre`: production capacity or resource limits. |
 | improvement | refactor, clean up, simplify, tech debt, readability, duplication | `refactor` | `architect`, `qa`, `engineer`, `principal` | `frontend`: client code. |
-| feature | a PRD, a new capability, a user story | `standard` or `full` | `product-manager`, `architect`, `qa`, `engineer`, `principal` | `frontend`: client work. |
+| feature | a PRD, a new capability, a user story | `standard` or `full` | `product-manager`, `architect`, `qa`, `engineer`, `principal` | `frontend`: client work. `database`: a schema change. `security`: authentication, money, or personal data. `sre`: a new endpoint, remote call, or rollout risk. `writer`: user documentation. |
 | investigation | why, how does, explain, find out, "where is", analyze (without a change) | `investigation` | `principal` and the experts that the question needs | Add only the roles that the question needs. |
 | review | review this PR, diff, design, RFC, or ADR | `pr-review` or `design-review` | `qa`, `architect`, `principal` | `product-manager`: user-facing scope. |
-| incident | production is down or degraded, urgent, hotfix | `incident` | `principal`, `engineer`, `qa` | `architect`: after the mitigation, for the root cause. |
-| security | vulnerability, CVE, authentication, authorization, secrets | `security` | `principal`, `architect`, `engineer`, `qa` | |
-| upgrade | upgrade a library, a framework, or a runtime | `upgrade` | `engineer`, `qa`, `principal` | `architect`: a major version or a breaking change. |
+| incident | production is down or degraded, urgent, hotfix | `incident` | `sre`, `principal`, `engineer`, `qa` | `architect`: after the mitigation, for the root cause. `platform`: a deployment or infrastructure cause. |
+| security | vulnerability, CVE, authentication, authorization, secrets | `security-fix` | `security`, `principal`, `engineer`, `qa` | `architect`: a structural fix. `platform`: a pipeline, image, or infrastructure fix. |
+| upgrade | upgrade a library, a framework, or a runtime | `upgrade` | `engineer`, `qa`, `principal` | `architect`: a major version or a breaking change. `security`: the upgrade fixes a CVE. `platform`: a runtime or base image upgrade. |
+| infrastructure | CI, CD, pipeline, Docker, Kubernetes, Helm, Terraform, deployment, build speed | `infrastructure` | `platform`, `sre` | `security`: secrets, permissions, or network exposure. |
+| reliability | SLO, alert, dashboard, observability, timeout, retry, circuit breaker, capacity, postmortem action | `reliability` | `sre`, `engineer` or `platform`, `qa` | `principal`: a change of the SLOs of the team. |
+| data | schema change, migration, backfill, index, data cleanup | `standard` or `full` | `database`, `architect`, `engineer`, `qa` | `sre`: a long backfill or a large table. |
+| docs | documentation, README, guide, release notes, changelog | `docs` | `writer` | The owner of the subject reviews (for example `architect` for a design guide). |
 | tests | add tests, coverage, flaky tests, test speed | `tests` | `qa`, `engineer` | `principal`: the change affects CI for the team. |
 | design | design a solution, write an RFC or an ADR, select a technology | `design` | `architect`, `principal` | `product-manager`: scope or value questions. `qa`: testability. |
 
@@ -31,12 +35,16 @@ Use the default mode for most tasks. Use team mode only when a team trigger appl
 | improvement | `engineer` or `frontend` | QA: characterization tests (green). Architect: the target structure as rules (red). | Architect, QA |
 | tests | `qa` | The project checks. | Principal, when the change affects CI for the team. |
 | upgrade | `engineer` | The project checks. QA: smoke tests for the changed behavior. | QA, Principal |
-| incident | `engineer` | QA: a test for the failure mode, when there is time. | Principal |
+| incident | `engineer` | QA: a test for the failure mode, when there is time. | SRE, Principal |
 | feature (small and clear) | `engineer` or `frontend` | QA: acceptance tests (red). Architect: the contracts. | QA, Architect, Principal |
 | investigation | None. The conductor or `principal` answers, read-only. | None. | None. |
 | review | None. | None. | The review panel: QA, Architect, Principal. |
 | design | `architect` | None. | Principal |
+| infrastructure | `platform` | SRE: the lint and validate commands of the changed files (red when they find the problem). | SRE. Security, for secrets, permissions, or exposure. |
+| reliability | `engineer` (code) or `platform` (alerts, dashboards, manifests) | SRE: the rule as a check. QA: a test for the failure behavior. | SRE, QA |
+| docs | `writer` | The project checks (Markdown lint, link check), when they exist. | The owner of the subject. |
 | security | Team mode. | | |
+| data | Team mode (a schema change is a team trigger). | | |
 
 ### Team triggers
 
@@ -52,14 +60,32 @@ Use team mode when one of these applies. Write the trigger in the brief.
 
 The playbooks and the lanes below describe team mode. In the default mode, the agents use the same skills (for example `performance-investigation`, `root-cause-analysis`, and `safe-refactoring`) inside the steps of the conductor.
 
+### Lenses
+
+A lens is a read-only review from the view of one role. Each role describes its lens in the section "Review lens". Select one to three lenses by risk:
+
+| Lens | Use it when the change |
+|---|---|
+| QA | changes behavior |
+| Architect | touches structure: boundaries, dependencies, contracts, data model, areas with an ADR |
+| Principal | is in the standard or full lane (production readiness and final review) |
+| SRE | adds or changes remote calls, timeouts, retries, resource use, configuration, or rollout |
+| Security | touches authentication, authorization, input from outside, secrets, money, personal data, or dependencies |
+| Database | changes a schema, a migration, a query on a hot path, or a transaction |
+
 ### Team rules
 
 1. Use the smallest team that covers the risks. Each agent in the team has a reason. Write the reason in the brief.
 2. QA is in the team for each change of behavior, performance, or tests.
 3. The Principal plans each standard or full task and does each final review.
 4. Add the Architect when the change crosses a module or service boundary, changes a data model, a schema, a cache, a public API, or an event contract, adds a dependency or a technology, or touches an area with an ADR.
-5. Add the Product Manager when the change affects users, scope, or priority, or when the success metric is a product metric.
-6. Use `engineer` for server code and `frontend` for client code. Use both only when the task needs both, with separate scopes.
+5. Add the SRE when the change affects production behavior: new or changed endpoints, remote calls, timeouts, retries, resource use, configuration, or rollout.
+6. Add the Security Engineer when the change touches authentication, authorization, input from outside, secrets, money, personal data, or adds a dependency.
+7. Add the Database Engineer when the change touches a schema, a migration, a backfill, an index, or a slow query. The Engineer writes the migration code from its plan.
+8. Use the Platform Engineer for CI/CD pipelines, container files, deployment manifests, and infrastructure code. Other makers do not change these files.
+9. Add the Technical Writer when user documentation or release notes are part of "done".
+10. Add the Product Manager when the change affects users, scope, or priority, or when the success metric is a product metric.
+11. Use `engineer` for server code and `frontend` for client code. Use both only when the task needs both, with separate scopes.
 
 ### Lanes
 

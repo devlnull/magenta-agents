@@ -48,7 +48,7 @@ If the request starts with `--lead`, use the default mode, also when a trigger a
 
 ## Rules for the conductor
 
-1. Do not change production code or tests yourself. The lead changes the code. QA and the Architect write the checks and the tests that define "done".
+1. Do not change production code or tests yourself. The lead changes the code. QA writes the tests. QA, the Architect, and the specialist reviewers (SRE, Security, Database) write the checks that define "done".
 2. Only the human approves checks and closes a task with failing checks. Do not run `approve` or a command with `--force`. Do not write `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, or `acceptance.lock`.
 3. Never make a check pass with a change to the check or to a locked test. If a check is wrong, its owner changes it, and the human approves it again.
 4. Use the smallest team that covers the risks. Each agent has a reason.
@@ -81,6 +81,10 @@ Make "done" executable before the work starts.
    - a test that fails now: a reproduction for a bug, a measurement with the thresholds for performance, an acceptance test for new behavior;
    - for a refactor: characterization tests that pass now.
 2. Start `architect` at the same time when the change touches structure: a module or service boundary, a dependency, a data model, a cache, a public API, an event contract, or an area with an ADR. Ask it to write the structural constraints as checks in `.magenta/checks/architect.yaml`, with `work_item: <ID>`.
+   Start the specialists at the same time when their area is at risk (team rules 5 to 7 in the routing table). Each one writes its checks in its own file, with `work_item: <ID>`:
+   - `sre` (`sre.yaml`): operations rules, lint of alerts, pipelines, and manifests;
+   - `security` (`security.yaml`): scanner rules and security tests;
+   - `database` (`database.yaml`): migration lint, migration tests, query checks. It also writes the migration plan in `03-data.md` for the lead.
 3. Lock the test files that QA and the Architect wrote: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" lock <ID> <file> <file> ...`.
 4. **Checks gate.** Run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list`. Show the human: the success criteria, the new checks with their commands, the locked test files, and the plan in three lines. Ask the human to approve the checks with the approve command that verify shows. In Claude Code, the human types it after `!`. The approval also seals the test lock. Stop and wait. In the default mode, this gate is also the plan gate.
 5. After the approval, run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run --set task`. The set `task` has the quick checks and all checks of this work item:
@@ -90,7 +94,7 @@ Make "done" executable before the work starts.
 
 ## Step 4: The lead does the work
 
-1. Select the lead: `engineer` for server code, `frontend` for client code. For a task with only tests, the lead is `qa`.
+1. Select the lead: `engineer` for server code (also migrations, from the plan of `database`), `frontend` for client code, `platform` for pipelines, containers, deployment manifests, and infrastructure code, `writer` for documentation. For a task with only tests, the lead is `qa`. Use two leads only when the task needs both, with separate scopes, one after the other.
 2. Start the lead with this brief:
    - the work item path and `00-brief.md`;
    - the goal, the success criteria, the scope, and the constraints;
@@ -102,10 +106,13 @@ Make "done" executable before the work starts.
 
 ## Step 5: Lenses
 
-1. Select one to three lenses by risk:
+1. Select one to three lenses by risk, with the lens table in the routing table:
    - **QA lens:** for each change of behavior. Edge cases, test quality, flaky tests.
    - **Architect lens:** when the change touches structure. Constraints, ADRs, boundaries, contracts.
    - **Principal lens:** for the standard and full lanes. Production readiness and the final review.
+   - **SRE lens:** remote calls, timeouts, retries, resource use, configuration, or rollout.
+   - **Security lens:** authentication, authorization, input from outside, secrets, money, personal data, or dependencies.
+   - **Database lens:** a schema, a migration, a query on a hot path, or a transaction.
 2. Start the lenses at the same time, read-only. Give each lens the brief, the diff against the base commit, and the last verify result. Ask for the "Review lens" section of its role.
 3. **Findings become checks.** For each BLOCKER or MAJOR finding that a command can test, the owner of the lens adds a check with `work_item: <ID>`. The human approves it. The lead fixes the code until the check passes.
 4. For a finding that a command cannot test, the lead fixes it and the same lens confirms the fix. Or you write it in the report as a risk.
@@ -150,7 +157,10 @@ The result must not break the rules of an agent. Write each rule as a check when
 
 - **Architect:** ADRs, module boundaries, dependency rules, data ownership, consistency rules, contracts.
 - **QA:** all tests pass, locked tests do not change, no new flaky tests, performance thresholds, edge cases.
-- **Principal:** rollback, feature flag when necessary, observability, resilience, capacity, security.
+- **Principal:** rollback, feature flag when necessary, production readiness.
+- **SRE:** SLOs, timeouts and retries, observability, capacity, runbooks for new alerts.
+- **Security:** access control, input validation, secrets, dependencies without high or critical vulnerabilities.
+- **Database:** reversible migrations, no blocking locks, compatibility of the old and the new code, indexes for new queries.
 - **Project:** the conventions of the project context, lint, format.
 - **Human:** the constraints in the request.
 

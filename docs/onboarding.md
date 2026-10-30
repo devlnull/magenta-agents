@@ -4,7 +4,7 @@ This guide is for an engineer in a team that uses Magenta. Read it in 15 minutes
 
 ## 1. What Magenta is
 
-Six AI agents with fixed roles: Product Manager, Software Architect, Senior Principal Engineer, QA Engineer, Software Engineer, and Front-End Engineer. The success criteria and the rules of the agents become checks: commands that a machine runs. You approve the checks. A task is done only when they pass. The design is in [RFC-0001](rfc/RFC-0001-magenta-agents.md) and [ADR-0012](adr/0012-verify-first.md).
+AI agents with fixed roles: product, architecture, engineering, QA, reliability, platform, security, database, and documentation ([the team](team.md)). The success criteria and the rules of the agents become checks: commands that a machine runs. You approve the checks. A task is done only when they pass. The design is in [RFC-0001](rfc/RFC-0001-magenta-agents.md) and [ADR-0012](adr/0012-verify-first.md).
 
 ## 2. Install (one time)
 

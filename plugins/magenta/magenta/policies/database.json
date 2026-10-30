@@ -1,0 +1,31 @@
+{
+  "agent": "database",
+  "writes": [
+    ".magenta/work/*/03-data.md",
+    ".magenta/checks/database.yaml"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**",
+    "**/*.tfvars",
+    "**/*.tfstate*"
+  ],
+  "shell": [
+    "git status*",
+    "git log*",
+    "git diff*",
+    "git show*",
+    "git rev-parse*",
+    "git grep *",
+    "ls*",
+    "squawk *",
+    "sqlfluff lint*",
+    "atlas migrate lint*",
+    "\"*\" \"*/verify.py\" run*",
+    "\"*\" \"*/verify.py\" list*",
+    "\"*\" \"*/verify.py\" status*"
+  ],
+  "shell_deny": []
+}

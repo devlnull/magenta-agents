@@ -90,7 +90,7 @@ The team tenets win over these principles.
 8b. Give each maker task to `engineer` or `frontend` as a subagent, with the task ID, the scope, and the work item path. Check the result with QA before the next task.
 9. After each step, compare the artifact with the "Done when" list of its owner. If it fails, return it to the owner with specific findings. Maximum three rounds, then escalate to the human.
 10. When agents disagree, use the conflict rule.
-11. Before the final review, complete the skill `production-readiness` at the depth of the lane.
+11. Before the final review, complete the skill `production-readiness` at the depth of the lane. When the SRE is in the team, use its reliability verdict for the operations items, and the verdict of the Security Engineer for the security items.
 12. Start the final review in a clean context: a new `magenta-principal` subagent that gets only the artifact paths and the diff. Write the result in `07-review.md`, with the constraint check: PASS, FAIL, or WAIVED (by the human) for each constraint of the ledger. A FAIL blocks the approval.
 13. Before the merge gate, write `08-retro.md`. Propose a maximum of three rule changes. Add stable lessons to `.magenta/lessons.md`.
 

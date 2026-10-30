@@ -8,7 +8,7 @@
     {
       "name": "magenta",
       "source": "./plugins/magenta",
-      "description": "Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End). The rules become checks, and a task is done when the checks pass."
+      "description": "Magenta: a team of role-based AI agents (product, architecture, engineering, QA, SRE, platform, security, database, docs). The rules become checks, and a task is done when the checks pass."
     }
   ]
 }

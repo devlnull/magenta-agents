@@ -19,14 +19,18 @@ The conductor (skill `magenta`) and the Principal use these tables. First select
 | Task type | Signals in the request | Playbook | Core team | Add these agents when |
 |---|---|---|---|---|
 | bug | error, exception, wrong result, "does not work", a failing test, a bug ticket | `bugfix` | `magenta:qa`, `magenta:engineer`, `magenta:principal` | `magenta:architect`: the root cause is structural or crosses a boundary. `magenta:frontend`: the bug is in client code. |
-| performance | latency, p95, p99, slow, throughput, memory, CPU, cost of a query, Core Web Vitals | `performance` | `magenta:qa`, `magenta:engineer`, `magenta:architect`, `magenta:principal` | `magenta:frontend`: the target is a client metric. |
+| performance | latency, p95, p99, slow, throughput, memory, CPU, cost of a query, Core Web Vitals | `performance` | `magenta:qa`, `magenta:engineer`, `magenta:architect`, `magenta:principal` | `magenta:frontend`: the target is a client metric. `magenta:database`: a slow query or an index. `magenta:sre`: production capacity or resource limits. |
 | improvement | refactor, clean up, simplify, tech debt, readability, duplication | `refactor` | `magenta:architect`, `magenta:qa`, `magenta:engineer`, `magenta:principal` | `magenta:frontend`: client code. |
-| feature | a PRD, a new capability, a user story | `standard` or `full` | `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, `magenta:principal` | `magenta:frontend`: client work. |
+| feature | a PRD, a new capability, a user story | `standard` or `full` | `magenta:product-manager`, `magenta:architect`, `magenta:qa`, `magenta:engineer`, `magenta:principal` | `magenta:frontend`: client work. `magenta:database`: a schema change. `magenta:security`: authentication, money, or personal data. `magenta:sre`: a new endpoint, remote call, or rollout risk. `magenta:writer`: user documentation. |
 | investigation | why, how does, explain, find out, "where is", analyze (without a change) | `investigation` | `magenta:principal` and the experts that the question needs | Add only the roles that the question needs. |
 | review | review this PR, diff, design, RFC, or ADR | `pr-review` or `design-review` | `magenta:qa`, `magenta:architect`, `magenta:principal` | `magenta:product-manager`: user-facing scope. |
-| incident | production is down or degraded, urgent, hotfix | `incident` | `magenta:principal`, `magenta:engineer`, `magenta:qa` | `magenta:architect`: after the mitigation, for the root cause. |
-| security | vulnerability, CVE, authentication, authorization, secrets | `security` | `magenta:principal`, `magenta:architect`, `magenta:engineer`, `magenta:qa` | |
-| upgrade | upgrade a library, a framework, or a runtime | `upgrade` | `magenta:engineer`, `magenta:qa`, `magenta:principal` | `magenta:architect`: a major version or a breaking change. |
+| incident | production is down or degraded, urgent, hotfix | `incident` | `magenta:sre`, `magenta:principal`, `magenta:engineer`, `magenta:qa` | `magenta:architect`: after the mitigation, for the root cause. `magenta:platform`: a deployment or infrastructure cause. |
+| security | vulnerability, CVE, authentication, authorization, secrets | `security-fix` | `magenta:security`, `magenta:principal`, `magenta:engineer`, `magenta:qa` | `magenta:architect`: a structural fix. `magenta:platform`: a pipeline, image, or infrastructure fix. |
+| upgrade | upgrade a library, a framework, or a runtime | `upgrade` | `magenta:engineer`, `magenta:qa`, `magenta:principal` | `magenta:architect`: a major version or a breaking change. `magenta:security`: the upgrade fixes a CVE. `magenta:platform`: a runtime or base image upgrade. |
+| infrastructure | CI, CD, pipeline, Docker, Kubernetes, Helm, Terraform, deployment, build speed | `infrastructure` | `magenta:platform`, `magenta:sre` | `magenta:security`: secrets, permissions, or network exposure. |
+| reliability | SLO, alert, dashboard, observability, timeout, retry, circuit breaker, capacity, postmortem action | `reliability` | `magenta:sre`, `magenta:engineer` or `magenta:platform`, `magenta:qa` | `magenta:principal`: a change of the SLOs of the team. |
+| data | schema change, migration, backfill, index, data cleanup | `standard` or `full` | `magenta:database`, `magenta:architect`, `magenta:engineer`, `magenta:qa` | `magenta:sre`: a long backfill or a large table. |
+| docs | documentation, README, guide, release notes, changelog | `docs` | `magenta:writer` | The owner of the subject reviews (for example `magenta:architect` for a design guide). |
 | tests | add tests, coverage, flaky tests, test speed | `tests` | `magenta:qa`, `magenta:engineer` | `magenta:principal`: the change affects CI for the team. |
 | design | design a solution, write an RFC or an ADR, select a technology | `design` | `magenta:architect`, `magenta:principal` | `magenta:product-manager`: scope or value questions. `magenta:qa`: testability. |
 
@@ -43,12 +47,16 @@ Use the default mode for most tasks. Use team mode only when a team trigger appl
 | improvement | `magenta:engineer` or `magenta:frontend` | QA: characterization tests (green). Architect: the target structure as rules (red). | Architect, QA |
 | tests | `magenta:qa` | The project checks. | Principal, when the change affects CI for the team. |
 | upgrade | `magenta:engineer` | The project checks. QA: smoke tests for the changed behavior. | QA, Principal |
-| incident | `magenta:engineer` | QA: a test for the failure mode, when there is time. | Principal |
+| incident | `magenta:engineer` | QA: a test for the failure mode, when there is time. | SRE, Principal |
 | feature (small and clear) | `magenta:engineer` or `magenta:frontend` | QA: acceptance tests (red). Architect: the contracts. | QA, Architect, Principal |
 | investigation | None. The conductor or `magenta:principal` answers, read-only. | None. | None. |
 | review | None. | None. | The review panel: QA, Architect, Principal. |
 | design | `magenta:architect` | None. | Principal |
+| infrastructure | `magenta:platform` | SRE: the lint and validate commands of the changed files (red when they find the problem). | SRE. Security, for secrets, permissions, or exposure. |
+| reliability | `magenta:engineer` (code) or `magenta:platform` (alerts, dashboards, manifests) | SRE: the rule as a check. QA: a test for the failure behavior. | SRE, QA |
+| docs | `magenta:writer` | The project checks (Markdown lint, link check), when they exist. | The owner of the subject. |
 | security | Team mode. | | |
+| data | Team mode (a schema change is a team trigger). | | |
 
 ### Team triggers
 
@@ -64,14 +72,32 @@ Use team mode when one of these applies. Write the trigger in the brief.
 
 The playbooks and the lanes below describe team mode. In the default mode, the agents use the same skills (for example `magenta:performance-investigation`, `magenta:root-cause-analysis`, and `magenta:safe-refactoring`) inside the steps of the conductor.
 
+### Lenses
+
+A lens is a read-only review from the view of one role. Each role describes its lens in the section "Review lens". Select one to three lenses by risk:
+
+| Lens | Use it when the change |
+|---|---|
+| QA | changes behavior |
+| Architect | touches structure: boundaries, dependencies, contracts, data model, areas with an ADR |
+| Principal | is in the standard or full lane (production readiness and final review) |
+| SRE | adds or changes remote calls, timeouts, retries, resource use, configuration, or rollout |
+| Security | touches authentication, authorization, input from outside, secrets, money, personal data, or dependencies |
+| Database | changes a schema, a migration, a query on a hot path, or a transaction |
+
 ### Team rules
 
 1. Use the smallest team that covers the risks. Each agent in the team has a reason. Write the reason in the brief.
 2. QA is in the team for each change of behavior, performance, or tests.
 3. The Principal plans each standard or full task and does each final review.
 4. Add the Architect when the change crosses a module or service boundary, changes a data model, a schema, a cache, a public API, or an event contract, adds a dependency or a technology, or touches an area with an ADR.
-5. Add the Product Manager when the change affects users, scope, or priority, or when the success metric is a product metric.
-6. Use `magenta:engineer` for server code and `magenta:frontend` for client code. Use both only when the task needs both, with separate scopes.
+5. Add the SRE when the change affects production behavior: new or changed endpoints, remote calls, timeouts, retries, resource use, configuration, or rollout.
+6. Add the Security Engineer when the change touches authentication, authorization, input from outside, secrets, money, personal data, or adds a dependency.
+7. Add the Database Engineer when the change touches a schema, a migration, a backfill, an index, or a slow query. The Engineer writes the migration code from its plan.
+8. Use the Platform Engineer for CI/CD pipelines, container files, deployment manifests, and infrastructure code. Other makers do not change these files.
+9. Add the Technical Writer when user documentation or release notes are part of "done".
+10. Add the Product Manager when the change affects users, scope, or priority, or when the success metric is a product metric.
+11. Use `magenta:engineer` for server code and `magenta:frontend` for client code. Use both only when the task needs both, with separate scopes.
 
 ### Lanes
 
@@ -214,11 +240,11 @@ Use it for a question or an analysis without a change.
 
 Use it when production is down or degraded. Speed and safety come first.
 
-1. `magenta:principal`: lead. Write a short timeline in `00-brief.md` (conductor) and the impact.
-2. Mitigate first: `magenta:principal` proposes the fastest safe mitigation (rollback, feature flag off, scale, rate limit). The human approves and runs it. Agents do not have production access.
-3. `magenta:engineer` and `magenta:qa` in parallel, read-only: find the cause from the evidence that the human gives (logs, metrics, traces in `UNTRUSTED` blocks) with the skill `magenta:root-cause-analysis`.
-4. Continue with the `bugfix` playbook for the permanent fix (lite lane is not permitted for an incident fix).
-5. `magenta:principal`: write a blameless postmortem with the skill `magenta:incident-response`: timeline, root cause, what worked, what did not, and actions with owners.
+1. `magenta:sre`: lead the response with the skill `magenta:incident-response`. Write the impact and a short timeline in `00-brief.md` (with the conductor).
+2. Mitigate first: `magenta:sre` proposes the fastest safe mitigation (rollback, feature flag off, scale, rate limit, traffic shift). The human approves and runs it. Agents do not have production access.
+3. `magenta:engineer` and `magenta:qa` in parallel, read-only: find the cause from the evidence that the human gives (logs, metrics, traces in `UNTRUSTED` blocks) with the skill `magenta:root-cause-analysis`. Add `magenta:platform` when a deployment or the infrastructure can be the cause.
+4. Continue with the `bugfix` playbook for the permanent fix (lite lane is not permitted for an incident fix). The `magenta:principal` does the final review.
+5. `magenta:sre`: write a blameless postmortem with the template `postmortem` in `docs/postmortems/`. Each action item has an owner, and a check when a command can test it. Update or write the runbook.
 
 ## Playbook: upgrade
 
@@ -231,16 +257,16 @@ Use it when production is down or degraded. Speed and safety come first.
 7. `magenta:qa`: run all tests. Compare the behavior and, for runtime upgrades, the performance.
 8. `magenta:principal`: final review with the rollback plan and the constraint check. Done gate.
 
-## Playbook: security
+## Playbook: security-fix
 
 1. Conductor: write the brief. Put the vulnerability report or the scanner output in an `UNTRUSTED` block. Do not copy secrets.
-2. `magenta:principal`: make a threat model with the skill `magenta:threat-model-stride` for the affected flow. Rate the risk.
-3. `magenta:architect`: find the structural cause (trust boundaries, authorization model, data exposure).
-4. `magenta:qa`: write a test that proves the vulnerability (safely, in the test environment only).
+2. `magenta:security`: make a threat model with the skill `magenta:threat-model-stride` for the affected flow, and triage the finding (skill `magenta:dependency-security` for a CVE). Rate the risk in `03-security.md`.
+3. `magenta:architect`: find the structural cause (trust boundaries, authorization model, data exposure), when the fix is structural.
+4. `magenta:qa`: write a test that proves the vulnerability (safely, in the test environment only). `magenta:security`: write the scanner rule or the check that keeps the defect out.
 5. Plan gate (full lane for money, personal data, or authentication flows).
-6. `magenta:engineer`: fix with TDD. Do not log sensitive data.
-7. `magenta:qa`: verify the fix and the related abuse cases. `magenta:principal`: final review with the constraint check.
-8. Done gate. The human decides the disclosure and the release.
+6. `magenta:engineer`: fix with TDD. Do not log sensitive data. `magenta:platform`: fix pipelines, images, or infrastructure, when the cause is there.
+7. `magenta:qa`: verify the fix and the related abuse cases. `magenta:security`: Security lens on the diff. `magenta:principal`: final review with the constraint check.
+8. Done gate. The human decides the disclosure, the rotation of secrets, and the release.
 
 ## Playbook: tests
 
@@ -285,3 +311,35 @@ Use it for a pull request or a local diff.
 4. `magenta:principal` merges the findings into one report, removes duplicates, and writes `07-review.md` if a work item exists. If not, it gives the report in the conversation.
 
 The conductor can run this panel directly for the task type "review". Each reviewer also checks the constraint ledger of the related work item, if one exists.
+
+## Playbook: docs
+
+Use it to write or update documentation without a code change.
+
+1. Conductor: write the brief: the readers, the document type (tutorial, how-to guide, reference, or explanation), and the source of truth (code, ADRs, the expert).
+2. `magenta:writer`: write or update the documents with the skill `magenta:technical-writing`. Copy commands and options from the code. Ask questions instead of guessing.
+3. The owner of the subject reviews the facts, read-only: for example `magenta:architect` for a design guide, `magenta:sre` for an operations guide, `magenta:platform` for a deployment guide.
+4. Run the Markdown lint and the link check, when the project has them.
+5. Done gate.
+
+## Playbook: infrastructure
+
+Use it for CI/CD pipelines, container files, Kubernetes manifests, Helm charts, and infrastructure as code.
+
+1. Conductor: write the brief: the goal (for example "the pipeline runs in under 10 minutes" or "the service runs as non-root"), the environments, and the constraints.
+2. `magenta:sre`: write the checks: the lint and validate commands for the changed files (`actionlint`, `hadolint`, `kubeconform`, `helm lint`, `terraform validate`), and the operations rules (probes, resources, rollback). `magenta:security`: add the checks for secrets, permissions, and exposure, when they apply.
+3. Checks gate.
+4. `magenta:platform`: make the change with the skill of the area. Run verify until the checks pass. Write the steps that the human runs (plan, apply, rollout, rollback).
+5. `magenta:sre` lens, and `magenta:security` lens when it applies.
+6. Done gate. The human runs `plan` and `apply`, or merges the pipeline change. Agents never apply or deploy.
+
+## Playbook: reliability
+
+Use it for SLOs, alerts, dashboards, observability, resilience (timeouts, retries, circuit breakers), capacity, and postmortem actions.
+
+1. Conductor: write the brief: the user journey, the current SLI values and their source, and the target.
+2. `magenta:sre`: write `03-reliability.md` with the skills `magenta:slo-observability` and `magenta:resilience-review`. Write the checks: lint of the alert rules, code rules as `git grep` checks. `magenta:qa`: write tests for the failure behavior (for example "the dependency times out, and the service returns the fallback").
+3. Checks gate.
+4. The lead makes the change: `magenta:engineer` for code (timeouts, retries, fallbacks, metrics), `magenta:platform` for alert rules, dashboards, and manifests. Run verify until the checks pass.
+5. `magenta:sre` lens, and `magenta:qa` lens for changed behavior.
+6. Done gate: the SLO effect, the alerts and their runbooks, and the rollback.

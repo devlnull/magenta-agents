@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.7.1
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.8.0
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.7.1"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.8.0"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -120,6 +120,10 @@ To select the mode yourself, start the request with `--team` or `--lead`.
 | tests | "fix the flaky OrderCancelTest" | Project checks. Lead: QA. | QA, Engineer |
 | design | "design the retry strategy for the shipping events" | Lead: Architect. | Architect, Principal |
 | feature | "implement this PRD: ..." | Small and clear: QA acceptance tests. Lead: Engineer or Front-End. | PM, Architect, QA, Engineer, Principal |
+| infrastructure | "make the CI pipeline run in under 10 minutes" | SRE: lint and validate checks. Lead: Platform. | Platform, SRE |
+| reliability | "add a timeout and a fallback to the shipping client" | SRE: the rule as a check. Lead: Engineer or Platform. | SRE, Engineer or Platform, QA |
+| data | "rename the column zip to postal_code" | Always team mode. | Database, Architect, Engineer, QA |
+| docs | "update the README for the new flags" | Lead: Writer. | Writer |
 
 The routing table and the playbooks are in [`workflows/`](../workflows/).
 
@@ -136,6 +140,9 @@ A check is a command that tests one rule. Exit code 0 means PASS. Each owner has
 | `project.yaml` | Principal: build, lint, unit tests |
 | `qa.yaml` | QA: tests, thresholds, regression tests |
 | `architect.yaml` | Architect: structural rules |
+| `sre.yaml` | SRE: operations rules, lint of alerts, pipelines, and manifests |
+| `security.yaml` | Security Engineer: scanners and security rules |
+| `database.yaml` | Database Engineer: migration lint, migration and query tests |
 | `human.yaml` | You |
 
 Example:
@@ -173,6 +180,10 @@ You can call one agent directly, in any session:
 | A PRD review | `@magenta-product-manager review this PRD: <link or text>` |
 | A design | `@magenta-architect design <change>` |
 | Edge cases and acceptance tests | `@magenta-qa find the edge cases of <story>` |
+| SLOs and alerts for a service | `@magenta-sre define the SLOs and alerts of <service>` |
+| A review of a Dockerfile or a pipeline | `@magenta-platform review <file>` |
+| A threat model or a CVE triage | `@magenta-security triage CVE-2026-1234 for this repository` |
+| A plan for a schema change | `@magenta-database plan the migration for <change>` |
 | The lead agent as the main session | `claude --agent magenta-principal` |
 
 With the plugin, the names are `magenta:<role>`, for example `@magenta:qa`.

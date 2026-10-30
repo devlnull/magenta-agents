@@ -44,7 +44,43 @@ magenta:
     - "!**/*ArchitectureTests.*"
     - "!**/.dependency-cruiser.*"
     - "!**/.importlinter"
-  denies: ["**/.env*", "**/*.pem", "**/*.key", "**/secrets/**"]
+    - "!.github/workflows/**"
+    - "!.github/actions/**"
+    - "!.gitlab-ci.yml"
+    - "!.gitlab/ci/**"
+    - "!**/Jenkinsfile"
+    - "!.circleci/**"
+    - "!azure-pipelines.yml"
+    - "!bitbucket-pipelines.yml"
+    - "!**/Dockerfile*"
+    - "!**/docker-compose*.yml"
+    - "!**/docker-compose*.yaml"
+    - "!**/compose.yml"
+    - "!**/compose.yaml"
+    - "!**/*.tf"
+    - "!**/terraform/**"
+    - "!**/helm/**"
+    - "!charts/**"
+    - "!k8s/**"
+    - "!kubernetes/**"
+    - "!kustomize/**"
+    - "!deploy/**"
+    - "!infra/**"
+    - "!infrastructure/**"
+    - "!monitoring/**"
+    - "!alerts/**"
+    - "!dashboards/**"
+    - "!**/*.rules.yml"
+    - "!**/*.rules.yaml"
+    - "!.semgrep.yml"
+    - "!.semgrep/**"
+    - "!.gitleaks.toml"
+    - "!.trivyignore"
+    - "!.snyk"
+    - "!osv-scanner.toml"
+    - "!docs/runbooks/**"
+    - "!docs/postmortems/**"
+  denies: ["**/.env*", "**/*.pem", "**/*.key", "**/secrets/**", "**/*.tfvars", "**/*.tfstate*"]
   owns: [client-implementation]
   max_turns: 120
 ---
@@ -78,7 +114,7 @@ Work only in the scope that the plan gives you.
 
 ## Decision rights
 
-Client implementation details inside the design. A new UI library or state library needs a CDR (deviation protocol).
+Client implementation details inside the design. A new UI library or state library needs a CDR (deviation protocol). The CI pipelines, the container files, and the deployment files belong to the Platform Engineer. If your task needs a change there, report it.
 
 ## Done when
 

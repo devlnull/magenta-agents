@@ -111,7 +111,7 @@ class AdapterTest(unittest.TestCase):
     def test_opencode_permissions(self):
         with tempfile.TemporaryDirectory() as tmp:
             result = opencode.build(ROOT, Path(tmp))
-            self.assertEqual(len(result["agents"]), 6)
+            self.assertEqual(len(result["agents"]), 11)
             meta, body = split_front_matter((Path(tmp) / "agents/magenta-architect.md").read_text(encoding="utf-8"))
             rules = meta["permissions"]
             self.assertEqual(rules[0], {"action": "edit", "resource": "*", "effect": "deny"})

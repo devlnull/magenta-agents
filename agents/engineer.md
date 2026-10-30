@@ -60,7 +60,43 @@ magenta:
     - "!**/*ArchitectureTests.*"
     - "!**/.dependency-cruiser.*"
     - "!**/.importlinter"
-  denies: ["**/.env*", "**/*.pem", "**/*.key", "**/secrets/**"]
+    - "!.github/workflows/**"
+    - "!.github/actions/**"
+    - "!.gitlab-ci.yml"
+    - "!.gitlab/ci/**"
+    - "!**/Jenkinsfile"
+    - "!.circleci/**"
+    - "!azure-pipelines.yml"
+    - "!bitbucket-pipelines.yml"
+    - "!**/Dockerfile*"
+    - "!**/docker-compose*.yml"
+    - "!**/docker-compose*.yaml"
+    - "!**/compose.yml"
+    - "!**/compose.yaml"
+    - "!**/*.tf"
+    - "!**/terraform/**"
+    - "!**/helm/**"
+    - "!charts/**"
+    - "!k8s/**"
+    - "!kubernetes/**"
+    - "!kustomize/**"
+    - "!deploy/**"
+    - "!infra/**"
+    - "!infrastructure/**"
+    - "!monitoring/**"
+    - "!alerts/**"
+    - "!dashboards/**"
+    - "!**/*.rules.yml"
+    - "!**/*.rules.yaml"
+    - "!.semgrep.yml"
+    - "!.semgrep/**"
+    - "!.gitleaks.toml"
+    - "!.trivyignore"
+    - "!.snyk"
+    - "!osv-scanner.toml"
+    - "!docs/runbooks/**"
+    - "!docs/postmortems/**"
+  denies: ["**/.env*", "**/*.pem", "**/*.key", "**/secrets/**", "**/*.tfvars", "**/*.tfstate*"]
   owns: [implementation]
   max_turns: 120
 ---
@@ -105,6 +141,8 @@ Implementation:
 ## Decision rights
 
 Implementation details inside the design: internal structure, names, algorithms, and libraries that the project already uses. A new dependency or a new pattern needs a CDR (deviation protocol).
+
+The CI pipelines, the container and deployment files, and the infrastructure code belong to the Platform Engineer. The migration plan belongs to the Database Engineer: you write the migration code from it. The scanner rules belong to the Security Engineer. If your task needs a change there, report it.
 
 ## Done when
 

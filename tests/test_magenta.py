@@ -137,7 +137,7 @@ class BuildInstallTest(unittest.TestCase):
             tmp = Path(tmp)
             dist, home, repo = tmp / "dist", tmp / "home", tmp / "repo"
             result = claude_code.build(ROOT, dist)
-            self.assertEqual(result["agents"], ["architect", "engineer", "frontend", "principal", "product-manager", "qa"])
+            self.assertEqual(result["agents"], ["architect", "database", "engineer", "frontend", "platform", "principal", "product-manager", "qa", "security", "sre", "writer"])
             self.assertIn("magenta-workflow", result["skills"])
             self.assertIn("magenta-templates", result["skills"])
 

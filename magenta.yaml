@@ -2,19 +2,19 @@
 
 version: 1
 
-# Version of the team plugin (phase 5). Increase it for each release to the team.
-release: 0.7.1
+# The release version. The release workflow checks that the tag agrees with it.
+release: 0.8.0
 
-# Owner of the team marketplace (phase 5).
+# Owner of the plugin marketplace.
 owner: AMQ
 
 # The GitHub repository that serves the plugin marketplace and the installers.
 repository: https://github.com/devlnull/magenta-agents
 
 # Agents that the build generates.
-agents_enabled: [principal, product-manager, architect, qa, engineer, frontend]
+agents_enabled: [principal, product-manager, architect, qa, engineer, frontend, sre, platform, security, database, writer]
 
-# Agents that the docs already name, but that come in a later phase.
+# Agents that the docs already name, but that do not exist yet. The roster shows them as not available.
 agents_planned: []
 
 # Name prefix for generated agents and skills, to avoid collisions with other agents.

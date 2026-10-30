@@ -1,0 +1,40 @@
+{
+  "agent": "sre",
+  "writes": [
+    ".magenta/work/*/03-reliability.md",
+    ".magenta/checks/sre.yaml",
+    "docs/runbooks/**",
+    "docs/postmortems/**",
+    "runbooks/**"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**",
+    "**/*.tfvars",
+    "**/*.tfstate*"
+  ],
+  "shell": [
+    "git status*",
+    "git log*",
+    "git diff*",
+    "git show*",
+    "git rev-parse*",
+    "git grep *",
+    "ls*",
+    "promtool check *",
+    "amtool check-config *",
+    "pint *",
+    "actionlint*",
+    "hadolint *",
+    "kubeconform *",
+    "helm lint *",
+    "helm template *",
+    "kustomize build *",
+    "\"*\" \"*/verify.py\" run*",
+    "\"*\" \"*/verify.py\" list*",
+    "\"*\" \"*/verify.py\" status*"
+  ],
+  "shell_deny": []
+}

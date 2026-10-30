@@ -1,0 +1,41 @@
+---
+name: zero-downtime-migration
+description: Plan schema changes and data migrations that keep the service online - expand and contract, batched backfills, lock-safe DDL, and a rollback for each step. Use it for each schema change or data migration.
+---
+
+# Zero-downtime migration
+
+During a deployment, the old and the new version of the code run at the same time. Each schema state must work with both versions.
+
+## Expand and contract
+
+| Step | Release | Example: rename `address.zip` to `postal_code` |
+|---|---|---|
+| 1. Expand | Migration only | Add the nullable column `postal_code`. |
+| 2. Dual write | Code | Write both columns. Read the old column. |
+| 3. Backfill | Job | Copy `zip` to `postal_code` in batches. |
+| 4. Switch reads | Code | Read the new column. Keep the dual write. |
+| 5. Stop the old writes | Code | Write only the new column. |
+| 6. Contract | Migration, later | Drop `zip`, after the old code is gone and a backup exists. |
+
+Each step is a separate release, and each one can roll back. Step 6 is a one-way door: the human approves it.
+
+## Lock-safe DDL (examples for PostgreSQL; check the rules of your engine and version)
+
+- Create indexes with `CREATE INDEX CONCURRENTLY` (not in a transaction).
+- Add a `NOT NULL` constraint in steps: `CHECK (col IS NOT NULL) NOT VALID`, then `VALIDATE CONSTRAINT`.
+- Add a foreign key with `NOT VALID`, then validate it.
+- Set a `lock_timeout` for the migration, so that it fails instead of blocking all traffic.
+- A type change usually rewrites the table. Use expand and contract instead.
+- MySQL: use the online DDL options (`ALGORITHM=INPLACE, LOCK=NONE`) or an online schema change tool. SQL Server: check if the operation is online in your edition.
+
+## Backfills
+
+- Run in batches (for example 1,000 to 10,000 rows) by the primary key, with a pause between the batches.
+- Make the job idempotent and resumable. Record the last key.
+- Monitor the replication lag and the load. Stop when they are high.
+- Verify with queries: the counts and samples of the old and the new data.
+
+## The plan in `03-data.md`
+
+For each step: the SQL or the migration, the expected lock and duration (for the table size), the verification query, and the rollback.

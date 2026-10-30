@@ -138,6 +138,9 @@ The template `checks` in the skill `magenta-templates` shows the format.
 | project.yaml | Principal (build, lint, unit tests) |
 | qa.yaml | QA (tests, thresholds, regression tests) |
 | architect.yaml | Architect (structure rules, fitness functions) |
+| sre.yaml | SRE (operations rules, lint of alerts, pipelines, and manifests) |
+| security.yaml | Security Engineer (scanners, security rules) |
+| database.yaml | Database Engineer (migration lint, migration and query tests) |
 | human.yaml | you |
 
 A check runs only after you approve its exact command:

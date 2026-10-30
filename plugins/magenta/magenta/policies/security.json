@@ -1,0 +1,47 @@
+{
+  "agent": "security",
+  "writes": [
+    ".magenta/work/*/03-security.md",
+    ".magenta/checks/security.yaml",
+    ".semgrep.yml",
+    ".semgrep/**",
+    ".gitleaks.toml",
+    ".trivyignore",
+    ".snyk",
+    "osv-scanner.toml"
+  ],
+  "denies": [
+    "**/.env*",
+    "**/*.pem",
+    "**/*.key",
+    "**/secrets/**",
+    "**/*.tfvars",
+    "**/*.tfstate*"
+  ],
+  "shell": [
+    "git status*",
+    "git log*",
+    "git diff*",
+    "git show*",
+    "git rev-parse*",
+    "git grep *",
+    "ls*",
+    "semgrep *",
+    "gitleaks *--redact*",
+    "trivy fs *",
+    "trivy config *",
+    "osv-scanner *",
+    "npm audit*",
+    "pnpm audit*",
+    "yarn audit*",
+    "pip-audit*",
+    "bandit *",
+    "govulncheck *",
+    "dotnet list package --vulnerable*",
+    "checkov *",
+    "\"*\" \"*/verify.py\" run*",
+    "\"*\" \"*/verify.py\" list*",
+    "\"*\" \"*/verify.py\" status*"
+  ],
+  "shell_deny": []
+}

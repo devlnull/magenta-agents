@@ -1,5 +1,5 @@
 # .magenta/checks/<owner>.yaml. Owners: qa.yaml (QA), architect.yaml (Architect), project.yaml (Principal),
-# human.yaml (human). A check is a command that tests one rule. Exit code 0 means PASS.
+# sre.yaml (SRE), security.yaml (Security), database.yaml (Database), human.yaml (human). A check is a command that tests one rule. Exit code 0 means PASS.
 # A check runs only after the human approves its exact command (verify.py approve). If the command changes,
 # the check fails until the human approves it again.
 checks:

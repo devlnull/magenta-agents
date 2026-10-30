@@ -42,7 +42,8 @@ def build(root: Path, out: Path) -> dict:
     (plugin / "hooks").mkdir()
 
     version = str(cfg.get("release") or "0.1.0")
-    description = ("Magenta: role-based AI agents (PM, Architect, Principal, QA, Engineer, Front-End). "
+    description = ("Magenta: a team of role-based AI agents (product, architecture, engineering, QA, SRE, platform, "
+                   "security, database, docs). "
                    "The rules become checks, and a task is done when the checks pass.")
     homepage = "https://github.com/devlnull/magenta-agents"
     (plugin / ".claude-plugin" / "plugin.json").write_text(json.dumps(
