@@ -112,7 +112,7 @@ class Run:
                     raise FileNotFoundError(cmd[0])
                 proc = subprocess.run([exe] + cmd[1:], cwd=self.repo, capture_output=True, text=True,
                                       encoding="utf-8", errors="replace", timeout=self.timeout_s)
-                code, out = proc.returncode, proc.stdout + ("\n" + proc.stderr if proc.returncode else "")
+                code, out = proc.returncode, (proc.stdout if proc.stdout.strip() else proc.stderr)
             except FileNotFoundError:
                 code, out = 127, f"the command {cmd[0]!r} is not installed"
             except subprocess.TimeoutExpired:
@@ -186,9 +186,13 @@ def _slug(text: str) -> str:
 
 # ----- workflows -----
 def prd_review(run: Run, prd_file: Path, item_id: str | None = None) -> dict:
+    if run.over_budget():
+        raise RunError("the budget is reached: no agent runs")
     prd_text = prd_file.read_text(encoding="utf-8")
     item_id = item_id or dt.datetime.now().strftime("%Y%m%d%H%M")
     folder = run.repo / ".magenta" / "work" / f"{item_id}-{_slug(prd_file.stem)}"
+    if (folder / "state.yaml").exists():
+        raise RunError(f"the work item {item_id} already exists: {folder.relative_to(run.repo).as_posix()}")
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "00-request.md").write_text(
         f"# Request\n\nSource: {prd_file.name}\nDate: {dt.date.today()}\n\n```UNTRUSTED\n{prd_text.strip()}\n```\n",
@@ -219,6 +223,8 @@ def pr_review(run: Run, base: str, item: str | None = None) -> dict:
         raise RunError(f"git diff failed: {diff.stderr.strip()}")
     if not diff.stdout.strip():
         return {"status": "OK", "report": "No changes between the base and HEAD."}
+    if run.over_budget():
+        return {"status": "BUDGET_EXCEEDED", "report": ""}
     diff_path = run.run_dir / "diff.patch"
     diff_path.write_text(diff.stdout, encoding="utf-8")
     rel_diff = diff_path.relative_to(run.repo).as_posix()

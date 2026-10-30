@@ -265,7 +265,7 @@ def run_workflow(args) -> int:
     if result["status"] != "OK":
         print(f"status: {result['status']}")
         return 1
-    if args.fail_on_blocker and re.search(r"\|\s*BLOCKER\s*\|", report):
+    if args.fail_on_blocker and re.search(r"^\s*\|\s*\**BLOCKER\**\s*\|[^|\n]*\|[^|\n]*\|", report, re.M):
         return 3
     return 0
 
