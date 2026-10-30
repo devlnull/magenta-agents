@@ -273,6 +273,53 @@ def check_plugin() -> list[str]:
         return problems
 
 
+def _source_files(root: Path) -> list[Path]:
+    """The files of the repository: the files that git tracks, or all files without .git, dist, and caches."""
+    try:
+        out = subprocess.run(["git", "ls-files", "-z"], cwd=root, capture_output=True, check=True)
+        names = [n for n in out.stdout.decode("utf-8").split("\0") if n]
+        if names:
+            return [root / n for n in names if (root / n).is_file()]
+    except (OSError, subprocess.CalledProcessError):
+        pass
+    skip = {".git", "dist", "__pycache__", ".magenta"}
+    return [p for p in root.rglob("*") if p.is_file() and not skip & set(p.relative_to(root).parts)]
+
+
+def _zip(target: Path, entries) -> None:
+    """Write a zip with a fixed order and fixed times, so that the same input gives the same file."""
+    import zipfile
+    with zipfile.ZipFile(target, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name, path in sorted(entries):
+            info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = ((0o755 if os.access(path, os.X_OK) or name.endswith((".sh", "verify.py"))
+                                   else 0o644) << 16)
+            archive.writestr(info, path.read_bytes())
+
+
+def package(out: Path) -> list[Path]:
+    """Release assets (CD): the source with the built files, the plugin marketplace, and SHA256SUMS."""
+    import hashlib
+    version = str(claude_code.load_config(ROOT).get("release"))
+    out.mkdir(parents=True, exist_ok=True)
+    top = f"magenta-agents-{version}"
+    source = [(f"{top}/{p.relative_to(ROOT).as_posix()}", p) for p in _source_files(ROOT)
+              if p.relative_to(ROOT).parts[0] != "dist"]
+    built = [(f"{top}/dist/{p.relative_to(DIST_ROOT).as_posix()}", p) for p in DIST_ROOT.rglob("*")
+             if p.is_file() and "__pycache__" not in p.parts and out.resolve() not in p.resolve().parents]
+    bundle = out / f"{top}.zip"
+    _zip(bundle, source + built)
+    plugin = out / f"magenta-plugin-{version}.zip"
+    _zip(plugin, [(f"magenta-plugin-{version}/{p.relative_to(ROOT).as_posix()}", p)
+                  for top_dir in (".claude-plugin", "plugins") for p in (ROOT / top_dir).rglob("*")
+                  if p.is_file() and "__pycache__" not in p.parts])
+    sums = out / "SHA256SUMS"
+    sums.write_text("".join(f"{hashlib.sha256(a.read_bytes()).hexdigest()}  {a.name}\n" for a in (bundle, plugin)),
+                    encoding="utf-8")
+    return [bundle, plugin, sums]
+
+
 def _extra_builds():
     """The team plugin and marketplace (phase 5)."""
     def build_plugin():
@@ -326,6 +373,8 @@ def main(argv=None) -> int:
     p_metrics = sub.add_parser("metrics", help="report work items and headless runs of repositories")
     p_metrics.add_argument("repos", type=Path, nargs="+")
     p_metrics.add_argument("--output", type=Path)
+    p_package = sub.add_parser("package", help="build the release assets (zip files and SHA256SUMS)")
+    p_package.add_argument("--out", type=Path, default=ROOT / "dist" / "release")
     p_evals = sub.add_parser("eval-summary", help="compare the eval runs of the modes plain, default, and team")
     p_evals.add_argument("--tasks", type=Path, default=ROOT / "evals" / "tasks")
     p_evals.add_argument("--output", type=Path)
@@ -405,6 +454,19 @@ def main(argv=None) -> int:
         return 0
     if args.cmd == "run":
         return run_workflow(args)
+    if args.cmd == "package":
+        errors = validate()
+        if errors or check_plugin():
+            print("The source is not valid, or the committed plugin is not current. Run: python3 magenta.py build")
+            return 1
+        claude_code.build(ROOT, DIST)
+        opencode.build(ROOT, DIST_ROOT / "opencode")
+        codex.build(ROOT, DIST_ROOT / "codex")
+        gemini.build(ROOT, DIST_ROOT / "gemini")
+        agents_md.build(ROOT, DIST_ROOT / "agents-md")
+        for asset in package(args.out.resolve()):
+            print(f"{asset}  ({asset.stat().st_size} bytes)")
+        return 0
     if args.cmd == "eval-summary":
         text = mode_evals.report(mode_evals.collect(args.tasks))
         if args.output:

@@ -209,5 +209,20 @@ class BuildInstallTest(unittest.TestCase):
             self.assertEqual((repo / ".git/info/exclude").read_text(encoding="utf-8").count(".magenta/"), 1)
 
 
+class PackageTest(unittest.TestCase):
+    def test_release_assets(self):
+        import zipfile
+        with tempfile.TemporaryDirectory() as tmp:
+            assets = magenta.package(Path(tmp))
+            self.assertEqual([a.name.split("-")[1] for a in assets[:2]], ["agents", "plugin"])
+            version = str(magenta.claude_code.load_config(magenta.ROOT)["release"])
+            names = zipfile.ZipFile(assets[0]).namelist()
+            self.assertIn(f"magenta-agents-{version}/magenta.py", names)
+            self.assertIn(f"magenta-agents-{version}/adapters/verify.py", names)
+            plugin = zipfile.ZipFile(assets[1]).namelist()
+            self.assertIn(f"magenta-plugin-{version}/.claude-plugin/marketplace.json", plugin)
+            self.assertEqual(len(assets[2].read_text(encoding="utf-8").splitlines()), 2)
+            self.assertTrue((magenta.ROOT / "docs" / "releases" / f"v{version}.md").exists())
+
 if __name__ == "__main__":
     unittest.main()

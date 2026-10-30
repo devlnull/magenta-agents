@@ -3,7 +3,7 @@
 version: 1
 
 # Version of the team plugin (phase 5). Increase it for each release to the team.
-release: 0.7.0
+release: 0.7.1
 
 # Owner of the team marketplace (phase 5).
 owner: AMQ

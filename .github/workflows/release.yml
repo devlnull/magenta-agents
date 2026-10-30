@@ -1,0 +1,50 @@
+name: release
+# CD: a tag v<version> publishes a GitHub release with the built assets.
+# The full CI (3 operating systems, 2 Python versions) must pass first.
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "An existing tag to publish, for example v0.7.1"
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  ci:
+    uses: ./.github/workflows/ci.yml
+    with:
+      ref: ${{ inputs.tag || github.ref }}
+
+  publish:
+    needs: ci
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ inputs.tag || github.ref_name }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+          fetch-depth: 0
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: The tag agrees with the release in magenta.yaml
+        run: |
+          VERSION="${TAG#v}"
+          grep -qx "release: $VERSION" magenta.yaml || { echo "magenta.yaml has no 'release: $VERSION'"; exit 1; }
+      - name: Build the release assets
+        run: python magenta.py package --out release-assets
+      - name: Publish the GitHub release
+        run: |
+          NOTES="docs/releases/$TAG.md"
+          if [ -f "$NOTES" ]; then set -- --notes-file "$NOTES"; else set -- --generate-notes; fi
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            gh release upload "$TAG" release-assets/* --clobber
+          else
+            gh release create "$TAG" release-assets/* --verify-tag --title "Magenta Agents ${TAG#v}" "$@"
+          fi

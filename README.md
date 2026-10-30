@@ -47,14 +47,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # other tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.7.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.7.1
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# other tool or version: set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.7.0" first
+# other tool or version: set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.7.1" first
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The guard hook uses the Python that ran the install. Run the script again to update. Use the plugin or the script for Claude Code, not both.
@@ -217,10 +217,20 @@ Agents name a profile. `models.yaml` maps each profile to a model for each tool 
 ## Release a new version
 
 1. Optional: copy `standards/organization.example.md` to `standards/organization.md` and write your organization standards.
-2. Increase `release` in `magenta.yaml`.
+2. Increase `release` in `magenta.yaml`. Write the release notes in `docs/releases/v<version>.md` (optional).
 3. Run `python3 magenta.py build`. It also updates the committed plugin (`plugins/magenta/`, `.claude-plugin/marketplace.json`).
-4. Run `python3 magenta.py check` and the tests. Commit and push. CI tests macOS, Linux, and Windows.
-5. Create a tag, for example `git tag v0.7.0 && git push origin v0.7.0`. Users can install that version with `--ref v0.7.0`.
+4. Run `python3 magenta.py check` and the tests. Commit and push.
+5. Create and push the tag: `git tag v0.7.1 && git push origin v0.7.1`.
+
+The tag starts the `release` workflow (CD). It runs the full CI on macOS, Linux, and Windows, checks that the tag agrees with `magenta.yaml`, builds the assets (`python3 magenta.py package`), and publishes the GitHub release:
+
+| Asset | Content |
+|---|---|
+| `magenta-agents-<version>.zip` | The source and the built files for all tools. Install without network: unzip, then `python3 magenta.py install`. |
+| `magenta-plugin-<version>.zip` | The Claude Code plugin marketplace. |
+| `SHA256SUMS` | The checksums. |
+
+To publish a tag that exists already, run the `release` workflow by hand (Actions, release, Run workflow) and give the tag.
 
 ## Repository layout
 
