@@ -7,6 +7,12 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 ### Fixed
 
 - The guard and the protect hook close shell bypasses: git options that write a file or run a program, a verify path that is not a real `verify.py` outside the project, quoted secret paths, and quoted or abbreviated human-only words. `verify.py` rejects abbreviated options.
+- `verify.py start` keeps a failing task that changed the code with its session. Only the human can replace it, with `--force`.
+- The code fingerprint counts files marked assume-unchanged or skip-worktree, and source files in nested `bin/`, `out/`, `build/`, and similar folders. A checks file that is not UTF-8 makes the Stop hook block. The Stop hook names the failed checks while a check waits for approval.
+- The YAML parser keeps the indentation and the final newline of block scalars, keeps the empty lines of folded blocks, drops a comment after an apostrophe, and accepts CRLF front matter. CI runs the PyYAML cross-check.
+- `validate` rejects overlapping write paths of two agents and finds more unknown skill names. Each path has one owner: nested deployment files belong to the Platform Engineer, `runbooks/` to the SRE, and `docs/architecture/` to the Architect.
+- QA and the SRE can run the test and lint commands that their steps need. The engineer can run `python3 -m unittest`.
+- The workflows, templates, and docs agree with the 0.8.0 team: the PRD steps of the standard lane apply to features only, and the full lane names the correct readiness step.
 
 ## [0.8.0] - 2026-10-30
 
