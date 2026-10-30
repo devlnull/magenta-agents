@@ -15,10 +15,10 @@ jobs:
     env:
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - name: Configure git for the tests
@@ -63,10 +63,10 @@ jobs:
     env:
       PYTHONUTF8: "1"
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - name: install.sh from this commit
@@ -75,7 +75,9 @@ jobs:
           git branch -f ci-install HEAD
           HOME="$RUNNER_TEMP/home" MAGENTA_REPO="$GITHUB_WORKSPACE" MAGENTA_REF=ci-install sh install.sh
           test -f "$RUNNER_TEMP/home/.claude/agents/magenta-qa.md"
-          grep -q 'guard.py" qa' "$RUNNER_TEMP/home/.claude/agents/magenta-qa.md"
+          # The hook command sits in a YAML double-quoted string, so its quotes are escaped: \"
+          grep -qF 'guard.py\" qa' "$RUNNER_TEMP/home/.claude/agents/magenta-qa.md"
+          test -f "$RUNNER_TEMP/home/.claude/skills/magenta/scripts/verify.py"
       - name: install.ps1 from this commit
         if: runner.os == 'Windows'
         shell: pwsh
