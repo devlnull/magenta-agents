@@ -2,6 +2,7 @@
 
 The policies come from the canonical source in agents/*.md, so each test covers every agent that has the pattern.
 """
+import os
 import subprocess
 import sys
 import tempfile
@@ -9,6 +10,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+_HOME = tempfile.TemporaryDirectory()  # the session records of `start` (never the real home)
+os.environ["MAGENTA_HOME"] = _HOME.name
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "adapters"))
 

@@ -58,7 +58,10 @@ If the request starts with `--lead`, use the default mode, also when a trigger a
 
 ## Step 1: Prepare
 
-1. Work from the root folder of the repository.
+1. Work from the root folder of the repository. If the session started in a parent folder (a workspace with many repositories), find the repository of the task. If it is not clear, ask the human. Then:
+   - Write the paths of files from the session folder, for example `<repository path>/.magenta/work/...`.
+   - Add `--repo <repository path>` after the command word of `list` and `start`, for example `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start --repo <repository path> <ID> --session="${CLAUDE_SESSION_ID}"`. When the task is active, the other verify commands find its repository. If a command says that more than one Magenta repository is below the folder, add `--repo` to it too.
+   - Give each agent the repository path. Agents run git commands as `git -C <repository path> <command>`.
 2. If `.magenta/work/` does not exist, create it. If `.git/info/exclude` exists and does not contain `.magenta/`, add it.
 3. If `.magenta/project-context.md` does not exist or has the status DRAFT, ask the human: "Run discover-project first? It is necessary one time for each repository." If yes, start `principal` with the task "Run the skill `discover-project`". It also writes the project checks (build, lint, unit tests) in `.magenta/checks/project.yaml`. Show the summary and the checks to the human. For an investigation only, you can continue without the profile.
 4. Run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list` to see the checks of the repository.

@@ -33,7 +33,7 @@ _ASK_WORDS = {"approve"}  # and --force with its abbreviations; the other human-
 # Permission rules that `magenta.py init` adds. Claude Code asks for a matching command in every mode.
 ASK_RULES = ("Bash(*verify.py*approve*)", "Bash(*verify.py*--force*)", "Bash(*magenta.py*approve*)",
              "Bash(*magenta.py*--force*)")
-_DELETE_STATE = re.compile(r"(\brm\b[^|;&]*\.magenta(?:[/\\\s'\"]|$))|(\bgit\s+clean\b[^|;&]*\s-[A-Za-z]*[xX])")
+_DELETE_STATE = re.compile(r"(\brm\b[^|;&]*\.magenta(?:[/\\\s'\"]|$))|(\bgit\s+(?:-C\s+\S+\s+)?clean\b[^|;&]*\s-[A-Za-z]*[xX])")
 
 
 def unquoted(command: str) -> str:
@@ -61,6 +61,22 @@ def _uses_magenta(cwd) -> bool:
         return any((p / ".magenta").is_dir() for p in [here, *list(here.parents)[:8]])
     except OSError:
         return False
+
+
+def _names_magenta(command: str, cwd) -> bool:
+    """True if the command names a `.magenta/` folder, or a folder with `.magenta/`, in the session folder (a session
+    in a workspace with many repositories)."""
+    try:
+        here = Path(cwd or ".").resolve()
+        for word in unquoted(command).split():
+            found = re.match(r"(.*?\.magenta)(?:[/\\]|$)", word)
+            base = Path(found.group(1) if found else word).expanduser()
+            base = base if base.is_absolute() else here / base
+            if (base if found else base / ".magenta").is_dir():
+                return True
+    except (OSError, ValueError):
+        return False
+    return False
 
 
 def _ask_rules_installed(cwd) -> bool:
@@ -119,7 +135,8 @@ def decide(event: dict) -> str | None:
         if human:
             return (f"only the human runs `{human.group(2)}`. Return the command to the conductor, which asks the "
                     "human to confirm it.")
-        if _DELETE_STATE.search(command) and _uses_magenta(event.get("cwd")):
+        if _DELETE_STATE.search(command) and (_uses_magenta(event.get("cwd"))
+                                              or _names_magenta(command, event.get("cwd"))):
             return ("do not delete `.magenta/` or run `git clean -x`. It holds the checks, the approvals, and the "
                     "work items. Ask the human.")
         state = _STATE_IN_SHELL.search(command)

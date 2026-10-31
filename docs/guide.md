@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.10.1
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.10.2
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.10.1"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.10.2"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -70,6 +70,8 @@ The first `/magenta` task asks to run discover-project. It writes `.magenta/proj
 ## Run a task
 
 Give Magenta any task in your own words. Start the session in the root folder of the repository.
+
+You can also start the session in a parent folder that holds many repositories (a workspace). The conductor finds the repository of the task (or asks you), the write rules of the agents apply to the repository of each file, and the hooks find the repository of the active task. One limit: a command cannot change the folder, so the agents cannot run project commands such as `./gradlew test` in the repository. The checks still run there. For the full set of agent commands, start the session in the repository.
 
 | Tool | Command |
 |---|---|

@@ -117,6 +117,43 @@ def _project_policy(cwd: Path) -> dict:
         return {}
 
 
+def _is_repo(folder: Path) -> bool:
+    return (folder / ".git").exists() or (folder / ".magenta").is_dir()
+
+
+def repo_root(target: Path, cwd: Path) -> Path:
+    """The repository of a file in the session folder. The write rules of the agents are relative to it.
+    When the session folder is a repository, it is the session folder. When the session started in a parent
+    folder (a workspace with many repositories), it is the nearest folder between the file and the session folder
+    that has `.git` or `.magenta/`. Without such a folder, it is the session folder."""
+    if _is_repo(cwd):
+        return cwd
+    for folder in target.parents:
+        if folder == cwd:
+            break
+        if _is_repo(folder):
+            return folder
+    return cwd
+
+
+def _inside(path: Path, cwd: Path) -> bool:
+    try:
+        path.relative_to(cwd)
+        return True
+    except ValueError:
+        return False
+
+
+def _without_git_folder(tokens, cwd: Path):
+    """`git -C <folder> <command>` with a folder in the session folder is `git <command>` in that folder (a
+    session in a workspace with many repositories). Return the tokens without `-C <folder>`, or None."""
+    if len(tokens) < 4 or tokens[0] != "git" or tokens[1] != "-C":
+        return None
+    folder = Path(tokens[2]).expanduser()
+    folder = (folder if folder.is_absolute() else cwd / folder).resolve()
+    return ["git", *tokens[3:]] if _inside(folder, cwd) else None
+
+
 def decide(agent: str, policy: dict, event: dict):
     """Return a reason to block the tool call, or None to let the normal flow continue."""
     me = PREFIX + agent
@@ -140,6 +177,12 @@ def decide(agent: str, policy: dict, event: dict):
         command = " ".join(str(tool_input.get("command") or "").split())
         if any(op in command for op in SHELL_OPERATORS):
             return f"{me} can run only one simple command, without shell operators: {command!r}"
+        try:
+            local = _without_git_folder(shlex.split(command), cwd)
+        except ValueError:
+            local = None
+        if local is not None:  # the rules apply to the git command itself
+            command = shlex.join(local)
         if any(fnmatch.fnmatchcase(command, p) for p in shell_deny):
             return f"{me} cannot run {command!r}: the command is denied"
         allowing = [p for p in shell if fnmatch.fnmatchcase(command, p)]
@@ -167,10 +210,15 @@ def decide(agent: str, policy: dict, event: dict):
         return None
     target = Path(str(raw)).expanduser()
     target = (target if target.is_absolute() else cwd / target).resolve()
+    inside = _inside(target, cwd)  # the session folder is the limit for writes
+    root = repo_root(target, cwd) if inside else cwd
     try:
-        rel, inside = target.relative_to(cwd).as_posix(), True
+        rel = target.relative_to(root).as_posix()
     except ValueError:
-        rel, inside = target.as_posix(), False
+        rel = target.as_posix()
+    if inside and root != cwd:  # the rules of the repository of the file
+        extra = _project_policy(root).get(agent, {})
+        writes = list(policy.get("writes", [])) + list(extra.get("writes", []))
 
     if _matches(rel, denies) or _matches(target.name, denies):
         return f"{me} cannot access the secret path {rel}"

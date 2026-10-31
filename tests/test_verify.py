@@ -10,6 +10,8 @@ from contextlib import redirect_stdout
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+_HOME = tempfile.TemporaryDirectory()  # the session records of `start` (never the real home)
+os.environ["MAGENTA_HOME"] = _HOME.name
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "adapters"))
 

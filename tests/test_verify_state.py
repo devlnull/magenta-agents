@@ -1,6 +1,7 @@
 import json
 import re
 import shutil
+import os
 import subprocess
 import sys
 import tempfile
@@ -8,6 +9,8 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+_HOME = tempfile.TemporaryDirectory()  # the session records of `start` (never the real home)
+os.environ["MAGENTA_HOME"] = _HOME.name
 sys.path.insert(0, str(ROOT / "adapters"))
 
 import verify  # noqa: E402

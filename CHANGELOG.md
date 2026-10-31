@@ -4,6 +4,19 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.10.2] - 2026-10-31
+
+### Fixed
+
+- A session that starts in a parent folder of the repository (a workspace with many repositories) works. Before, the guard compared the path of a file from the session folder (for example `group/app/.magenta/checks/project.yaml`) with the write rules of the agent (`.magenta/checks/project.yaml`), and blocked an agent that owns the file. Now the rules apply to the path in the repository of the file, and the `.magenta/policy.json` of that repository applies.
+- The Stop and subagent hooks find the repository of the active task of the session when the session folder is not that repository. `start` records the repository of the session, and `finish` removes the record.
+- Verify commands without `--repo` in a workspace folder use the one repository below it with an active task. When there is more than one, the command tells you to add `--repo`.
+- The permission dialog of `approve` reads `--repo`, and does not show the path as a check id.
+
+### Added
+
+- Agents can run their allowed git commands as `git -C <folder> <command>`, when the folder is in the session folder.
+
 ## [0.10.1] - 2026-10-31
 
 ### Changed
@@ -109,7 +122,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.1...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.2...HEAD
+[0.10.2]: https://github.com/devlnull/magenta-agents/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/devlnull/magenta-agents/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/devlnull/magenta-agents/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/devlnull/magenta-agents/compare/v0.8.0...v0.9.0

@@ -65,6 +65,10 @@ ARTIFACT_DIRS = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", "
 ROOT_ARTIFACT_DIRS = {"coverage", "build", "target", "out", "dist", "bin", "obj"}
 ARTIFACT_ENDINGS = (".pyc", ".pyo", ".class", ".coverage", "coverage.xml", ".log")
 SETTINGS = Path(".claude") / "settings.local.json"
+SESSION_TTL = 30 * 24 * 3600  # a session record older than this is stale
+SKIP_DIRS = {"node_modules", "vendor", "venv", "target", "build", "dist", "__pycache__"}
+WORKSPACE_DEPTH = 3  # how deep to look for repositories below a workspace folder
+WORKSPACE_LIMIT = 2000  # the maximum number of folders to look at
 
 
 class VerifyError(Exception):
@@ -85,9 +89,106 @@ def _text(raw: bytes) -> str:
     return raw.decode("utf-8", "replace").strip()
 
 
-def find_repo(start: Path) -> Path:
+def _toplevel(start: Path) -> Path | None:
     raw = _git(Path(start), "rev-parse", "--show-toplevel")
-    return Path(_text(raw)).resolve() if raw and _text(raw) else Path(start).resolve()
+    return Path(_text(raw)).resolve() if raw and _text(raw) else None
+
+
+def find_repo(start: Path) -> Path:
+    return _toplevel(start) or Path(start).resolve()
+
+
+def repos_below(root: Path) -> list[Path]:
+    """The Magenta repositories (folders with `.magenta/`) below a workspace folder, at most WORKSPACE_DEPTH
+    levels down. The search does not go into a repository, a hidden folder, or a folder of dependencies."""
+    found, level, seen = [], [root], 0
+    for _ in range(WORKSPACE_DEPTH):
+        below = []
+        for folder in level:
+            try:
+                with os.scandir(folder) as entries:
+                    children = sorted((e for e in entries if e.is_dir(follow_symlinks=False)), key=lambda e: e.name)
+            except OSError:
+                continue
+            for entry in children:
+                if entry.name.startswith(".") or entry.name in SKIP_DIRS:
+                    continue
+                seen += 1
+                if seen > WORKSPACE_LIMIT:
+                    return found
+                path = Path(entry.path)
+                if (path / ".magenta").is_dir():
+                    found.append(path.resolve())
+                elif not (path / ".git").exists():
+                    below.append(path)
+        level = below
+    return found
+
+
+def default_repo(start: Path) -> Path:
+    """The repository of a command without --repo: the git root of the folder. When the folder is a workspace
+    (it has no `.magenta/`, and Magenta repositories are below it), the one repository below it with an active
+    task. When there is more than one, the human or the agent must give --repo."""
+    top = _toplevel(start)
+    here = top or Path(start).resolve()
+    if _mdir(here).is_dir():
+        return here
+    below = repos_below(here)
+    busy = [r for r in below if active(r).get("work_item")]
+    pick = busy or ([] if top else below)
+    if len(pick) == 1:
+        return pick[0]
+    if len(pick) > 1:
+        names = ", ".join(r.relative_to(here).as_posix() for r in pick)
+        raise VerifyError(f"{here} is a folder with more than one Magenta repository ({names}). "
+                          "Add --repo <repository> after the command, for example: run --repo <repository>")
+    return here
+
+
+def _magenta_home() -> Path:
+    return Path(os.environ.get("MAGENTA_HOME") or Path.home() / ".claude" / "magenta")
+
+
+def _session_file(session: str) -> Path:
+    return _magenta_home() / "sessions" / (re.sub(r"[^A-Za-z0-9._-]", "_", session)[:80] + ".json")
+
+
+def _remember_session(repo: Path, session: str, item: str) -> None:
+    """Record the repository of the task of a session. The hooks use it when the session folder is not the
+    repository (a session in a workspace with many repositories). The record is a help: an error is ignored."""
+    try:
+        folder = _magenta_home() / "sessions"
+        for old in folder.glob("*.json") if folder.is_dir() else []:
+            if time.time() - old.stat().st_mtime > SESSION_TTL:
+                old.unlink(missing_ok=True)
+        _write_json(_session_file(session), {"repo": str(repo), "work_item": item, "at": _now()})
+    except OSError:
+        pass
+
+
+def _forget_session(repo: Path, session: str) -> None:
+    try:
+        path = _session_file(session)
+        if Path(_read_json(path, {}).get("repo") or "") == repo:
+            path.unlink(missing_ok=True)
+    except OSError:
+        pass
+
+
+def event_repo(event: dict) -> Path:
+    """The repository of a hook event: the git root of the session folder, or, when the active task of the session
+    is in another repository (the session started in a parent folder), that repository."""
+    repo = find_repo(Path(event.get("cwd") or os.getcwd()))
+    session = str(event.get("session_id") or "")
+    if not session or active(repo).get("session") == session:
+        return repo
+    try:
+        other = _read_json(_session_file(session), {}).get("repo")
+    except OSError:
+        other = None
+    if other and active(Path(other)).get("session") == session:
+        return Path(other)
+    return repo
 
 
 def _git_path(repo: Path, name: str) -> Path | None:
@@ -396,11 +497,13 @@ def start(repo: Path, item: str, session=None, force: bool = False) -> dict:
     if current == item:
         data.update(session=session or owner, resumed_at=_now())
         _write_json(_mdir(repo) / "active.json", data)
-        return data
-    note = f"replaced the task {current} of another session" if current and other_session else ""
-    data = {"work_item": item, "session": session, "base_fingerprint": fingerprint(repo), "started_at": _now(),
-            "blocks": 0, "previous": current or data.get("last"), "note": note}
-    _write_json(_mdir(repo) / "active.json", data)
+    else:
+        note = f"replaced the task {current} of another session" if current and other_session else ""
+        data = {"work_item": item, "session": session, "base_fingerprint": fingerprint(repo), "started_at": _now(),
+                "blocks": 0, "previous": current or data.get("last"), "note": note}
+        _write_json(_mdir(repo) / "active.json", data)
+    if data.get("session"):
+        _remember_session(repo, data["session"], item)
     return data
 
 
@@ -416,6 +519,8 @@ def finish(repo: Path, force: bool = False) -> dict:
     out = {"work_item": None, "last": item, "last_status": status + (" (closed by the human)" if force else ""),
            "finished_at": _now()}
     _write_json(_mdir(repo) / "active.json", out)
+    if data.get("session"):
+        _forget_session(repo, data["session"])
     return out
 
 
@@ -674,7 +779,7 @@ def _magenta_agent(agent_type) -> str | None:
 
 def _task_of_session(event: dict):
     """(repo, active data) when the event belongs to the session of the active task, else (repo, None)."""
-    repo = find_repo(Path(event.get("cwd") or os.getcwd()))
+    repo = event_repo(event)
     if not _mdir(repo).is_dir():
         return repo, None  # not a Magenta repository: never create .magenta/
     data = active(repo)
@@ -745,7 +850,7 @@ def subagent_stop(event: dict) -> tuple[int, str]:
 def hook(event: dict) -> tuple[int, str]:
     """Stop hook. Return (exit code, text). Exit 2 blocks the stop; the text goes to the agent.
     Exit 0 with text: the text goes to the human as a system message."""
-    repo = find_repo(Path(event.get("cwd") or os.getcwd()))
+    repo = event_repo(event)
     data = active(repo)
     item, session = data.get("work_item"), data.get("session")
     if not item or not session or session != event.get("session_id"):
@@ -988,8 +1093,24 @@ def approval_details(event: dict, limit: int = 12) -> str:
     if " approve" not in f" {command}":
         return ""
     words = command.split()
-    ids = [w for w in words[words.index("approve") + 1:] if not w.startswith("-")] if "approve" in words else []
-    repo = find_repo(Path(event.get("cwd") or os.getcwd()))
+    after = words[words.index("approve") + 1:] if "approve" in words else []
+    given, ids, skip = None, [], False
+    for i, word in enumerate(after):
+        if skip:
+            skip = False
+        elif word == "--repo" and i + 1 < len(after):
+            given, skip = after[i + 1], True
+        elif word.startswith("--repo="):
+            given = word.split("=", 1)[1]
+        elif not word.startswith("-"):
+            ids.append(word)
+    for i, word in enumerate(words[:len(words) - len(after)]):  # --repo before the command
+        if word == "--repo" and i + 1 < len(words):
+            given = given or words[i + 1]
+        elif word.startswith("--repo="):
+            given = given or word.split("=", 1)[1]
+    cwd = Path(event.get("cwd") or os.getcwd())
+    repo = find_repo(cwd / Path(given).expanduser()) if given else event_repo(event)
     approved = approvals(repo)
     checks = load_checks(repo)
     lines = []
@@ -1096,8 +1217,8 @@ def main(argv=None) -> int:
     if cmd in ("hook", "protect"):
         return _run_hook(cmd)
 
-    repo = (args.repo or find_repo(Path.cwd())).resolve()
     try:
+        repo = (args.repo or default_repo(Path.cwd())).resolve()
         if cmd == "run":
             only = [x.strip() for x in getattr(args, "only", "").split(",") if x.strip()]
             outcome = run(repo, getattr(args, "set", "quick"), only or None)
