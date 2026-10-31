@@ -173,7 +173,7 @@ Reject a candidate solution that breaks one constraint, also when it is faster o
 
 ## The Stop hook (Claude Code)
 
-When a task of this session is active and the code changed, the Stop hook does not let you finish until the approved checks pass on the current code. In one turn, it blocks two times. Then it lets you stop and tells the human.
+When a task of this session is active and the code changed, the Stop hook does not let you finish until the approved checks pass on the current code. It sends you back one time for each state of the code and of the results. When nothing changed since that reminder, it lets you stop, and your report must say that the checks do not pass.
 
 - If the hook blocks you, run verify. Fix the failures through the lead.
 - At the checks gate, the checks of the task wait for approval. Then the hook lets you stop, and it reminds the human to approve them.

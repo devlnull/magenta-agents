@@ -4,6 +4,12 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.10.1] - 2026-10-31
+
+### Changed
+
+- The Stop hook sends Claude back one time for each state of the code and of the results, not two times in each turn. While nothing changes (for example, Claude waits for your answer), it does not repeat the same message. A new change of the code gives a new reminder.
+
 ## [0.10.0] - 2026-10-30
 
 ### Added
@@ -103,7 +109,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.0...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.1...HEAD
+[0.10.1]: https://github.com/devlnull/magenta-agents/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/devlnull/magenta-agents/compare/v0.9.0...v0.10.0
 [0.9.0]: https://github.com/devlnull/magenta-agents/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/devlnull/magenta-agents/compare/v0.7.1...v0.8.0

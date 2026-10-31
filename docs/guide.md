@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.10.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.10.1
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.10.0"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.10.1"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -194,7 +194,7 @@ Only you can start `approve-checks`: the model cannot start it.
 
 - **A background agent.** The conductor can start the lead in the background. While a subagent of the task still works, the Stop hook lets the conductor wait. When the subagent returns, the conductor runs the checks, and the Stop hook checks again.
 - **Makers verify before they return.** A maker (Engineer, Front-End, Platform, Writer) that changed the code cannot return to the conductor until the checks of the task pass. After two tries, it returns and reports the problem.
-- **When the checks do not pass**, Claude Code shows a short note from Magenta, and Claude continues the task. After two blocks in one turn, Claude can stop, and its report says that the checks do not pass.
+- **When the checks do not pass**, Magenta sends Claude back one time, with the reason, and you see a short note. Magenta does not repeat the same reminder: while the code and the results stay the same, Claude can stop (for example to ask you), and its report says that the checks do not pass. A new change of the code gives a new reminder.
 
 ## Use one role
 

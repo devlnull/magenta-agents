@@ -324,9 +324,11 @@ class HookTest(RepoCase):
         self.assertEqual(code, 2)
         self.assertIn("fail on the current code: qa.b", text)
         code, text = self.hook(session_id="S1", stop_hook_active=True)
-        self.assertEqual(code, 0)  # the third stop in the same turn is allowed
-        self.assertIn("do not pass", text)
-        self.assertEqual(self.hook(session_id="S1")[0], 2)  # a new turn counts again
+        self.assertEqual(code, 0)  # one reminder for each state of the code: Claude knows the result now
+        self.assertIn("still do not pass on this code (qa.b)", text)
+        self.assertEqual(self.hook(session_id="S1")[0], 0)  # also in a new turn, while nothing changed
+        write(self.repo / "a.txt", "a\nd\n")
+        self.assertEqual(self.hook(session_id="S1")[0], 2)  # a new change gives a new reminder
         write(self.repo / "a.txt", "a\nb\n")
         verify.run(self.repo)
         self.assertEqual(self.hook(session_id="S1"), (0, ""))
@@ -349,7 +351,8 @@ class HookTest(RepoCase):
         data = verify.active(self.repo)
         data["blocks"] = 3  # an old turn
         (self.repo / ".magenta/active.json").write_text(json.dumps(data), encoding="utf-8")
-        self.assertEqual(self.hook(session_id="S1")[0], 2)
+        self.assertEqual(self.hook(session_id="S1")[0], 2)  # the old counter does not let the stop through
+        write(self.repo / "a.txt", "a\nd\n")
         self.assertEqual(self.hook(session_id="S1", stop_hook_active=True)[0], 2)
 
     def test_cli_hook_never_blocks_on_bad_input(self):

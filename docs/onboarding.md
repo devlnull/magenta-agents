@@ -58,7 +58,7 @@ The conductor asks QA (and the Architect, when the structure is at risk) to writ
 - No agent reads `.env` files, keys, or `secrets/`.
 - Shell commands: only the allowlist of each agent, without pipes or `;`.
 - No model approves checks or writes the verify state.
-- While a task is active and the code changed, the Stop hook does not let the agent finish until the approved checks pass. After two tries in one turn, it lets the agent stop and tells you.
+- While a task is active and the code changed, the Stop hook does not let the agent finish until the approved checks pass. It reminds the agent one time for each state of the code, and does not repeat itself while nothing changes.
 
 If the guard blocks an agent, the agent reports it. Do not turn off the guard. If a rule is wrong for your repository, ask the owner of the repository to add it to `.magenta/policy.json`.
 

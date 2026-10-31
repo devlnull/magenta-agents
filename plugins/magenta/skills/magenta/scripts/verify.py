@@ -770,8 +770,17 @@ def hook(event: dict) -> tuple[int, str]:
     if result["status"] == "NO CHECKS":
         note = " Some checks wait for the approval of the human." if result["pending"] else ""
         return 0, f"Magenta: the task {item} changed the code, but no approved check exists, so nothing enforces the rules.{note}"
+    # Remind Claude one time for each state of the code and of the results. The same reminder again and again
+    # is noise: Claude knows the result, and its report must say it. A new change gives a new reminder.
+    bad = result["failed"] + result["invalid"] + result["not_run"]
+    state_key = hashlib.sha256(json.dumps([current, result["status"], sorted(bad), result["error"]])
+                               .encode("utf-8")).hexdigest()[:16]
+    if data.get("reminded") == state_key:
+        shown = ", ".join(bad[:5]) + (", ..." if len(bad) > 5 else "")
+        return 0, (f"Magenta: the checks of {item} still do not pass on this code"
+                   + (f" ({shown})." if shown else f" ({result['status']}).") + " The report must say this.")
     blocks = (int(data.get("blocks") or 0) if event.get("stop_hook_active") else 0) + 1
-    data["blocks"] = blocks
+    data.update(blocks=blocks, reminded=state_key)
     _write_json(_mdir(repo) / "active.json", data)
     run_cmd = f"{self_command()} run" + (" --set task" if result["full"] else "")
     if result["status"] == "ERROR":
