@@ -64,6 +64,8 @@ A repository can extend the rules of an agent. Only you change this file. A patt
 }
 ```
 
+Write a shell pattern as narrow as possible, for example `docker compose exec -T app php artisan test*`, not `docker compose exec *`. A `*` matches any text, also other words and options. The guard blocks inline code (`php -r`, `sh -c`) in all commands, but a broad pattern still lets an agent run any program in the container.
+
 ## Enforcement
 
 | Tool | Rules of the agents | Checks |
@@ -79,6 +81,8 @@ The guard blocks:
 - writes outside the files of the agent,
 - access to secret paths (`.env`, keys, `secrets/`),
 - shell commands outside the allowlist of the agent, and all shell operators (`;`, `|`, `>`, and more),
+- shell syntax that bash expands and the guard does not see: `$` outside single quotes (variables, `$@`, encoded characters such as `$'\x3b'`), brace expansion such as `{a,b}`, and wildcards that give a secret path (`.e?v`),
+- inline code for an interpreter, also behind a wrapper such as `docker compose exec`: `php -r`, `python -c`, `node -e`, `sh -c`, `bash -lc`, `perl -e`, `ruby -e`, `deno eval`, `pwsh -Command`, `cmd /c`,
 - for subagents: the approve command and `--force` (in the main session, Claude Code asks you instead),
 - writes to `.magenta/policy.json`, `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, `acceptance.lock`, `.claude/`, and `.git/`.
 

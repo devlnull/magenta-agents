@@ -17,6 +17,8 @@ Exit code 2 blocks the tool call. Claude Code shows the stderr message to the ag
 from __future__ import annotations
 
 import fnmatch
+import glob
+import itertools
 import json
 import os
 import re
@@ -36,6 +38,37 @@ HARD_DENY_WRITES = [".magenta/policy.json", "**/acceptance.lock", ".magenta/chec
                     ".magenta/active.json", ".magenta/agents/**", ".claude/**", ".git/**", ".opencode/**"]
 PYTHON = re.compile(r"(python3?(\.\d+)?|py)(\.exe)?")
 SHELL_OPERATORS = (";", "&", "|", ">", "<", "`", "$(", "\n")
+# Interpreters that run code from the command line. Such code is outside the write rules and the secret rules.
+INTERPRETERS = (
+    (re.compile(r"php[\d.]*(-cli)?"), "php"),
+    (re.compile(r"(python|pypy)[\d.]*|py"), "python"),
+    (re.compile(r"node(js)?|bun"), "node"),
+    (re.compile(r"deno"), "deno"),
+    (re.compile(r"j?ruby[\d.]*"), "ruby"),
+    (re.compile(r"perl[\d.]*"), "perl"),
+    (re.compile(r"lua[\d.]*|luajit"), "lua"),
+    (re.compile(r"rscript|groovy|osascript"), "e"),
+    (re.compile(r"(ba|da|z|k|mk|a|tc|c)?sh|fish"), "shell"),
+    (re.compile(r"pwsh|powershell"), "pwsh"),
+    (re.compile(r"cmd"), "cmd"),
+)
+# kind: (short options with inline code, short options that take a value, long options with inline code)
+INLINE = {
+    "php": ("rRBEFa", "cdztSf", ("--run", "--process-code", "--process-begin", "--process-end", "--process-file",
+                                 "--interactive")),
+    "python": ("c", "WXQ", ()),
+    "node": ("ep", "rC", ("--eval", "--print")),
+    "deno": ("", "", ("--eval", "--eval-file")),
+    "ruby": ("e", "IrCEFxKT0", ()),
+    "perl": ("eE", "IMmxlF0iDCd", ()),
+    "lua": ("e", "l", ()),
+    "e": ("e", "", ()),
+    "shell": ("c", "oO", ("--command",)),
+}
+# Commands of frameworks that run code from the command line or from a console.
+EVAL_COMMANDS = {("artisan", "tinker"), ("manage.py", "shell"), ("manage.py", "shell_plus"), ("rails", "runner"),
+                 ("rails", "r"), ("rails", "console"), ("rails", "c"), ("npx", "-c"), ("npx", "--call")}
+GLOB_LIMIT = 2000
 # macOS and Windows file systems ignore case by default: compare paths without case there.
 CASE_INSENSITIVE = sys.platform in ("darwin", "win32")
 
@@ -80,6 +113,117 @@ def _unsafe_git_option(tokens) -> str | None:
             return token
         if sub == "grep" and (_long_option(token, "--open-files-in-pager") or (short and "O" in token)):
             return token
+    return None
+
+
+def _hidden_expansion(command: str) -> str | None:
+    """Return the shell syntax that bash expands but the guard does not see, or None. The guard checks the words of
+    the command, so bash must run the same words: no `$` outside single quotes (variables, `$@`, and encoded
+    characters such as `$'\\x3b'`), and no brace expansion such as `{a,b}`."""
+    view, quote, i = [], None, 0
+    while i < len(command):
+        ch = command[i]
+        if quote == "'":
+            quote = None if ch == "'" else quote
+            view.append("x")
+        elif ch == "\\":
+            view.append("xx")
+            i += 1
+        elif ch == "$":
+            return "$"
+        elif quote == '"':
+            quote = None if ch == '"' else quote
+            view.append("x")
+        elif ch in "'\"":
+            quote = ch
+            view.append("x")
+        else:
+            view.append(ch)
+        i += 1
+    found = re.search(r"\{[^{}\s]*(,|\.\.)[^{}\s]*\}", "".join(view))
+    return found.group(0) if found else None
+
+
+def _looks_like_file(word: str) -> bool:
+    return "/" in word or "\\" in word or bool(re.search(r"\.[A-Za-z0-9]+$", word))
+
+
+def _inline_option(kind: str, rest) -> str | None:
+    """The option of an interpreter that runs code from the command line, in the words after the interpreter."""
+    if kind == "cmd":
+        return next((w for w in rest if w.lower() in ("/c", "/k", "/r")), None)
+    if kind == "pwsh":
+        return next((w for w in rest if w[:1] in "-/" and w.lstrip("-/")[:1].lower() in ("c", "e")), None)
+    inline, value, longs = INLINE[kind]
+    skip, first = False, True
+    for word in rest:
+        if kind == "php" and ("auto_prepend_file" in word or "auto_append_file" in word):
+            return word  # a setting that runs a file before or after the script
+        if skip:
+            skip = False
+            continue
+        if word == "--":
+            return None
+        if word.startswith("--"):
+            if word.split("=", 1)[0] in longs:
+                return word
+            skip = "=" not in word  # the next word can be its value
+            continue
+        if len(word) > 1 and (word[0] == "-" or (kind == "shell" and word[0] == "+")):
+            letters = word[1:]
+            for k, letter in enumerate(letters):
+                if letter in inline:
+                    return word
+                if kind == "python" and letter == "m":
+                    return None  # a module: the next words are its arguments
+                if letter in value:
+                    skip = k == len(letters) - 1  # the next word is the value
+                    break
+            continue
+        if kind == "deno" and first and word == "eval":
+            return word
+        first = False
+        if _looks_like_file(word):
+            return None  # the script: the next words are its arguments
+    return None
+
+
+def _inline_code(tokens) -> str | None:
+    """Return the interpreter and the option that run code from the command line (for example `php -r`), or None.
+    Every word is examined, so an interpreter behind a wrapper (for example `docker compose exec app`) counts too."""
+    for i, word in enumerate(tokens):
+        name = re.split(r"[\\/]", word)[-1].lower()
+        name = name[:-4] if name.endswith(".exe") else name
+        if i + 1 < len(tokens) and (name, tokens[i + 1].split("=", 1)[0]) in EVAL_COMMANDS:
+            return f"{word} {tokens[i + 1]}"
+        if name in ("npm", "pnpm") and tokens[i + 1:i + 2] == ["exec"]:
+            call = next((w for w in tokens[i + 2:] if w.split("=", 1)[0] in ("-c", "--call")), None)
+            if call:
+                return f"{word} exec {call}"
+        kind = next((k for pattern, k in INTERPRETERS if pattern.fullmatch(name)), None)
+        found = _inline_option(kind, tokens[i + 1:]) if kind else None
+        if found:
+            return f"{word} {found}"
+    return None
+
+
+def _secret_by_glob(word: str, cwd: Path, denies) -> str | None:
+    """Return a secret path that a wildcard word (for example `.e?v`) gives in bash, or None."""
+    if not any(c in word for c in "*?["):
+        return None
+    word = os.path.expanduser(word)
+    pattern = word if os.path.isabs(word) else os.path.join(glob.escape(str(cwd)), word)
+    try:
+        for hit in itertools.islice(glob.iglob(pattern), GLOB_LIMIT):
+            path = Path(hit)
+            try:
+                rel = path.resolve().relative_to(cwd).as_posix()
+            except ValueError:
+                rel = path.as_posix()
+            if _matches(rel, denies) or _matches(path.name, denies):
+                return rel
+    except (OSError, ValueError, re.error):
+        return None
     return None
 
 
@@ -176,7 +320,12 @@ def decide(agent: str, policy: dict, event: dict):
     if tool == "Bash":
         command = " ".join(str(tool_input.get("command") or "").split())
         if any(op in command for op in SHELL_OPERATORS):
-            return f"{me} can run only one simple command, without shell operators: {command!r}"
+            return (f"{me} can run only one simple command, without shell operators: {command!r}. Do not encode or "
+                    "hide an operator. If you need more, report it to the conductor.")
+        hidden = _hidden_expansion(command)
+        if hidden:
+            return (f"{me} cannot run {command!r}: bash expands {hidden!r}, so the guard cannot check the words that "
+                    "run. Write values as plain words, or in single quotes. Do not encode characters.")
         try:
             local = _without_git_folder(shlex.split(command), cwd)
         except ValueError:
@@ -198,7 +347,15 @@ def decide(agent: str, policy: dict, event: dict):
         unsafe = _unsafe_git_option(tokens)
         if unsafe:
             return f"{me} cannot run {command!r}: the git option {unsafe!r} writes a file or runs a program"
+        inline = _inline_code(tokens)
+        if inline:
+            return (f"{me} cannot run {command!r}: `{inline}` runs code from the command line, and that code is "
+                    "outside the write and secret rules. Put the code in a test or a script in your write folders, "
+                    "or report the need to the conductor.")
         for word in tokens:
+            secret = _secret_by_glob(word, cwd, denies)
+            if secret:
+                return f"{me} cannot access the secret path {secret!r} (from the wildcard {word!r})"
             for token in re.split(r"[\s:=]+", word):
                 token = token[2:] if token.startswith("./") else token
                 if token and (_matches(token, denies) or _matches(Path(token).name, denies)):

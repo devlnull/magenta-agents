@@ -141,7 +141,8 @@ def write_rules(agent: dict) -> str:
             "You may write only these paths. A path with `!` is denied. The last matching rule wins.\n\n"
             f"{writes}\n\nDo not write `.magenta/policy.json`, `.magenta/checks.lock`, `.magenta/verify-state.json`, "
             "`.magenta/active.json`, `acceptance.lock`, `.git/`, or secret files. Never approve checks.\n\n"
-            f"Run only these shell commands: {shell}. Do not use shell operators such as `;`, `|`, or `>`.")
+            f"Run only these shell commands: {shell}. Do not use shell operators such as `;`, `|`, or `>`, "
+            "`$` outside single quotes, inline code such as `php -r`, `python -c`, or `sh -c`, or encoded characters.")
     if deny:
         text += f" Never run: {deny}."
     return text + " Do not push, merge, or deploy.\n\n"

@@ -4,6 +4,15 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.10.3] - 2026-10-31
+
+### Security
+
+- The guard blocks inline code for interpreters in the commands of the agents: `php -r`, `python -c`, `node -e`, `sh -c`, `bash -lc`, `perl -e`, `ruby -e`, `deno eval`, `pwsh -Command`, `cmd /c`, and more. It also finds them behind a wrapper such as `docker compose exec app`. Before, a QA lens used `docker compose exec ... php -r` (allowed by a broad pattern in `.magenta/policy.json`) with an encoded `;` to read a file.
+- The guard blocks shell syntax that bash expands but the guard does not see: `$` outside single quotes (variables, `$@`, and encoded characters such as `$'\x3b'`) and brace expansion such as `{a,b}`. Before, `git diff --ou$@tput=<file>` could write a file.
+- The guard blocks a wildcard word that gives a secret path in bash, for example `.e?v`.
+- When the guard blocks a shell operator, it tells the agent not to encode or hide it, and to report the need to the conductor.
+
 ## [0.10.2] - 2026-10-31
 
 ### Fixed
@@ -122,7 +131,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.2...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.3...HEAD
+[0.10.3]: https://github.com/devlnull/magenta-agents/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/devlnull/magenta-agents/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/devlnull/magenta-agents/compare/v0.10.0...v0.10.1
 [0.10.0]: https://github.com/devlnull/magenta-agents/compare/v0.9.0...v0.10.0

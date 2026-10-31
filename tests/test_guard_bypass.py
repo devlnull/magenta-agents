@@ -285,3 +285,96 @@ class AllowedCommandsStayAllowedTest(ShellCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class HiddenCodeTest(unittest.TestCase):
+    """A QA lens ran `docker ... php -r` with an encoded `;` to read a file. The project policy allowed
+    `docker compose exec *`. The guard must check the words that bash runs, and must not let inline code run."""
+
+    @classmethod
+    def setUpClass(cls):
+        cfg = source.load_config(ROOT)
+        agents = source.load_agents(ROOT, cfg["agents_enabled"])
+        cls.policies = {a: source.policy(a, agents[a]) for a in agents}
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.cwd = Path(self.tmp.name).resolve()
+        (self.cwd / ".magenta").mkdir()
+        (self.cwd / ".magenta" / "policy.json").write_text(
+            '{"qa": {"shell": ["docker compose exec *", "php *", "sh gradlew *"]}}', encoding="utf-8")
+        (self.cwd / ".env").write_text("SECRET=1\n", encoding="utf-8")
+        (self.cwd / "README.md").write_text("x\n", encoding="utf-8")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def decide(self, command, agent="qa"):
+        event = {"tool_name": "Bash", "tool_input": {"command": command}, "cwd": str(self.cwd)}
+        return guard.decide(agent, self.policies[agent], event)
+
+    def assert_denied(self, commands, why):
+        for command in commands:
+            with self.subTest(command=command):
+                reason = self.decide(command)
+                self.assertIsNotNone(reason, f"qa must not run {command!r}")
+                self.assertIn(why, reason)
+
+    def assert_allowed(self, commands):
+        for command in commands:
+            with self.subTest(command=command):
+                self.assertIsNone(self.decide(command))
+
+    def test_encoded_and_hidden_characters_are_denied(self):
+        self.assert_denied([
+            "docker compose exec -T app php -r $'echo 1\\x3b echo 2'",  # the encoded ;
+            "docker compose exec app php -r $\"x\"",
+            "git diff --ou$@tput=/tmp/x.patch",  # bash removes $@: --output writes a file
+            "git diff --out${IFS}put=/tmp/x",
+            'pytest -k "test_$HOME"',
+        ], "bash expands '$'")
+        self.assert_denied(["git log --{output,x}=/tmp/y"], "bash expands")
+
+    def test_inline_code_is_denied_also_behind_a_wrapper(self):
+        self.assert_denied([
+            "docker compose exec -T app php -r 'echo file_get_contents(chr(46).chr(101).chr(110).chr(118))'",
+            "docker compose exec app php -d memory_limit=-1 -r 'echo 1'",
+            "docker compose exec app php -c /etc/php.ini -r 'echo 1'",
+            "docker compose exec app php -dauto_prepend_file=tests/x.php artisan test",
+            "docker compose exec app sh -c 'cat README.md'",
+            "docker compose exec app bash -lc 'id'",
+            "docker compose exec app python3 -c 'print(1)'",
+            "docker compose exec app python -X dev -c 'print(1)'",
+            "docker compose exec app node -e 'console.log(1)'",
+            "docker compose exec app node --require ./x.js --eval 'x'",
+            "docker compose exec app perl -Ilib -e 'print 1'",
+            "docker compose exec app ruby -e 'p 1'",
+            "docker compose exec app deno eval 'console.log(1)'",
+            "php -r 'echo 1'",
+            "docker compose exec app php artisan tinker --execute='echo 1'",
+            "docker compose exec app python manage.py shell -c 'print(1)'",
+            "docker compose exec app bin/rails runner 'p 1'",
+            "docker compose exec app npx -c 'id'",
+            "docker compose exec app npm exec --call='id'",
+            "docker compose exec app /usr/bin/php8.2 -r 'echo 1'",
+        ], "runs code from the command line")
+
+    def test_a_wildcard_that_gives_a_secret_is_denied(self):
+        self.assert_denied(["git diff --no-index /dev/null .e?v", "git diff --no-index /dev/null .en*"],
+                           "secret path '.env'")
+
+    def test_normal_commands_stay_allowed(self):
+        self.assert_allowed([
+            "docker compose exec -T app php artisan test --filter=OrderTest",
+            "docker compose exec app php -d memory_limit=-1 vendor/bin/phpunit -c phpunit.xml",
+            "docker compose exec app python -m pytest -c pytest.ini -k 'test_x$'",
+            "docker compose exec app sh ./scripts/test.sh -c",
+            "sh gradlew test",
+            "git show HEAD@{1}",
+            "git log --format='%H %s'",
+            "git diff --no-index /dev/null READ*",
+            "pytest -k 'price and not tax'",
+        ])
+
+    def test_the_operator_message_says_do_not_encode(self):
+        self.assertIn("Do not encode", self.decide("docker compose exec app php -r 'echo 1; echo 2'"))
