@@ -6,6 +6,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import os
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -34,7 +36,12 @@ def git(repo, *args):
 
 
 class MakerGuardTest(unittest.TestCase):
+    """The rules of the Engineer in strict mode (file ownership and a shell allowlist)."""
+
     def setUp(self):
+        self.mode = mock.patch.dict(os.environ, {"MAGENTA_GUARD": "strict"})
+        self.mode.start()
+        self.addCleanup(self.mode.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.cwd = Path(self.tmp.name)
         agent = source.load_agents(ROOT, ["engineer"])["engineer"]
@@ -164,7 +171,8 @@ class AdapterTest(unittest.TestCase):
             self.assertTrue((out / "plugins/magenta/magenta/policies/engineer.json").exists())
             # The plugin guard in auto mode: blocks a plugin agent, passes a normal session.
             guard_py = out / "plugins/magenta/magenta/guard.py"
-            event = {"tool_name": "Write", "tool_input": {"file_path": "src/A.java"}, "cwd": tmp, "agent_type": "magenta:qa"}
+            event = {"tool_name": "Write", "tool_input": {"file_path": ".magenta/checks/project.yaml"}, "cwd": tmp,
+                     "agent_type": "magenta:qa"}
             run = subprocess.run([sys.executable, str(guard_py), "--auto"], input=json.dumps(event), capture_output=True, text=True)
             self.assertEqual(run.returncode, 2, run.stderr)
             del event["agent_type"]
@@ -175,6 +183,7 @@ class AdapterTest(unittest.TestCase):
             if shell:  # the launcher that the plugin hook runs on macOS, Linux, and Git Bash on Windows
                 launcher = (out / "plugins/magenta/magenta/guard.sh").as_posix()
                 event["agent_type"] = "magenta:engineer"
+                event["tool_input"]["file_path"] = "src/A.java"
                 run = subprocess.run([shell, launcher, "--auto"], input=json.dumps(event), capture_output=True, text=True)
                 self.assertEqual(run.returncode, 0, run.stderr)  # engineers write src/
                 event["tool_input"]["file_path"] = "docs/adr/0001-x.md"

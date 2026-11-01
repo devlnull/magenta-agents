@@ -55,6 +55,7 @@ If the request starts with `--lead`, use the default mode, also when a trigger a
 5. Each statement in your report has evidence: a verify result, a measurement, or a file reference.
 6. When an assumption is risky, stop and ask the human.
 7. Never push, merge, or deploy.
+8. Write each decision of the human in `.magenta/work/<ID>/decisions/<YYYYMMDD>-<slug>.md`: the question, the options, the decision, and the reason. A decision that is only in the conversation is lost when the session ends.
 
 ## Step 1: Prepare
 
@@ -63,7 +64,7 @@ If the request starts with `--lead`, use the default mode, also when a trigger a
    - Add `--repo <repository path>` after the command word of `list` and `start`, for example `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start --repo <repository path> <ID> --session="${CLAUDE_SESSION_ID}"`. When the task is active, the other verify commands find its repository. If a command says that more than one Magenta repository is below the folder, add `--repo` to it too.
    - Give each agent the repository path. Agents run git commands as `git -C <repository path> <command>`.
 2. If `.magenta/work/` does not exist, create it. If `.git/info/exclude` exists and does not contain `.magenta/`, add it.
-3. If `.magenta/project-context.md` does not exist or has the status DRAFT, ask the human: "Run discover-project first? It is necessary one time for each repository." If yes, start `principal` with the task "Run the skill `discover-project`". It also writes the project checks (build, lint, unit tests) in `.magenta/checks/project.yaml`. Show the summary and the checks to the human. For an investigation only, you can continue without the profile.
+3. If `.magenta/project-context.md` does not exist or has the status DRAFT, ask the human: "Run discover-project first? It is necessary one time for each repository." If yes, start `principal` with the task "Run the skill `discover-project`". It also writes the project checks (build, lint, unit tests) in `.magenta/checks/project.yaml`. Show the summary and the checks to the human, and ask the human to confirm the profile. After the confirmation, start `principal` to set the status CONFIRMED. For an investigation only, you can continue without the profile.
 4. Run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list` to see the checks of the repository.
 
 ## Step 2: Intake
@@ -122,6 +123,7 @@ Make "done" executable before the work starts.
    - **Security lens:** authentication, authorization, input from outside, secrets, money, personal data, or dependencies.
    - **Database lens:** a schema, a migration, a query on a hot path, or a transaction.
 2. Start the lenses at the same time, read-only. Give each lens the brief, the diff against the base commit, and the last verify result. Ask for the "Review lens" section of its role.
+   Write the result of each lens in `.magenta/work/<ID>/06-review-<role>.md`, with an ID for each finding (for example B1). The lenses are read-only, so you write the file. Later rounds refer to these IDs.
 3. **Findings become checks.** For each BLOCKER or MAJOR finding that a command can test, the owner of the lens adds a check with `work_item: <ID>`. The human approves it. The lead fixes the code until the check passes.
 4. For a finding that a command cannot test, the lead fixes it and the same lens confirms the fix. Or you write it in the report as a risk.
 5. Run verify with the set `task` after the last change. It must pass.

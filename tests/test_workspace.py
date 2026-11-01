@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -82,6 +83,14 @@ class WorkspaceCase(unittest.TestCase):
 
 
 class GuardTest(WorkspaceCase):
+    """File ownership in a workspace (strict mode)."""
+
+    def setUp(self):
+        super().setUp()
+        self.mode = mock.patch.dict(os.environ, {"MAGENTA_GUARD": "strict"})
+        self.mode.start()
+        self.addCleanup(self.mode.stop)
+
     @classmethod
     def setUpClass(cls):
         cfg = source.load_config(ROOT)
@@ -217,6 +226,18 @@ class CommandTest(WorkspaceCase):
         out = self.cli("status", cwd=self.other)  # a git repository without .magenta/: it is the repository
         self.assertEqual(out.returncode, 0, out.stderr)
         self.assertNotIn("T1-x", out.stdout)
+
+    def test_a_package_in_vendor_of_a_git_application(self):
+        app = make_repo(self.ws / "shop")
+        package = make_repo(app / "vendor" / "shopping" / "omc")
+        (package / ".magenta").mkdir()
+        verify.start(package, "T5-v", session="S5")
+        out = self.cli("status", cwd=app)  # by the record of the session
+        self.assertEqual(out.returncode, 0, out.stderr)
+        self.assertIn("T5-v", out.stdout)
+        verify._session_file("S5").unlink()
+        out = self.cli("status", cwd=app)  # by the search: vendor/ is searched
+        self.assertIn("T5-v", out.stdout)
 
     def test_the_search_skips_dependencies_and_hidden_folders(self):
         (self.ws / "node_modules" / "pkg" / ".magenta").mkdir(parents=True)

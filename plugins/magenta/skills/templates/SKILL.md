@@ -103,6 +103,9 @@ One-way door / two-way door. Reason:
 # sre.yaml (SRE), security.yaml (Security), database.yaml (Database), human.yaml (human). A check is a command that tests one rule. Exit code 0 means PASS.
 # A check runs only after the human approves its exact command (verify.py approve). If the command changes,
 # the check fails until the human approves it again.
+# The command runs in the repository folder (or `cwd`). Do not write the absolute paths of one computer: use
+# relative paths, or $MAGENTA_REPO (the repository folder). In a pipeline, only the last command can fail the
+# check: start the command with `set -o pipefail;`, or do not use a pipe.
 checks:
   - id: qa.addresses-default-latency      # letters, digits, and . _ - ; unique in all files
     name: "GET /v2/addresses/default: p95 at or below 5 ms and p99 at or below 10 ms at 200 requests per second"

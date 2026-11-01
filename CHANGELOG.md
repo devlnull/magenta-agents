@@ -4,6 +4,33 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-11-01
+
+### Changed
+
+- **Guard modes (ADR-0014).** The default mode `standard` lets all agents change the code. Git, the approved checks, the locks, and the review find mistakes. The guard still protects the files in `.magenta/` (each one keeps its owner), the locked tests (makers cannot write them), the human-only files, the secrets, and the paths that a role denies with `!`. The shell runs any simple command except dangerous commands (push, merge, rebase, reset `--hard`, stash, restore, `rm`, deploy, publish, `gh`, `ssh`, `sudo`, global installs). The former rules (file ownership and a shell allowlist) are the mode `strict`: `{"guard": "strict"}` in `.magenta/policy.json`, or `MAGENTA_GUARD=strict`.
+- The conductor writes the result of each review lens in `06-review-<role>.md` of the work item, and each decision of the human in `decisions/`. It asks the human to confirm the project profile.
+- The run folders in `.magenta/runs/verify/` have UTC names (like the state files). Verify keeps the last 30 runs.
+
+### Added
+
+- `fingerprint.include` in `.magenta/policy.json`: files that git ignores, but the checks use (for example local-only tests).
+- `mounts` in `.magenta/policy.json`: host folders that a container command of an agent can mount.
+- Checks get the environment variable `MAGENTA_REPO` (the repository folder), so a check does not need the absolute path of one computer.
+- `list`, `approve`, and the approval dialog show a note for a check that is a pipeline without `pipefail`: only the last command can fail it.
+
+### Fixed
+
+- A session in an application that is a git repository, with the Magenta repository in a subfolder (for example a package in `vendor/`): the guard used the rules of the application. The Engineer could write the `policy.json`, the checks, and the Claude Code settings of the package, and the Principal and QA could not write their own files. Now the rules of the nearest folder with `.magenta/` apply, and the human-only files are protected at any depth.
+- The fingerprint did not see a change of a locked test in a folder that git ignores, so an old PASS counted for the changed test. Now the current content of the locked tests is in the fingerprint.
+- Verify commands in an application folder did not find a Magenta repository in `vendor/`. Now they use the session records of `start` first, and the search includes `vendor/`.
+
+### Security
+
+- The guard blocks container options that reach the computer: a mount of a folder outside the project (except the git repository that holds the session folder and the `mounts` of the policy), the Docker socket, `--privileged`, `--pid host`, `--cap-add`, and `--device`.
+- More secret paths for all agents: `.ssh/`, `id_rsa`, `id_ed25519`, `*.p12`, `*.pfx`, `*.jks`, `*.keystore`, `.netrc`, `.git-credentials`, `.aws/credentials`, `.docker/config.json`.
+- A shell command of an agent cannot name a human-only file, for example `sed -i … .magenta/policy.json`.
+
 ## [0.10.3] - 2026-10-31
 
 ### Security
@@ -131,7 +158,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.10.3...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.11.0...HEAD
+[0.11.0]: https://github.com/devlnull/magenta-agents/compare/v0.10.3...v0.11.0
 [0.10.3]: https://github.com/devlnull/magenta-agents/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/devlnull/magenta-agents/compare/v0.10.1...v0.10.2
 [0.10.1]: https://github.com/devlnull/magenta-agents/compare/v0.10.0...v0.10.1

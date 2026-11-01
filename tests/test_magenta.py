@@ -4,6 +4,8 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import os
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -67,6 +69,9 @@ class GlobTest(unittest.TestCase):
 
 class GuardTest(unittest.TestCase):
     def setUp(self):
+        self.mode = mock.patch.dict(os.environ, {"MAGENTA_GUARD": "strict"})  # file ownership and allowlist
+        self.mode.start()
+        self.addCleanup(self.mode.stop)
         self.tmp = tempfile.TemporaryDirectory()
         self.cwd = Path(self.tmp.name)
         self.policy = {"writes": [".magenta/work/*/04-plan.md"], "denies": ["**/.env*", "**/secrets/**"],
@@ -164,7 +169,7 @@ class BuildInstallTest(unittest.TestCase):
             # The rendered hook command runs the real guard.
             import shlex
             argv = shlex.split(command)
-            event = {"tool_name": "Write", "tool_input": {"file_path": "src/App.java"}, "cwd": str(home)}
+            event = {"tool_name": "Write", "tool_input": {"file_path": ".magenta/checks/project.yaml"}, "cwd": str(home)}
             run = subprocess.run(argv, input=json.dumps(event), capture_output=True, text=True)
             self.assertEqual(run.returncode, 2, run.stderr)
             self.assertTrue(installed)
@@ -177,11 +182,11 @@ class BuildInstallTest(unittest.TestCase):
 
             # The installed guard runs as a real hook.
             repo.mkdir()
-            event = {"tool_name": "Write", "tool_input": {"file_path": "src/App.java"}, "cwd": str(repo)}
+            event = {"tool_name": "Write", "tool_input": {"file_path": ".magenta/checks/project.yaml"}, "cwd": str(repo)}
             run = subprocess.run([sys.executable, str(home / ".claude/magenta/guard.py"), "qa"],
                                  input=json.dumps(event), capture_output=True, text=True)
             self.assertEqual(run.returncode, 2, run.stderr)
-            self.assertIn("magenta-qa cannot write src/App.java", run.stderr)
+            self.assertIn("magenta-qa cannot write .magenta/checks/project.yaml", run.stderr)
             event["tool_input"]["file_path"] = ".magenta/work/1-x/05-test-plan.md"
             run = subprocess.run([sys.executable, str(home / ".claude/magenta/guard.py"), "qa"],
                                  input=json.dumps(event), capture_output=True, text=True)

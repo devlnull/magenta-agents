@@ -54,9 +54,9 @@ The conductor asks QA (and the Architect, when the structure is at risk) to writ
 
 ## 6. Rules that the guard enforces
 
-- Each agent writes only its own files. Makers do not change the checks or the locked tests.
-- No agent reads `.env` files, keys, or `secrets/`.
-- Shell commands: only the allowlist of each agent, without pipes or `;`.
+- The code is free for all agents (standard mode). Each agent writes only its own files in `.magenta/`. Makers do not change the checks or the locked tests. A repository can select strict mode: then each agent writes only its own files everywhere.
+- No agent reads `.env` files, keys, `.ssh/`, or `secrets/`.
+- Shell commands: one simple command, without pipes or `;`. Dangerous commands (push, merge, reset `--hard`, `rm`, deploy, publish) are blocked. In strict mode, only the allowlist of each agent.
 - No model approves checks or writes the verify state.
 - While a task is active and the code changed, the Stop hook does not let the agent finish until the approved checks pass. It reminds the agent one time for each state of the code, and does not repeat itself while nothing changes.
 

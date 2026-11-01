@@ -46,7 +46,7 @@ flowchart LR
 Two rules keep the result honest:
 
 1. **Maker and checker are different agents.** A maker never writes the checks that judge its work. Only the human approves a check.
-2. **One owner for each file.** The guard blocks a write to a file of another role. For example, only the Platform Engineer changes CI pipelines, and only the Security Engineer changes scanner rules and ignore files. A maker reports a needed change to the owner.
+2. **One owner for each file.** Each file in `.magenta/` (checks, plans, reports) has one owner. A maker cannot write the files that its rules give to another role: for example, the Engineer does not change CI pipelines, Dockerfiles, or scanner rules. A maker reports a needed change to the owner. In strict mode ([ADR-0014](adr/0014-guard-modes.md)), the guard blocks all writes to the files of another role.
 
 ## File ownership in a product repository
 

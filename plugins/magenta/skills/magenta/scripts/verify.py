@@ -66,7 +66,8 @@ ROOT_ARTIFACT_DIRS = {"coverage", "build", "target", "out", "dist", "bin", "obj"
 ARTIFACT_ENDINGS = (".pyc", ".pyo", ".class", ".coverage", "coverage.xml", ".log")
 SETTINGS = Path(".claude") / "settings.local.json"
 SESSION_TTL = 30 * 24 * 3600  # a session record older than this is stale
-SKIP_DIRS = {"node_modules", "vendor", "venv", "target", "build", "dist", "__pycache__"}
+SKIP_DIRS = {"node_modules", "venv", "target", "build", "dist", "__pycache__"}  # not vendor/: packages can be repositories
+RUNS_KEEP = 30  # the run folders to keep in .magenta/runs/verify/
 WORKSPACE_DEPTH = 3  # how deep to look for repositories below a workspace folder
 WORKSPACE_LIMIT = 2000  # the maximum number of folders to look at
 
@@ -133,6 +134,9 @@ def default_repo(start: Path) -> Path:
     here = top or Path(start).resolve()
     if _mdir(here).is_dir():
         return here
+    recorded = _recorded_repos(here)
+    if len(recorded) == 1:
+        return recorded[0]
     below = repos_below(here)
     busy = [r for r in below if active(r).get("work_item")]
     pick = busy or ([] if top else below)
@@ -173,6 +177,25 @@ def _forget_session(repo: Path, session: str) -> None:
             path.unlink(missing_ok=True)
     except OSError:
         pass
+
+
+def _recorded_repos(here: Path) -> list[Path]:
+    """The repositories below a folder with an active task that `start` recorded for its session."""
+    folder = _magenta_home() / "sessions"
+    found = []
+    for path in sorted(folder.glob("*.json")) if folder.is_dir() else []:
+        repo = _read_json(path, {}).get("repo")
+        if not repo:
+            continue
+        repo = Path(repo)
+        try:
+            repo.relative_to(here)
+        except ValueError:
+            continue
+        data = active(repo)
+        if repo != here and data.get("work_item") and data.get("session") == path.stem and repo not in found:
+            found.append(repo)
+    return found
 
 
 def event_repo(event: dict) -> Path:
@@ -385,7 +408,7 @@ def fingerprint(repo: Path) -> str | None:
     change it. None outside a git repository."""
     if _git(repo, "rev-parse", "--git-dir") is None:
         return None
-    return (_tree_fingerprint(repo) or _diff_fingerprint(repo)) + _acceptance_digest(repo)
+    return (_tree_fingerprint(repo) or _diff_fingerprint(repo)) + _acceptance_digest(repo) + _included_digest(repo)
 
 
 def _tree_fingerprint(repo: Path) -> str | None:
@@ -444,12 +467,17 @@ def _diff_fingerprint(repo: Path) -> str:
 
 
 def _acceptance_digest(repo: Path) -> str:
-    """The tests in `.magenta/work/*/acceptance/` and the lock files are code too."""
+    """The tests in `.magenta/work/*/acceptance/`, the lock files, and the current content of the locked tests are
+    code too. A locked test can be in a folder that git ignores (for example local-only tests)."""
     work = _mdir(repo) / "work"
     files: list[Path] = []
+    locked: set[str] = set()
     for item in (work.iterdir() if work.is_dir() else []):
         if item.is_dir():
-            files += [p for p in [item / test_lock.LOCK_NAME] if p.is_file()]
+            lock_file = item / test_lock.LOCK_NAME
+            if lock_file.is_file():
+                files.append(lock_file)
+                locked.update(_read_json(lock_file, {}).get("files", {}))
             files += [p for p in (item / "acceptance").rglob("*") if p.is_file()]
     if not files:
         return ""
@@ -457,7 +485,45 @@ def _acceptance_digest(repo: Path) -> str:
     for path in sorted(files):
         digest.update(path.relative_to(repo).as_posix().encode("utf-8"))
         digest.update(hashlib.sha256(path.read_bytes()).digest())
+    for name in sorted(locked):
+        digest.update(b"locked:" + name.encode("utf-8"))
+        try:
+            digest.update(hashlib.sha256((repo / name).read_bytes()).digest())
+        except OSError:
+            digest.update(b"missing")
     return "+acc:" + digest.hexdigest()[:16]
+
+
+def _policy(repo: Path) -> dict:
+    data = _read_json(_mdir(config_root(repo)) / "policy.json", {})
+    return data if isinstance(data, dict) else {}
+
+
+def fingerprint_includes(repo: Path) -> list[str]:
+    """Patterns of files that git ignores but the checks use (`fingerprint.include` in .magenta/policy.json)."""
+    value = (_policy(repo).get("fingerprint") or {})
+    patterns = value.get("include") if isinstance(value, dict) else None
+    return [str(p) for p in patterns if str(p).strip()] if isinstance(patterns, list) else []
+
+
+def _included_digest(repo: Path) -> str:
+    """The ignored files of `fingerprint.include`. Without it, a change of a local-only test or of an ignored input
+    of a check does not change the fingerprint, and an old result counts for the new code."""
+    patterns = fingerprint_includes(repo)
+    if not patterns:
+        return ""
+    raw = _git(repo, "ls-files", "--others", "--ignored", "--exclude-standard", "-z", "--",
+               *[f":(glob){p}" for p in patterns]) or b""
+    names = sorted(n for n in raw.split(b"\0") if n and not n.startswith(b".magenta/")
+                   and not _is_artifact(n.decode("utf-8", "replace")))
+    digest = hashlib.sha256()
+    for name in names:
+        digest.update(name + b"\0")
+        try:
+            digest.update(hashlib.sha256((repo / name.decode("utf-8", "replace")).read_bytes()).digest())
+        except OSError:
+            digest.update(b"missing")
+    return "+inc:" + digest.hexdigest()[:16]
 
 
 # ----- the active task -----
@@ -628,11 +694,11 @@ def _windows_bash() -> str | None:
     return None
 
 
-def _execute(command: str, cwd: Path, timeout: int):
+def _execute(command: str, cwd: Path, timeout: int, env: dict | None = None):
     """Run a shell command. Return (exit code or None on timeout, output). A timeout stops all its processes.
     The shell is sh on macOS and Linux, and Git Bash on Windows when it exists (else cmd)."""
     kwargs = {"cwd": cwd, "stdout": subprocess.PIPE, "stderr": subprocess.STDOUT, "text": True,
-              "encoding": "utf-8", "errors": "replace"}
+              "encoding": "utf-8", "errors": "replace", "env": dict(os.environ, **(env or {}))}
     args = command
     if os.name == "posix":
         kwargs.update(shell=True, start_new_session=True)
@@ -666,7 +732,8 @@ def _run_one(repo: Path, check: dict, log_dir: Path) -> dict:
     else:
         cwd = (repo / check["cwd"]) if check["cwd"] else repo
         try:
-            code, output = _execute(check["command"], cwd, check["timeout"])
+            code, output = _execute(check["command"], cwd, check["timeout"],
+                                    {"MAGENTA_REPO": str(repo), "PWD": str(cwd)})
             status = "TIMEOUT" if code is None else (PASS if code == 0 else "FAIL")
             if code is None:
                 output += f"\n[magenta] timeout after {check['timeout']} s\n"
@@ -690,10 +757,11 @@ def run(repo: Path, set_name: str = "quick", only: list[str] | None = None) -> d
     check, so that a stopped run keeps the results that it has."""
     runnable, pending, invalid = required(repo, set_name, only)
     item = active(repo).get("work_item")
-    log_dir = _mdir(repo) / "runs" / "verify" / dt.datetime.now().strftime("%Y%m%d-%H%M%S-%f")
+    log_dir = _mdir(repo) / "runs" / "verify" / dt.datetime.now(dt.timezone.utc).strftime("%Y%m%d-%H%M%S-%fZ")
     state_file = _mdir(repo) / "verify-state.json"
     before = fingerprint(repo)
     previous = _read_json(state_file, {})
+    _prune_runs(repo, previous)
     merged = dict(previous.get("results") or {}) if before and previous.get("fingerprint") == before else {}
     state = {"fingerprint": before, "at": _now(), "set": set_name, "work_item": item, "results": merged,
              "pending": [c["id"] for c in pending]}
@@ -722,6 +790,19 @@ def run(repo: Path, set_name: str = "quick", only: list[str] | None = None) -> d
         _write_json(_mdir(repo) / "active.json", data)
     return {"results": results, "pending": pending, "state": state, "changed_files": changed,
             "empty": not (runnable or pending or invalid)}
+
+
+def _prune_runs(repo: Path, state: dict, keep: int = RUNS_KEEP) -> None:
+    """Delete the oldest run folders. Keep the newest ones and the folders of the logs in the current state."""
+    folder = _mdir(repo) / "runs" / "verify"
+    try:
+        runs = sorted((p for p in folder.iterdir() if p.is_dir()), key=lambda p: p.stat().st_mtime)
+    except OSError:
+        return
+    used = {Path(r.get("log") or "").parent.name for r in (state.get("results") or {}).values()}
+    for old in runs[:max(0, len(runs) - (keep - 1))]:
+        if old.name not in used:
+            shutil.rmtree(old, ignore_errors=True)
 
 
 def exit_code(outcome: dict) -> int:
@@ -1087,6 +1168,14 @@ def _run_hook(mode: str) -> int:
     return code
 
 
+def pipe_note(command: str) -> str:
+    """A note for a check that is a pipeline without `pipefail`: only the exit code of the last command counts."""
+    text = command.replace("||", "")
+    if "|" in text and "pipefail" not in text:
+        return " (NOTE: a pipeline; only the last command can fail the check. Start it with `set -o pipefail;`)"
+    return ""
+
+
 def approval_details(event: dict, limit: int = 12) -> str:
     """The checks and locks that an approve command approves, for the permission dialog of Claude Code."""
     command = protect.unquoted(str((event.get("tool_input") or {}).get("command") or ""))
@@ -1118,7 +1207,8 @@ def approval_details(event: dict, limit: int = 12) -> str:
         status = check_status(c, approved)
         if (ids and c["id"] in ids) or (not ids and status != "approved"):
             note = " (CHANGED)" if status == "changed" else ""
-            lines.append(f"- {c['id']}{note} [{c['set']}]: {c['command']}" + (f" (in {c['cwd']})" if c["cwd"] else ""))
+            lines.append(f"- {c['id']}{note} [{c['set']}]: {c['command']}" + (f" (in {c['cwd']})" if c["cwd"] else "")
+                         + pipe_note(c["command"]))
     lines += [f"- {i}: seal the locked tests" for i in ids if i.startswith("lock.")]
     if not ids:
         lines += [f"- lock.{n}: seal the locked tests" for n in _lock_files(repo)]
@@ -1137,7 +1227,8 @@ def _print_list(repo: Path) -> None:
     for c in checks:
         state = {"approved": "approved", "pending": "WAITS", "changed": "CHANGED"}[check_status(c, approved)]
         cwd = f" (in {c['cwd']})" if c["cwd"] else ""
-        print(f"| {c['id']} | {c['source']} | {c['set']} | {state} | {c['work_item'] or '-'} | `{c['command']}`{cwd} |")
+        print(f"| {c['id']} | {c['source']} | {c['set']} | {state} | {c['work_item'] or '-'} | `{c['command']}`{cwd}"
+              f"{pipe_note(c['command'])} |")
     for cid in sorted(set(approved) - {c["id"] for c in checks}):
         print(f"| {cid} | - | - | REMOVED | - | `{approved[cid].get('command', '')}` |")
     files = _lock_files(repo)
@@ -1235,7 +1326,8 @@ def main(argv=None) -> int:
             if not done and not pruned and not sealed:
                 print("Nothing to approve.")
             for c in done:
-                print(f"approved {c['id']} ({c['set']}): {c['command']}" + (f" (in {c['cwd']})" if c["cwd"] else ""))
+                print(f"approved {c['id']} ({c['set']}): {c['command']}" + (f" (in {c['cwd']})" if c["cwd"] else "")
+                      + pipe_note(c["command"]))
             for cid in pruned:
                 print(f"removed {cid}")
             for lid in sealed:

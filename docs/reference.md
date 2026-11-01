@@ -59,10 +59,20 @@ A repository can extend the rules of an agent. Only you change this file. A patt
 
 ```json
 {
-  "qa":       { "writes": ["src/acceptanceTest/**"], "shell": ["./gradlew acceptanceTest*"] },
-  "engineer": { "writes": ["!src/acceptanceTest/**"] }
+  "guard":       "standard",
+  "fingerprint": { "include": ["tests/Unit/**"] },
+  "mounts":      ["/path/to/the/application"],
+  "qa":          { "writes": ["src/acceptanceTest/**"], "shell": ["./gradlew acceptanceTest*"] },
+  "engineer":    { "writes": ["!src/acceptanceTest/**"] }
 }
 ```
+
+| Key | Meaning |
+|---|---|
+| `guard` | `standard` (default) or `strict`. See [Guard modes](#guard-modes). The environment variable `MAGENTA_GUARD` wins over it. |
+| `fingerprint.include` | Files that git ignores, but the checks use, for example local-only tests. A change of these files makes the old results invalid. The locked tests are always in the fingerprint. |
+| `mounts` | Host folders that a container command of an agent can mount (`docker run -v`), in addition to the session folder and the git repository that holds it. |
+| `<agent>.writes`, `<agent>.shell`, `<agent>.shell_deny` | More rules for one agent. A `shell` pattern here can also allow a command that the guard blocks as dangerous, for example `gh pr view*`. |
 
 Write a shell pattern as narrow as possible, for example `docker compose exec -T app php artisan test*`, not `docker compose exec *`. A `*` matches any text, also other words and options. The guard blocks inline code (`php -r`, `sh -c`) in all commands, but a broad pattern still lets an agent run any program in the container.
 
@@ -76,15 +86,29 @@ Write a shell pattern as narrow as possible, for example `docker compose exec -T
 | Codex CLI | Rules as instructions, plus the Codex sandbox and approvals | The verify script, run by the conductor |
 | Gemini CLI | Rules as instructions, plus the Gemini approvals | The verify script, run by the conductor |
 
-The guard blocks:
+### Guard modes
 
-- writes outside the files of the agent,
-- access to secret paths (`.env`, keys, `secrets/`),
-- shell commands outside the allowlist of the agent, and all shell operators (`;`, `|`, `>`, and more),
+| | `standard` (default) | `strict` |
+|---|---|---|
+| Code and other files of the repository | All agents write them. Git, the approved checks, the locks, and the review find mistakes. Only the paths that the rules of a role deny with `!` stay blocked (for example CI files and Dockerfiles for the Engineer, ADRs for all roles except the Architect). | Each agent writes only its own paths. |
+| `.magenta/` (checks, work items, profile) | Only the owner of each file | Only the owner of each file |
+| Locked tests of a task | Makers cannot write them. QA and the Architect can, and the lock check then fails until the human approves the new seal. | Only the owners |
+| Shell | Any simple command, except dangerous commands: push, pull, merge, rebase, reset `--hard`, stash, restore, clean, delete files (`rm`), `kubectl`, deploy and publish commands, `gh`, `ssh`, `sudo`, and global package installs. An agent without a shell list has no shell. | Only the allowlist of the agent |
+
+Select strict mode for a repository with `{"guard": "strict"}` in `.magenta/policy.json`, or for all repositories with the environment variable `MAGENTA_GUARD=strict`. An unknown value means strict.
+
+In both modes, the guard blocks:
+
+- access to secret paths (`.env`, keys, `secrets/`, `.ssh/`, `id_rsa`, `*.p12`, `.netrc`, and more),
+- all shell operators (`;`, `|`, `>`, and more),
 - shell syntax that bash expands and the guard does not see: `$` outside single quotes (variables, `$@`, encoded characters such as `$'\x3b'`), brace expansion such as `{a,b}`, and wildcards that give a secret path (`.e?v`),
 - inline code for an interpreter, also behind a wrapper such as `docker compose exec`: `php -r`, `python -c`, `node -e`, `sh -c`, `bash -lc`, `perl -e`, `ruby -e`, `deno eval`, `pwsh -Command`, `cmd /c`,
+- container options that reach the computer: a mount of a folder outside the project (see `mounts`), the Docker socket, `--privileged`, `--pid host`, `--cap-add`, and `--device`,
+- shell commands that name a human-only file, for example `.magenta/policy.json`,
 - for subagents: the approve command and `--force` (in the main session, Claude Code asks you instead),
-- writes to `.magenta/policy.json`, `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, `acceptance.lock`, `.claude/`, and `.git/`.
+- writes to `.magenta/policy.json`, `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, `acceptance.lock`, `.claude/`, and `.git/`, also in a repository in a subfolder of the session folder.
+
+The rules of a file apply to its path in its repository: the nearest folder with `.magenta/` between the file and the session folder. So a session can start in an application that holds the repository, for example in `vendor/`.
 
 The guard and the hooks are guardrails against mistakes. They are not a sandbox. The OpenCode, Codex CLI, and Gemini CLI adapters get bug fixes, but no new features ([ADR-0012](adr/0012-verify-first.md)).
 

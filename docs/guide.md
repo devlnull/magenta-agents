@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.10.3
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.11.0
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.10.3"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.11.0"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -193,6 +193,8 @@ You can check and approve from the prompt of Claude Code. You do not need a term
 Only you can start `approve-checks`: the model cannot start it.
 
 ## While the agents work
+
+- **The guard.** The agents change the code freely: git, the checks, the locks, and the review find mistakes. The guard protects the checks, the approvals, the locked tests, your settings, and the secrets, and blocks dangerous commands (push, merge, reset `--hard`, `rm`, deploy). For file ownership and a shell allowlist, add `{"guard": "strict"}` to `.magenta/policy.json`.
 
 - **A background agent.** The conductor can start the lead in the background. While a subagent of the task still works, the Stop hook lets the conductor wait. When the subagent returns, the conductor runs the checks, and the Stop hook checks again.
 - **Makers verify before they return.** A maker (Engineer, Front-End, Platform, Writer) that changed the code cannot return to the conductor until the checks of the task pass. After two tries, it returns and reports the problem.

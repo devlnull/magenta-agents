@@ -1,9 +1,23 @@
 """Tests for the extended team (ADR-0013): roles, file ownership, and safe shell rules."""
 import sys
 import unittest
+import os
+from unittest import mock
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
+
+_MODE = mock.patch.dict(os.environ, {"MAGENTA_GUARD": "strict"})
+
+
+def setUpModule():  # these tests are about file ownership and the shell allowlists: strict mode
+    _MODE.start()
+
+
+def tearDownModule():
+    _MODE.stop()
+
+
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "adapters"))
 

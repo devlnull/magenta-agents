@@ -43,6 +43,6 @@ flowchart LR
 | Part | File | Job |
 |---|---|---|
 | Conductor | `skills/magenta/SKILL.md` | Runs `/magenta`: routes the task, gets the checks, starts the agents, reports |
-| Guard | `adapters/guard.py` | A PreToolUse hook: file ownership, secret paths, shell allowlist |
+| Guard | `adapters/guard.py` | A PreToolUse hook: the process files, secret paths, dangerous commands; in strict mode also file ownership and a shell allowlist (ADR-0014) |
 | Verify | `adapters/verify.py` | The checks registry, approvals, runs, the Stop hook, and the protect hook |
 | Test lock | `adapters/lock.py` | Hashes of the locked test files of a work item |

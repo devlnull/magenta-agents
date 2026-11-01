@@ -17,7 +17,7 @@ It works best with [Claude Code](https://code.claude.com). OpenCode, Codex CLI, 
 - **You own the definition of done.** Only you approve a check. If an agent changes an approved check or a locked test, the check fails.
 - **The right team for the task.** Most tasks use one lead agent and one to three reviewers. High-risk work (a PRD, a contract change, security) uses the full team.
 - **Your project, your conventions.** The agents learn the conventions of your repository first, and keep them.
-- **Guardrails.** Each agent writes only its own files and runs only its allowed commands. No agent pushes, merges, or deploys.
+- **Guardrails.** The agents change the code freely, but not the checks, the approvals, the locked tests, or the secrets. Dangerous commands are blocked: no agent pushes, merges, or deploys. A strict mode adds file ownership and a shell allowlist.
 
 ## How it works
 

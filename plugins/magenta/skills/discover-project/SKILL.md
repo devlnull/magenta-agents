@@ -26,6 +26,10 @@ The profile tells all agents how this repository works. Agents follow it before 
 { "qa": { "writes": ["src/acceptanceTest/**"] }, "engineer": { "shell": ["./scripts/dev-db.sh *"] } }
 ```
 
+   - If git ignores tests or other files that the checks use (for example `tests/Unit/` in `.git/info/exclude`), propose `"fingerprint": {"include": ["tests/Unit/**"]}`. Without it, a change of these files does not make the old results invalid.
+   - If the tests run in a container that mounts a folder outside the repository (for example the application that holds this package), propose `"mounts": ["<that folder>"]`.
+   - Write each shell pattern as narrow as possible. A `*` matches any text, also more options.
+
 12. Ask the human to confirm the profile and to approve the project checks. After the confirmation, set the status to CONFIRMED and record the commit SHA.
 
 ## Rules
