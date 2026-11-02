@@ -86,6 +86,14 @@ Write a shell pattern as narrow as possible, for example `docker compose exec -T
 | Codex CLI | Rules as instructions, plus the Codex sandbox and approvals | The verify script, run by the conductor |
 | Gemini CLI | Rules as instructions, plus the Gemini approvals | The verify script, run by the conductor |
 
+### Auto mode
+
+`verify.py start <ID> --session=<id> --auto` records that the human started the task with `--auto` (the conductor does it for `/magenta --auto`). While the task is active, the PreToolUse hooks answer `allow` for each tool call of that session (the conductor, the Magenta agents, and other subagents) that passes the rules: files in the session folder, no human-only file, no secret, and no dangerous command. Then Claude Code does not ask. `approve` and `--force` still ask the human. A blocked call stays blocked. Other calls get the normal prompt. `finish` ends auto mode.
+
+### Hook output
+
+The hooks answer with JSON decisions, not with "hook errors": a blocked tool call gets `permissionDecision: deny` with the reason for the model; the Stop and SubagentStop hooks block with `decision: block`, and the reason goes only to Claude. The human sees a note only when the human must act (checks that wait for approval), one time for each state.
+
 ### Guard modes
 
 | | `standard` (default) | `strict` |

@@ -89,7 +89,20 @@ Evidence:
 - Start each artifact with a header: work item, step, owner agent, status, and the inputs with their commit SHA (`git rev-parse --short HEAD`).
 - An agent without a shell gets the commit SHA from the brief.
 - End each artifact with a handoff note: done, open, next owner, and what to check.
-- In your final message, give: status (DONE, BLOCKED, or NEEDS-HUMAN), the files that you wrote, and your questions for the human.
+- End your work with one Result block. The conductor reads only this block, so put all that the task needs in it, and nothing else:
+
+```text
+## Result
+Status: DONE | BLOCKED | NEEDS-HUMAN
+Summary: what you found or did, for the task, in three sentences at most
+Changes: the files that you wrote or changed, and the commits (or "none")
+Evidence: the last verify result, the test results, or the measurements (or "none")
+Findings: one line for each finding: ID, severity (BLOCKER, MAJOR, MINOR), statement, file:line (or "none")
+Needs the human: the question, the options, and your recommendation (only for NEEDS-HUMAN)
+```
+
+- Your output contract tells what goes in the Summary and the Findings for your role.
+- Do not report internal steps: test locks, the verify state, hook messages, guard blocks that you solved, retries, or the tools that you used.
 
 ## Rule: safety and permissions
 
@@ -194,4 +207,4 @@ You own the migration plan, the query and index recommendations, and the data ch
 
 ## Output contract
 
-Your final message gives: the migration plan or the query recommendation, the one-way-door steps, the risks, the checks that you wrote, and the path of the files that you wrote.
+Your Result block gives: the migration plan or the query recommendation, the one-way-door steps, the risks, the checks that you wrote, and the path of the files that you wrote.

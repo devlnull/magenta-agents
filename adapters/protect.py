@@ -116,12 +116,14 @@ def evaluate(event: dict) -> tuple[str, str]:
 
 
 def hook_output(kind: str, reason: str) -> tuple[int, str, str]:
-    """(exit code, stdout, stderr) for a Claude Code PreToolUse hook."""
-    if kind == "ask":
-        return 0, json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": "ask",
-                                                     "permissionDecisionReason": reason}}), ""
-    if kind == "deny":
-        return 2, "", f"Magenta: {reason}"
+    """(exit code, stdout, stderr) for a Claude Code PreToolUse hook. `ask` shows the permission dialog, `deny`
+    blocks the call and gives the reason to the model (a decision, not a "hook error"), `auto` allows the call
+    without a prompt (a task that the human started with --auto), and `allow` lets the normal flow decide."""
+    if kind in ("ask", "deny", "auto"):
+        decision = {"ask": "ask", "deny": "deny", "auto": "allow"}[kind]
+        text = reason if kind != "deny" or reason.startswith("Magenta") else f"Magenta: {reason}"
+        return 0, json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse", "permissionDecision": decision,
+                                                     "permissionDecisionReason": text}}), ""
     return 0, "", ""
 
 

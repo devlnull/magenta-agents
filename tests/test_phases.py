@@ -10,6 +10,8 @@ import os
 from unittest import mock
 from pathlib import Path
 
+from hooktools import decision  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "adapters"))
@@ -174,7 +176,7 @@ class AdapterTest(unittest.TestCase):
             event = {"tool_name": "Write", "tool_input": {"file_path": ".magenta/checks/project.yaml"}, "cwd": tmp,
                      "agent_type": "magenta:qa"}
             run = subprocess.run([sys.executable, str(guard_py), "--auto"], input=json.dumps(event), capture_output=True, text=True)
-            self.assertEqual(run.returncode, 2, run.stderr)
+            self.assertEqual(decision(run)[0], "deny", run.stdout + run.stderr)
             del event["agent_type"]
             run = subprocess.run([sys.executable, str(guard_py), "--auto"], input=json.dumps(event), capture_output=True, text=True)
             self.assertEqual(run.returncode, 0, run.stderr)
@@ -188,7 +190,7 @@ class AdapterTest(unittest.TestCase):
                 self.assertEqual(run.returncode, 0, run.stderr)  # engineers write src/
                 event["tool_input"]["file_path"] = "docs/adr/0001-x.md"
                 run = subprocess.run([shell, launcher, "--auto"], input=json.dumps(event), capture_output=True, text=True)
-                self.assertEqual(run.returncode, 2, run.stderr)
+                self.assertEqual(decision(run)[0], "deny", run.stdout + run.stderr)
 
 
 class RunnerTest(unittest.TestCase):

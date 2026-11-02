@@ -8,6 +8,8 @@ import os
 from unittest import mock
 from pathlib import Path
 
+from hooktools import decision  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT / "adapters"))
 sys.path.insert(0, str(ROOT))
@@ -171,7 +173,7 @@ class BuildInstallTest(unittest.TestCase):
             argv = shlex.split(command)
             event = {"tool_name": "Write", "tool_input": {"file_path": ".magenta/checks/project.yaml"}, "cwd": str(home)}
             run = subprocess.run(argv, input=json.dumps(event), capture_output=True, text=True)
-            self.assertEqual(run.returncode, 2, run.stderr)
+            self.assertEqual(decision(run)[0], "deny", run.stdout + run.stderr)
             self.assertTrue(installed)
 
             # A foreign file with the same name is protected.
@@ -185,8 +187,8 @@ class BuildInstallTest(unittest.TestCase):
             event = {"tool_name": "Write", "tool_input": {"file_path": ".magenta/checks/project.yaml"}, "cwd": str(repo)}
             run = subprocess.run([sys.executable, str(home / ".claude/magenta/guard.py"), "qa"],
                                  input=json.dumps(event), capture_output=True, text=True)
-            self.assertEqual(run.returncode, 2, run.stderr)
-            self.assertIn("magenta-qa cannot write .magenta/checks/project.yaml", run.stderr)
+            self.assertEqual(decision(run)[0], "deny", run.stdout + run.stderr)
+            self.assertIn("magenta-qa cannot write .magenta/checks/project.yaml", decision(run)[1])
             event["tool_input"]["file_path"] = ".magenta/work/1-x/05-test-plan.md"
             run = subprocess.run([sys.executable, str(home / ".claude/magenta/guard.py"), "qa"],
                                  input=json.dumps(event), capture_output=True, text=True)

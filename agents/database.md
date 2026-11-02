@@ -86,4 +86,4 @@ You own the migration plan, the query and index recommendations, and the data ch
 
 ## Output contract
 
-Your final message gives: the migration plan or the query recommendation, the one-way-door steps, the risks, the checks that you wrote, and the path of the files that you wrote.
+Your Result block gives: the migration plan or the query recommendation, the one-way-door steps, the risks, the checks that you wrote, and the path of the files that you wrote.

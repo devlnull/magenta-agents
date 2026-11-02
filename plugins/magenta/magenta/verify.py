@@ -545,7 +545,7 @@ def _blocks_close(repo: Path, data: dict) -> str | None:
     return None if status in OK_TO_CLOSE else status
 
 
-def start(repo: Path, item: str, session=None, force: bool = False) -> dict:
+def start(repo: Path, item: str, session=None, force: bool = False, auto: bool = False) -> dict:
     """Start a task, or resume it when it is already active (the base fingerprint does not change).
     A task that changed code and does not pass cannot be replaced, and cannot be taken over by another session,
     without --force."""
@@ -562,11 +562,13 @@ def start(repo: Path, item: str, session=None, force: bool = False) -> dict:
                               f"{self_command()} start {item} --force")
     if current == item:
         data.update(session=session or owner, resumed_at=_now())
+        if auto:
+            data["auto"] = True
         _write_json(_mdir(repo) / "active.json", data)
     else:
         note = f"replaced the task {current} of another session" if current and other_session else ""
         data = {"work_item": item, "session": session, "base_fingerprint": fingerprint(repo), "started_at": _now(),
-                "blocks": 0, "previous": current or data.get("last"), "note": note}
+                "blocks": 0, "previous": current or data.get("last"), "note": note, "auto": bool(auto)}
         _write_json(_mdir(repo) / "active.json", data)
     if data.get("session"):
         _remember_session(repo, data["session"], item)
@@ -928,6 +930,29 @@ def subagent_stop(event: dict) -> tuple[int, str]:
     return 0, ""
 
 
+def auto_session(event: dict) -> bool:
+    """True when the event belongs to the session of an active task that the human started with --auto. Then the
+    hooks allow the tool calls that pass the rules of Magenta, so Claude Code does not ask for each one."""
+    session = event.get("session_id")
+    if not session:
+        return False
+    try:
+        data = active(event_repo(event))
+    except Exception:
+        return False
+    return bool(data.get("auto") and data.get("work_item") and data.get("session") == session)
+
+
+def _note_once(repo: Path, data: dict, key, text: str) -> tuple[int, str]:
+    """Show a note to the human one time for each state (exit 0 with the text), else nothing."""
+    digest = hashlib.sha256(json.dumps(key).encode("utf-8")).hexdigest()[:16]
+    if data.get("noted") == digest:
+        return 0, ""
+    data["noted"] = digest
+    _write_json(_mdir(repo) / "active.json", data)
+    return 0, text
+
+
 def hook(event: dict) -> tuple[int, str]:
     """Stop hook. Return (exit code, text). Exit 2 blocks the stop; the text goes to the agent.
     Exit 0 with text: the text goes to the human as a system message."""
@@ -947,24 +972,21 @@ def hook(event: dict) -> tuple[int, str]:
     result = evaluate(repo, current)
     if result["status"] == PASS:
         return 0, ""
+    # Tell the human only what needs the human, one time for each state. Internal states stay internal.
     if result["pending_linked"]:
-        failing = result["failed"] + result["invalid"]
-        return 0, (f"Magenta: {len(result['pending_linked'])} checks of the task {item} wait for your approval: "
-                   f"{', '.join(result['pending_linked'])}. Say \"approve\" to the agent, then confirm the command "
-                   "in the dialog of Claude Code."
-                   + (f"\nThese checks fail on the current code: {', '.join(failing)}." if failing else ""))
+        return _note_once(repo, data, ["pending", sorted(result["pending_linked"])],
+                          f"Magenta: checks of {item} wait for your approval: {', '.join(result['pending_linked'])}. "
+                          "Say \"approve\" to continue.")
     if result["status"] == "NO CHECKS":
-        note = " Some checks wait for the approval of the human." if result["pending"] else ""
-        return 0, f"Magenta: the task {item} changed the code, but no approved check exists, so nothing enforces the rules.{note}"
+        return _note_once(repo, data, ["no-checks", item],
+                          f"Magenta: {item} changed the code, but no approved check exists.")
     # Remind Claude one time for each state of the code and of the results. The same reminder again and again
     # is noise: Claude knows the result, and its report must say it. A new change gives a new reminder.
     bad = result["failed"] + result["invalid"] + result["not_run"]
     state_key = hashlib.sha256(json.dumps([current, result["status"], sorted(bad), result["error"]])
                                .encode("utf-8")).hexdigest()[:16]
     if data.get("reminded") == state_key:
-        shown = ", ".join(bad[:5]) + (", ..." if len(bad) > 5 else "")
-        return 0, (f"Magenta: the checks of {item} still do not pass on this code"
-                   + (f" ({shown})." if shown else f" ({result['status']}).") + " The report must say this.")
+        return 0, ""  # Claude knows the result; its report says it
     blocks = (int(data.get("blocks") or 0) if event.get("stop_hook_active") else 0) + 1
     data.update(blocks=blocks, reminded=state_key)
     _write_json(_mdir(repo) / "active.json", data)
@@ -982,7 +1004,7 @@ def hook(event: dict) -> tuple[int, str]:
         reason = (f"Magenta: these checks did not run on the current code: {', '.join(result['not_run'])}. "
                   f"Before you finish, run: {run_cmd}")
     if blocks > MAX_BLOCKS:
-        return 0, f"{reason}\nThe agent stopped without a pass. Its report must say that the checks of {item} do not pass."
+        return _note_once(repo, data, ["stopped", state_key], f"Magenta: the checks of {item} do not pass yet.")
     return 2, (reason + "\nIf you wait for the human, or the human asked you to stop, say in your answer that the "
                "checks do not pass, and stop.")
 
@@ -1139,16 +1161,14 @@ def _run_hook(mode: str) -> int:
                 return 0
             if name == "SubagentStop":
                 code, text = subagent_stop(event)
-                if code == 2:
-                    print(text, file=sys.stderr)  # exit 2 sends the subagent back to work
-                return code
+                if code == 2:  # the subagent goes back to work; the reason goes to it, not to the human
+                    print(json.dumps({"decision": "block", "reason": text}))
+                return 0
             code, text = hook(event)
         except Exception as exc:  # a broken hook must not trap the session
             code, text = 0, f"Magenta verify hook error: {exc}"
         if code == 2:  # a structured block: the reason goes to Claude, a short message to the human
-            print(json.dumps({"decision": "block", "reason": text,
-                              "systemMessage": "Magenta: the approved checks do not pass on the current code yet. "
-                                               "Claude continues the task."}))
+            print(json.dumps({"decision": "block", "reason": text}))
             return 0
         if text:
             print(json.dumps({"systemMessage": text}))
@@ -1158,6 +1178,13 @@ def _run_hook(mode: str) -> int:
         kind, reason = protect.evaluate(event)
         if kind == "ask":
             reason += approval_details(event)
+        elif kind == "allow":
+            try:  # a task with --auto: the calls that pass the rules need no prompt
+                import guard
+                if guard.auto_allows(event):
+                    kind, reason = "auto", "Magenta: the task runs with --auto"
+            except ImportError:
+                pass
     except Exception:  # a broken guardrail must not block the session
         kind, reason = "allow", ""
     code, out, err = protect.hook_output(kind, reason)
@@ -1248,7 +1275,8 @@ def _print_status(repo: Path) -> None:
     result = evaluate(repo)
     state = _read_json(_mdir(repo) / "verify-state.json", {})
     item = data.get("work_item")
-    print(f"Active task: {item or '(none)'}" + (f", session {data.get('session')}" if data.get("session") else ""))
+    print(f"Active task: {item or '(none)'}" + (" (auto)" if item and data.get("auto") else "")
+          + (f", session {data.get('session')}" if data.get("session") else ""))
     if not item and data.get("last"):
         print(f"Last task: {data['last']}, finished with {data.get('last_status')}")
     print(f"Stop hook: {hook_status(repo)}")
@@ -1291,6 +1319,8 @@ def main(argv=None) -> int:
     p_start.add_argument("item")
     p_start.add_argument("--session", default="")
     p_start.add_argument("--force", action="store_true", help="replace a failing task (human only)")
+    p_start.add_argument("--auto", action="store_true",
+                         help="the agents work without a permission prompt for each tool call (the human asked for it)")
     p_finish = sub.add_parser("finish", parents=[shared], help="close the active task")
     p_finish.add_argument("--force", action="store_true", help="close a task with failing checks (human only)")
     p_lock = sub.add_parser("lock", parents=[shared], help="lock the test files of a work item")
@@ -1334,18 +1364,16 @@ def main(argv=None) -> int:
                 print(f"sealed {lid}")
             return 0
         if cmd == "start":
-            data = start(repo, args.item, args.session, args.force)
-            print(f"Task {args.item} {'resumed' if data.get('resumed_at') else 'started'}."
+            data = start(repo, args.item, args.session, args.force, args.auto)
+            print(f"Task {args.item} {'resumed' if data.get('resumed_at') else 'started'}"
+                  + (" (auto)" if data.get("auto") else "") + "."
                   + (f" Note: {data['note']}." if data.get("note") else ""))
             if not data.get("session"):
                 print("Note: no session id, so the Claude Code Stop hook does not enforce this task.")
-            status = hook_status(repo)
-            if status == "missing":
+            if hook_status(repo) == "missing":
                 print("Note: the Claude Code Stop hook is not installed for this repository, so nothing stops the "
                       "agent when the checks fail. The human can install it (one time) with:\n"
                       f"  {self_command()} install-hook")
-            else:
-                print(f"Stop hook: {status}.")
             return 0
         if cmd == "finish":
             data = finish(repo, args.force)
@@ -1354,10 +1382,7 @@ def main(argv=None) -> int:
         if cmd == "lock":
             target = test_lock.lock(repo, args.item, args.files)
             files = json.loads(target.read_text(encoding="utf-8"))["files"]
-            print(f"Locked {len(files)} test files in {target.relative_to(repo).as_posix()}:")
-            for name in files:
-                print(f"  {name}")
-            print("The human seals the lock with the approval of the checks (approve).")
+            print(f"Locked {len(files)} test files of {args.item}. The approval of the checks seals them.")
             return 0
         if cmd == "check-lock":
             items = [args.item] if args.item else sorted(_lock_files(repo))

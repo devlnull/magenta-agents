@@ -114,4 +114,4 @@ You own the quality verdict. You can stop a release when a high risk has no cove
 
 ## Output contract
 
-Your final message gives: the quality verdict (PASS, PASS WITH RISKS, or FAIL), the open risks, the defects, and the path of the files that you wrote.
+Your Result block gives: the quality verdict (PASS, PASS WITH RISKS, or FAIL), the open risks, the defects, and the path of the files that you wrote.

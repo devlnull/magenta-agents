@@ -4,6 +4,19 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-11-02
+
+### Added
+
+- **Auto mode (ADR-0015).** `/magenta --auto <task>` lets the agents work to the end without a permission prompt for each tool call. Magenta allows each call of the task that passes its rules. You decide only at the checks gate (one approval), at a blocker, and at the done gate. `approve` and `--force` always ask. `verify.py start --auto` records it; `finish` ends it.
+- **Result block.** Each agent ends with one Result block (status, summary, changes, evidence, findings, the question for the human). The conductor reads only this block.
+
+### Changed
+
+- The conductor talks to you only for questions, the checks to approve, and the final report. It does not report internal steps (locks, verify runs, hooks, the guard).
+- The hooks answer with JSON decisions. A blocked tool call is a `deny` with the reason for the model, not a "PreToolUse hook error". A SubagentStop block is a `decision: block`, not a "hook error". The Stop hook does not show "Claude continues the task" and does not repeat that the checks still fail. You see a note only when you must act (checks wait for your approval), one time for each state.
+- `start` and `lock` print one line. `status` shows "(auto)".
+
 ## [0.11.0] - 2026-11-01
 
 ### Changed
@@ -158,7 +171,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.11.0...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.12.0...HEAD
+[0.12.0]: https://github.com/devlnull/magenta-agents/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/devlnull/magenta-agents/compare/v0.10.3...v0.11.0
 [0.10.3]: https://github.com/devlnull/magenta-agents/compare/v0.10.2...v0.10.3
 [0.10.2]: https://github.com/devlnull/magenta-agents/compare/v0.10.1...v0.10.2

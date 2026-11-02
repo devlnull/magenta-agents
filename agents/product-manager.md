@@ -64,4 +64,4 @@ Advisory only. The human PM owns the product decision.
 
 ## Output contract
 
-Your final message gives: the verdict, the total score, the three most important questions, and the path of the files that you wrote.
+Your Result block gives: the verdict, the total score, the three most important questions, and the path of the files that you wrote.

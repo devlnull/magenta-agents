@@ -127,4 +127,4 @@ The details of the pipelines, the images, and the manifests inside the plan. A n
 
 ## Output contract
 
-Your final message gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the validation results, the last verify result, the steps for the human (apply, rollout, rollback), the files that you changed, and your questions.
+Your Result block gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the validation results, the last verify result, the steps for the human (apply, rollout, rollback), the files that you changed, and your questions.

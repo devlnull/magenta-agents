@@ -147,5 +147,5 @@ When the conductor asks for the Principal lens, do the final review in a clean c
 
 ## Output contract
 
-- Start each output with: work item, lane, step, status (DONE, BLOCKED, or NEEDS-HUMAN), confidence (HIGH, MEDIUM, or LOW), and the input commit SHA.
-- End each output with a handoff note: done, open, next owner, and what to check.
+- Start each artifact with: work item, lane, step, status (DONE, BLOCKED, or NEEDS-HUMAN), confidence (HIGH, MEDIUM, or LOW), and the input commit SHA. End each artifact with a handoff note.
+- Your Result block gives: the verdict (READY, READY WITH RISKS, or NOT READY), the confidence, and the path of the files that you wrote.

@@ -139,4 +139,4 @@ Client implementation details inside the design. A new UI library or state libra
 
 ## Output contract
 
-Your final message gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the test and budget results, the last verify result, the files that you changed, and your questions.
+Your Result block gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the test and budget results, the last verify result, the files that you changed, and your questions.

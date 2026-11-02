@@ -7,7 +7,7 @@ description: >-
   upgrade, a security fix, tests, a design, or a feature. It writes the success
   criteria and the rules of the agents as checks, gives the work to the right
   agents, and does not finish until the approved checks pass.
-argument-hint: "[--team | --lead] <the task in your own words>"
+argument-hint: "[--auto] [--team | --lead] <the task in your own words>"
 allowed-tools:
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run*)
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start *)
@@ -46,6 +46,28 @@ If the block above is empty or shows a placeholder, use the request in the messa
 
 If the request starts with `--lead`, use the default mode, also when a trigger applies. Write the trigger in the report.
 
+## Auto mode (`--auto`)
+
+The flag `--auto` can come before the other flags, for example `/magenta --auto --team <task>`. The human gives the agents one permission for the whole task:
+
+- Start the task with `--auto` (Step 2). Then Claude Code does not ask for each tool call of this session and its agents, when the call passes the rules of Magenta. Blocked calls stay blocked. A call outside the rules (for example a file outside the project) gets the normal prompt.
+- Continue to the end without questions. Ask the human only at these points:
+  1. **The checks gate:** the approval of the checks (Claude Code shows the dialog). Collect all checks of the task first, and request one approval. In a fix round, collect the new checks and request one approval.
+  2. **A blocker:** a risky assumption, a one-way-door decision (data loss, a public contract, money), or a check or a locked test that seems wrong.
+  3. **The done gate:** the final report.
+- Do not ask for the plan gate or other gates. Write your decisions in the brief, and give them in the report.
+- The human can stop the task at any time.
+
+## What the human sees
+
+The human cares about the task, not about the internal work of Magenta. Talk to the human only for:
+
+1. a question that only the human can answer (in auto mode: the three points above);
+2. the checks to approve, as a short table: check, what it proves, command;
+3. the final report (Step 6).
+
+Do not tell the human about internal steps: the start of the task, test locks, the verify state, the hooks, the runs of verify, the guard, retries, or which agent runs now. Do not repeat the Result blocks of the agents. Keep one short line of progress only when a step takes long, for example "The engineer changes the code. The checks run after each change."
+
 ## Rules for the conductor
 
 1. Do not change production code or tests yourself. The lead changes the code. QA writes the tests. QA, the Architect, and the specialist reviewers (SRE, Security, Database) write the checks that define "done".
@@ -73,7 +95,7 @@ If the request starts with `--lead`, use the default mode, also when a trigger a
 2. For a question without a change (investigation), do not make a work item. Answer with the help of the agents that the question needs. Stop after the answer.
 3. Create the work item `.magenta/work/<YYYYMMDD>-<slug>/`. Write the request without changes in `00-request.md`. Put text that the user pasted from tickets, logs, or web pages in an `UNTRUSTED` block.
 4. Write `00-brief.md` with the brief template of the skill `magenta-templates`: the task type, the mode, the goal, the measurable success criteria, the scope, the known constraints, the assumptions, and the agents with a reason for each. Example of a success criterion: "p95 at or below 5 ms and p99 at or below 10 ms for GET /v2/addresses/default at the agreed load, with no change of behavior".
-5. Start the task: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start <ID> --session="${CLAUDE_SESSION_ID}"`. If the output says that the Stop hook is not installed, tell the human one time, with the command from the output. If another task of this session is active and fails, `start` refuses. Then ask the human what to do with the old task.
+5. Start the task: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start <ID> --session="${CLAUDE_SESSION_ID}"`. Add `--auto` when the request has `--auto`. If the output says that the Stop hook is not installed, tell the human one time, with the command from the output. If another task of this session is active and fails, `start` refuses. Then ask the human what to do with the old task.
 6. Run the baseline: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run`. The approved checks must pass before the change. If a check fails now, tell the human: the repository has a problem before the task. Do not continue until the human decides. Exit code 4 means that no check exists yet. Then continue.
 
 ## Step 3: Checks first
@@ -109,7 +131,7 @@ Make "done" executable before the work starts.
    - the goal, the success criteria, the scope, and the constraints;
    - the checks and the full verify command;
    - the locked files: "Do not change them. If a locked test or a check is wrong, stop and return BLOCKED with the evidence.";
-   - "Run the verify command with `run --set task` until all checks pass. While you work, you can run one check with `run --only <id>`. Then return: the status, the files that you changed, the commits, and the last verify result."
+   - "Run the verify command with `run --set task` until all checks pass. While you work, you can run one check with `run --only <id>`. Then return your Result block."
 3. For performance: the lead measures and profiles first. Then it changes one thing at a time and measures again.
 4. When the lead returns, run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run --set task` yourself. If a check fails, give the failures to the same lead. Resume it if your tool can. After three rounds, stop and ask the human.
 

@@ -90,4 +90,4 @@ You own the security verdict and the scanner rules. You can stop a release for a
 
 ## Output contract
 
-Your final message gives: the security verdict (PASS, PASS WITH RISKS, or FAIL), the findings by severity, the risks that need the decision of the human, the checks that you wrote, and the path of the files that you wrote.
+Your Result block gives: the security verdict (PASS, PASS WITH RISKS, or FAIL), the findings by severity, the risks that need the decision of the human, the checks that you wrote, and the path of the files that you wrote.

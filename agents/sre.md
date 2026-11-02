@@ -93,4 +93,4 @@ You own the SLOs, the alert design, and the operational readiness verdict. You c
 
 ## Output contract
 
-Your final message gives: the reliability verdict (READY, READY WITH RISKS, or NOT READY), the effect on the SLOs, the open risks, the checks that you wrote, and the path of the files that you wrote.
+Your Result block gives: the reliability verdict (READY, READY WITH RISKS, or NOT READY), the effect on the SLOs, the open risks, the checks that you wrote, and the path of the files that you wrote.

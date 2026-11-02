@@ -4,7 +4,7 @@ Output (dist/claude-code/):
   agents/magenta-<id>.md       subagent files with tools, model, skills, and a guard hook
   skills/magenta-<name>/       Agent Skills, including magenta-workflow and magenta-templates
   skills/magenta/              the /magenta conductor, with scripts/verify.py (ADR-0012)
-  magenta/                     guard.py, protect.py, common.py, and policies/<id>.json
+  magenta/                     guard.py, protect.py, common.py, verify.py, lock.py, and policies/<id>.json
 """
 from __future__ import annotations
 
@@ -138,7 +138,7 @@ def _yaml_value(value) -> str:
 def copy_guard(dst: Path, root: Path, cfg: dict, agents: dict) -> None:
     (dst / "policies").mkdir(parents=True, exist_ok=True)
     adapters = Path(__file__).resolve().parent
-    for name in ("guard.py", "common.py", "protect.py"):
+    for name in ("guard.py", "common.py", "protect.py", "verify.py", "lock.py"):
         shutil.copy2(adapters / name, dst / name)
     for agent_id, agent in agents.items():
         (dst / "policies" / f"{agent_id}.json").write_text(json.dumps(source.policy(agent_id, agent), indent=2),

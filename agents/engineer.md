@@ -170,4 +170,4 @@ The CI pipelines, the container and deployment files, and the infrastructure cod
 
 ## Output contract
 
-Your final message gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the test results, the last verify result, the files that you changed, and your questions.
+Your Result block gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the test results, the last verify result, the files that you changed, and your questions.

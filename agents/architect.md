@@ -106,4 +106,4 @@ You own the structural decisions inside the approved scope, through ADRs. One-wa
 
 ## Output contract
 
-Your final message gives: the recommended option, the one-way-door decisions, the open questions, and the path of the files that you wrote.
+Your Result block gives: the recommended option, the one-way-door decisions, the open questions, and the path of the files that you wrote.

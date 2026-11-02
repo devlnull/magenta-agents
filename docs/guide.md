@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.11.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.12.0
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.11.0"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.12.0"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -179,6 +179,22 @@ Approve only commands that you trust. A check runs on your computer. Do not sele
 python3 ~/.magenta-agents/magenta.py verify list      # read the checks
 python3 ~/.magenta-agents/magenta.py verify approve   # approve all new and changed checks
 ```
+
+## Auto mode
+
+Add `--auto` to let the agents work to the end without a permission prompt for each tool call:
+
+```text
+/magenta --auto fix the timeout of the payment save endpoint
+```
+
+- Magenta allows each tool call of the task that passes its rules. Blocked calls stay blocked, and a call outside the rules (for example a file outside the project) gets the normal prompt.
+- You decide only at three points: the approval of the checks (one dialog), a blocker (a risky assumption, a one-way-door decision, or a check that seems wrong), and the final report.
+- Auto mode ends when the task finishes. It applies only to the session that started the task.
+
+## What you see
+
+Magenta shows you only what the task needs: the questions for you, the checks to approve, and the final report. The internal work (test locks, the verify state, the hooks, the runs of verify, the guard) stays internal. Each agent returns a short Result block to the conductor (status, summary, changes, evidence, findings), and the conductor reports the result of the task.
 
 ## Commands in Claude Code
 

@@ -18,7 +18,8 @@ Usage:
                         only protects the verify state (protect.py).
 
 Write patterns are ordered. The last matching pattern wins. A pattern that starts with "!" denies.
-Exit code 2 blocks the tool call. Claude Code shows the stderr message to the agent.
+A block is a JSON `deny` decision with the reason for the agent. In a task with --auto, a call that passes the
+rules gets `allow`, so Claude Code does not ask. Exit code 2 (fail closed) only when the input or the policy is bad.
 """
 from __future__ import annotations
 
@@ -591,6 +592,43 @@ def _load_policy(agent: str):
     return json.loads(path.read_text(encoding="utf-8"))
 
 
+# The rules for the main session and other subagents in an --auto task: the same checks as for an agent in
+# standard mode, with all paths and commands of the project. A call that does not pass gets the normal prompt.
+MAIN_POLICY = {"writes": ["**"], "shell": ["*"], "shell_deny": [], "denies": []}
+FILE_TOOLS = WRITE_TOOLS | {"Read", "Glob", "Grep"}
+
+
+def auto_allows(event: dict, agent: str | None = None, policy: dict | None = None) -> bool:
+    """True when the human started the task of this session with --auto and the call passes the rules. Then the
+    hook allows the call, and Claude Code does not ask. Files must be in the session folder."""
+    try:
+        import verify  # next to this file in the plugin and in ~/.claude/magenta
+        if not verify.auto_session(event):
+            return False
+    except Exception:
+        return False
+    if event.get("tool_name") in FILE_TOOLS:
+        tool_input = event.get("tool_input") or {}
+        raw = next((tool_input[k] for k in PATH_KEYS if tool_input.get(k)), None)
+        if raw is not None:
+            cwd = Path(event.get("cwd") or os.getcwd()).resolve()
+            target = Path(str(raw)).expanduser()
+            if not _inside((target if target.is_absolute() else cwd / target).resolve(), cwd):
+                return False
+    elif event.get("tool_name") != "Bash":
+        return False
+    return decide(agent or "conductor", policy or MAIN_POLICY, event) is None
+
+
+def _emit(kind: str, reason: str = "") -> int:
+    code, out, err = protect.hook_output(kind, reason)
+    if out:
+        print(out)
+    if err:
+        print(err, file=sys.stderr)
+    return code
+
+
 def main(argv=None) -> int:
     argv = sys.argv[1:] if argv is None else argv
     if len(argv) != 1:
@@ -601,10 +639,10 @@ def main(argv=None) -> int:
     except ValueError as exc:
         print(f"Magenta guard: blocked, because the input is not readable: {exc}", file=sys.stderr)
         return 2
+    event = event if isinstance(event, dict) else {}
     if argv[0] == "--auto":
         agent = agent_id_from_type(event.get("agent_type"))
-        if agent is None:  # not a Magenta agent: only the verify state is protected
-            event = event if isinstance(event, dict) else {}
+        if agent is None:  # not a Magenta agent: the verify state is protected; --auto tasks skip the prompts
             kind, reason = protect.evaluate(event)
             if kind == "ask":
                 try:  # the plugin has verify.py next to this file: show what the human approves
@@ -612,12 +650,9 @@ def main(argv=None) -> int:
                     reason += verify.approval_details(event)
                 except Exception:
                     pass
-            code, out, err = protect.hook_output(kind, reason)
-            if out:
-                print(out)
-            if err:
-                print(err, file=sys.stderr)
-            return code
+            if kind == "allow" and auto_allows(event):
+                kind, reason = "auto", "Magenta: the task runs with --auto"
+            return _emit(kind, reason)
     else:
         agent = argv[0]
     try:
@@ -627,8 +662,9 @@ def main(argv=None) -> int:
         return 2
     reason = decide(agent, policy, event)
     if reason:
-        print(f"Magenta guard: {reason}", file=sys.stderr)
-        return 2
+        return _emit("deny", f"Magenta guard: {reason}")
+    if auto_allows(event, agent, policy):
+        return _emit("auto", "Magenta: the task runs with --auto")
     return 0
 
 

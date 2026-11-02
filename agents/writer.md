@@ -93,4 +93,4 @@ The structure and the words of the user documentation inside the scope. The ADRs
 
 ## Output contract
 
-Your final message gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the documents that you changed, the questions about the behavior, and the lint and link-check results.
+Your Result block gives: status (DONE, BLOCKED, or NEEDS-HUMAN), the commits, the documents that you changed, the questions about the behavior, and the lint and link-check results.

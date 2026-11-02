@@ -278,7 +278,7 @@ class W3NonUtf8ChecksFileTest(StateCase):
 
 
 class W3PendingCheckNamesFailuresTest(StateCase):
-    def test_the_hook_names_the_failed_checks_while_a_task_check_waits(self):
+    def test_the_hook_tells_the_human_only_the_checks_to_approve(self):
         self.checks("qa.yaml", [{"id": "qa.must-pass", "command": self.has_b()},
                                 {"id": "qa.waits", "command": self.script("ok", "pass\n"), "work_item": "T1-x"}])
         verify.approve(self.repo, ["qa.must-pass"])
@@ -287,8 +287,9 @@ class W3PendingCheckNamesFailuresTest(StateCase):
         self.assertEqual(self.cli("run").returncode, 1)
         out = self.hook("S1")
         text = out.stdout + out.stderr
-        self.assertIn("qa.must-pass", text)
         self.assertIn("qa.waits", text)
+        self.assertNotIn("qa.must-pass", text)  # an internal result: the report of Claude says it
+        self.assertEqual(self.hook("S1").stdout.strip(), "")  # one time for each state
 
 
 if __name__ == "__main__":

@@ -15,7 +15,7 @@ CONDUCTOR = "magenta"  # the /magenta skill keeps its plain name in every tool
 VERIFY_TOKEN = '"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py"'
 # The command skills (run-checks, task-status, approve-checks) use the scripts of the conductor next to them.
 SIBLING_VERIFY_TOKEN = '"python3" "${CLAUDE_SKILL_DIR}/../magenta/scripts/verify.py"'
-CONDUCTOR_SCRIPTS = ("verify.py", "lock.py", "common.py", "protect.py")
+CONDUCTOR_SCRIPTS = ("verify.py", "lock.py", "common.py", "protect.py", "guard.py")
 GENERATED_SKILLS = ("workflow", "templates")
 WORKFLOW_ORDER = ("routing", "lite", "standard", "full", "bugfix", "performance", "refactor", "investigation",
                   "incident", "upgrade", "security-fix", "tests", "design", "design-review", "pr-review")

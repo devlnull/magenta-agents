@@ -9,6 +9,8 @@ import unittest
 from contextlib import redirect_stdout
 from pathlib import Path
 
+from hooktools import decision  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 _HOME = tempfile.TemporaryDirectory()  # the session records of `start` (never the real home)
 os.environ["MAGENTA_HOME"] = _HOME.name
@@ -327,7 +329,7 @@ class HookTest(RepoCase):
         self.assertIn("fail on the current code: qa.b", text)
         code, text = self.hook(session_id="S1", stop_hook_active=True)
         self.assertEqual(code, 0)  # one reminder for each state of the code: Claude knows the result now
-        self.assertIn("still do not pass on this code (qa.b)", text)
+        self.assertEqual(text, "")  # silent: an internal state, and the report says it
         self.assertEqual(self.hook(session_id="S1")[0], 0)  # also in a new turn, while nothing changed
         write(self.repo / "a.txt", "a\nd\n")
         self.assertEqual(self.hook(session_id="S1")[0], 2)  # a new change gives a new reminder
@@ -364,8 +366,8 @@ class HookTest(RepoCase):
         event = json.dumps({"tool_name": "Write", "tool_input": {"file_path": ".magenta/checks.lock"}})
         out = subprocess.run([sys.executable, str(ROOT / "adapters" / "verify.py"), "protect"], input=event,
                              capture_output=True, text=True, cwd=self.repo)
-        self.assertEqual(out.returncode, 2)
-        self.assertIn("Only the verify script", out.stderr)
+        self.assertEqual(decision(out)[0], "deny")
+        self.assertIn("Only the verify script", decision(out)[1])
 
     def test_install_and_uninstall_hooks(self):
         write(self.repo / ".claude/settings.local.json", json.dumps(
@@ -433,7 +435,7 @@ class ProtectTest(unittest.TestCase):
         event = {"tool_name": "Write", "tool_input": {"file_path": ".magenta/active.json"}, "cwd": "/tmp"}
         out = subprocess.run([sys.executable, str(ROOT / "adapters" / "guard.py"), "--auto"], input=json.dumps(event),
                              capture_output=True, text=True)
-        self.assertEqual(out.returncode, 2)
+        self.assertEqual(decision(out)[0], "deny")
         event["tool_input"] = {"file_path": "src/app.py"}
         out = subprocess.run([sys.executable, str(ROOT / "adapters" / "guard.py"), "--auto"], input=json.dumps(event),
                              capture_output=True, text=True)
@@ -655,11 +657,12 @@ class SubagentTest(RepoCase):
         decision = json.loads(out)
         self.assertEqual((code, decision["decision"]), (0, "block"))
         self.assertIn("did not run", decision["reason"])
-        self.assertIn("systemMessage", decision)
+        self.assertNotIn("systemMessage", decision)  # the reason goes to Claude only
         self.assertEqual(self.cli_hook(self.event("SubagentStart"))[0], 0)
-        code, _, err = self.cli_hook(self.event("SubagentStop"))
-        self.assertEqual(code, 2)  # the subagent goes back to work
-        self.assertIn("before you return", err)
+        code, out, _ = self.cli_hook(self.event("SubagentStop"))
+        decision = json.loads(out)
+        self.assertEqual((code, decision["decision"]), (0, "block"))  # the subagent goes back to work
+        self.assertIn("before you return", decision["reason"])
 
     def test_the_records_are_protected(self):
         self.assertIsNotNone(protect.decide({"tool_name": "Write", "tool_input": {"file_path": ".magenta/agents/S1/x.json"}}))
