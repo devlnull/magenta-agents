@@ -517,7 +517,7 @@ def _human_only_token(token: str, cwd: Path) -> bool:
     if PureWindowsPath(token).drive and os.name != "nt":
         return False  # a Windows path: not in this session folder
     path = Path(token).expanduser()
-    if path.is_absolute():
+    if path.anchor:
         try:
             token = path.resolve().relative_to(cwd).as_posix()
         except (ValueError, OSError):
