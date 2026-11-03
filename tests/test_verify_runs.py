@@ -223,3 +223,8 @@ class DirectRiskTest(RepoCase):
         write(self.repo / "shop" / "a.py", "from .conv import to_int\n")
         write(self.repo / "shop" / "b.py", "from .conv import to_int\n")
         self.assertIn("to_int in shop/conv.py is used by 2 other files", self.ctx("shop/conv.py"))
+
+    def test_a_longer_name_is_not_a_caller(self):
+        write(self.repo / "shop" / "conv.py", "def to_int(a):\n    return int(a)\n")
+        write(self.repo / "shop" / "a.py", "from .other import to_integer\nx = to_integer(1)\n")
+        self.assertIn("Allowed", self.ctx("shop/conv.py"))

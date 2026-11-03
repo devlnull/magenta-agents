@@ -900,7 +900,10 @@ def context(repo: Path, paths: list[str], limit: int = 2500) -> str:
             if m and not m.group(2).startswith("_") and m.group(2) not in names:
                 names.append(m.group(2))
         for name in names[:30]:
-            pattern = rf"\b{name}\s*\(|\bimport\b.*\b{name}\b|\b{name}\b.*\bimport\b|\.{name}\b"
+            other = "[^[:alnum:]_]"
+            start, end, gap = f"(^|{other})", f"({other}|$)", f"{other}(.*{other})?"
+            pattern = (rf"{start}{name}[[:space:]]*\(|{start}import{gap}{name}{end}"
+                       rf"|{start}{name}{gap}import{end}|\.{name}{end}")
             out = _git(repo, "grep", "-n", "-I", "-E", pattern, "--", ".", f":(exclude){path}", ":(exclude).magenta",
                        ":(exclude)*.md", ":(exclude)*.txt", ":(exclude)*.json", ":(exclude)*.lock")
             hits = [h[:120].rstrip() for h in _text(out).splitlines() if h] if out else []
