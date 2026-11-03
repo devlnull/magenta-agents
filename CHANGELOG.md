@@ -4,6 +4,21 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-11-03
+
+### Added
+
+- **Direct mode.** For a small, clear, low-risk task (the lite lane), the conductor does the work itself: it reads the rules near the change, writes the test first for a bug, changes the code, and runs the project checks. No other agents. A task with money, security, a stored format, a public API, or callers with another meaning is never direct.
+- `verify context <files>`: a script that finds the rule files of the repository (RULES, SPEC, SECURITY, ARCHITECTURE, CONTRIBUTING, ADRs, the project profile, the lessons) and, for each function in the files, the other files that use it. It costs no model tokens. The conductor uses it before it selects the mode.
+- `verify begin`, `gate`, and `close`: the bookkeeping of a task in three calls (start and baseline; lock and the checks that wait; the final run and the close).
+- `verify run --table`. A test budget for each lane.
+
+### Changed
+
+- The conductor skill is 15 KB (34 KB before): it no longer carries the constitution of the agents, and team mode and the collaboration patterns are in the skill `magenta-workflow`. The agents get a short roster.
+- When all checks pass, `verify run` prints one line.
+- Benchmark (`evals/benchmark/`, 14 tasks, 4 models, one run each), 0.15 against 0.14: hidden tests 95.3% → 96.3%, tasks with all hidden tests passed 48 → 50 of 56, tokens −68%, cost −64%, time −67%. A plain prompt: 93.4%.
+
 ## [0.14.0] - 2026-11-03
 
 ### Changed
@@ -190,7 +205,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.14.0...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.15.0...HEAD
+[0.15.0]: https://github.com/devlnull/magenta-agents/compare/v0.14.0...v0.15.0
 [0.14.0]: https://github.com/devlnull/magenta-agents/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/devlnull/magenta-agents/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/devlnull/magenta-agents/compare/v0.11.0...v0.12.0

@@ -215,10 +215,10 @@ class W6GatesTest(unittest.TestCase):
 
 class W6SpecialistTestRequestsGoToQaTest(unittest.TestCase):
     def test_step_3_gives_the_specialist_test_requests_to_qa_before_the_lock(self):
-        lines = section("skills/magenta/SKILL.md", "## Step 3")
+        lines = section("skills/magenta/SKILL.md", "## Default mode")
         requests = [i for i, line in enumerate(lines) if "test request" in line.lower()]
         self.assertTrue(requests, "Step 3 must name the test requests of the specialists")
-        lock = [i for i, line in enumerate(lines) if 'verify.py" lock' in line]
+        lock = [i for i, line in enumerate(lines) if "gate <ID> <test files>" in line]
         self.assertTrue(lock, "Step 3 has no lock command")
         self.assertLess(requests[0], lock[0])
         self.assertRegex(lines[requests[0]], r"QA|`qa`")

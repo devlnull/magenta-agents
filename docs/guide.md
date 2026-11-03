@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.14.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.15.0
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.14.0"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.15.0"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -102,10 +102,11 @@ The result must meet the target **and** keep the rules of all roles. A faster so
 
 | Mode | When | How |
 |---|---|---|
-| Default: lead, checks, lenses | Most tasks | QA and the Architect write the checks. One lead does the work. One to three reviewers ("lenses") read the result. |
+| Direct | Small, clear, low-risk changes (the lite lane) | The conductor does the work itself: it reads the rules near the change, writes the test first for a bug, changes the code, and runs the project checks. No other agents. |
+| Default: lead, checks, lenses | Tasks with risk | QA and the Architect write the checks. One lead does the work. One to three reviewers ("lenses") read the result. |
 | Team | A PRD, a one-way-door decision, a change of a contract or a schema, money or security, more than one bounded context, or a lead that failed three rounds | The playbook of the task type, with its core team and gates |
 
-To select the mode yourself, start the request with `--team` or `--lead`.
+The conductor selects the mode by the risk of the task. To select it yourself, start the request with `--team` or `--lead`.
 
 ## Task types
 

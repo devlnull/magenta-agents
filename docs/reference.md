@@ -23,12 +23,16 @@ All commands run with `python3 magenta.py <command>` from the Magenta folder (fo
 | `unhook <repo>` | Remove the Claude Code hooks of Magenta. |
 | `verify list --repo <repo>` | Show the checks, the test locks, and their approval. |
 | `verify approve [ID ...] --repo <repo>` | Approve new and changed checks, and seal the test locks. Only the human decides: in Claude Code, through the permission dialog; otherwise in a terminal. |
-| `verify run [--set quick\|task\|full\|all] [--only ID,ID] --repo <repo>` | Run the approved checks and record the result. |
+| `verify run [--set quick\|task\|full\|all] [--only ID,ID] [--table] --repo <repo>` | Run the approved checks and record the result. When all checks pass, it prints one line (`--table` prints the table). |
+| `verify begin <ID> --session=<id> [--auto]` | Start or resume a task, and run the baseline (the conductor uses it). |
+| `verify gate <ID> [test files]` | Lock the test files of the task, and show the checks that wait for approval with the approve command. |
+| `verify close` | Run the checks of the task, and finish the task when they pass. A failing task stays open. |
+| `verify context [files]` | Show the rule files of the repository and, for each function in the files, the other files that use it. A script: no model tokens. |
 | `verify status --repo <repo>` | Show the active task and the result for the current code. |
 | `lock <repo> <work-item> [--files FILE ...]` | Lock the tests of a work item. |
 | `check-lock <repo> <work-item>` | Fail if the locked tests changed. |
 
-Exit codes of `verify run`: 0 pass, 1 fail (or the code changed during the run), 2 configuration error, 3 some checks wait for approval, 4 no checks exist.
+Exit codes of `verify run`, `begin`, and `close`: 0 pass, 1 fail (or the code changed during the run), 2 configuration error, 3 some checks wait for approval, 4 no checks exist.
 
 ### Headless and metrics
 

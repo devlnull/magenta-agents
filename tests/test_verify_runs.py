@@ -137,3 +137,62 @@ class PipelineNoteTest(RepoCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class FewerTurnsTest(RepoCase):
+    """begin, gate, and close do the bookkeeping of a task in three calls, with short output."""
+
+    def cli(self, *args):
+        return subprocess.run([sys.executable, str(VERIFY), "--repo", str(self.repo), *args], capture_output=True,
+                              text=True, cwd=self.repo)
+
+    def test_begin_gate_close(self):
+        write(self.repo / ".magenta" / "t" / "ok.py", "pass\n")
+        self.checks([{"id": "qa.ok", "command": f"{PY} .magenta/t/ok.py", "work_item": "T1-x"}])
+        out = self.cli("begin", "T1-x", "--session", "S1", "--auto")
+        self.assertIn("Task T1-x started (auto).", out.stdout)
+        self.assertIn("Baseline:", out.stdout)
+        write(self.repo / "tests" / "test_a.py", "def test_a():\n    pass\n")
+        (self.repo / ".magenta" / "work" / "T1-x").mkdir(parents=True)
+        out = self.cli("gate", "T1-x", "tests/test_a.py")
+        self.assertEqual(out.returncode, 3, out.stdout + out.stderr)
+        self.assertIn("Locked 1 test files", out.stdout)
+        self.assertIn("approve qa.ok lock.T1-x", out.stdout)
+        verify.approve(self.repo, [])
+        self.assertIn("No check waits", self.cli("gate", "T1-x").stdout)
+        out = self.cli("close")
+        self.assertEqual(out.returncode, 0, out.stdout + out.stderr)
+        self.assertIn("finished: PASS", out.stdout)
+        self.assertIn("| qa.ok |", out.stdout)  # the table for the report
+        self.assertFalse(verify.active(self.repo).get("work_item"))
+
+    def test_close_keeps_a_failing_task_open(self):
+        write(self.repo / ".magenta" / "t" / "bad.py", "raise SystemExit(1)\n")
+        self.checks([{"id": "qa.bad", "command": f"{PY} .magenta/t/bad.py", "work_item": "T2-y"}])
+        verify.approve(self.repo, [])
+        self.cli("begin", "T2-y", "--session", "S2")
+        out = self.cli("close")
+        self.assertEqual(out.returncode, 1)
+        self.assertIn("stays open", out.stdout)
+        self.assertEqual(verify.active(self.repo)["work_item"], "T2-y")
+
+    def test_a_passing_run_prints_one_line(self):
+        write(self.repo / ".magenta" / "t" / "ok.py", "pass\n")
+        self.checks([{"id": "qa.ok", "command": f"{PY} .magenta/t/ok.py"}])
+        verify.approve(self.repo, [])
+        out = self.cli("run")
+        self.assertEqual(out.stdout.strip().count("\n"), 0, out.stdout)
+        self.assertIn("PASS. 1 checks passed", out.stdout)
+        self.assertIn("| qa.ok |", self.cli("run", "--table").stdout)
+
+
+class ContextTest(RepoCase):
+    def test_rule_files_and_callers(self):
+        write(self.repo / "shop" / "money.py", "def to_rials(a):\n    return int(a)\n")
+        write(self.repo / "shop" / "refunds.py", "from .money import to_rials\n\ndef refund(p):\n    return to_rials(p)\n")
+        write(self.repo / "SECURITY.md", "# Security\n\n- A user reads only their own data.\n")
+        git(self.repo, "add", "-A")
+        text = verify.context(self.repo, ["shop/money.py"])
+        self.assertIn("### SECURITY.md", text)
+        self.assertIn("A user reads only their own data.", text)
+        self.assertIn("to_rials: shop/refunds.py:1:", text)

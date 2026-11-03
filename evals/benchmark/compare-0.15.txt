@@ -1,0 +1,20 @@
+pairs 56
+ALL                n=56 | hidden% plain  93.4  mag0.14  95.3  mag-next  96.3 | full 47/48/50 | tok   252k   2640k    836k (+68% saved) | cost $0.11 $1.12 $0.40 | sec 24 321 106 | tests 11.5->4.9 | orig ok 54/55/56
+claude-opus-5-5    n=14 | hidden% plain 100.0  mag0.14 100.0  mag-next 100.0 | full 14/14/14 | tok   152k   1619k    663k (+59% saved) | cost $0.16 $1.62 $0.60 | sec 23 261 121 | tests 12.9->6.9 | orig ok 14/14/14
+claude-sonnet-5-5  n=14 | hidden% plain  96.9  mag0.14 100.0  mag-next  96.9 | full 13/14/13 | tok   155k    815k    238k (+71% saved) | cost $0.07 $0.40 $0.13 | sec 11 88 23 | tests 14.7->3.7 | orig ok 14/14/14
+claude-sonnet-5    n=14 | hidden% plain  93.5  mag0.14  95.2  mag-next  98.2 | full 12/13/13 | tok   341k   4320k   1774k (+59% saved) | cost $0.16 $1.72 $0.74 | sec 28 488 222 | tests 7.6->5.4 | orig ok 13/13/14
+claude-haiku-4-5   n=14 | hidden% plain  83.4  mag0.14  86.0  mag-next  90.0 | full 8/7/10 | tok   360k   3808k    671k (+82% saved) | cost $0.07 $0.74 $0.13 | sec 34 445 58 | tests 10.9->3.6 | orig ok 13/14/14
+simple             n=16 | hidden% plain  98.2  mag0.14  93.1  mag-next  96.7 | full 15/13/14 | tok   215k   2038k    629k (+69% saved) | cost $0.11 $0.86 $0.29 | sec 18 222 63 | tests 8.2->4.0 | orig ok 16/16/16
+complex            n=16 | hidden% plain  99.3  mag0.14  99.2  mag-next  99.3 | full 15/15/15 | tok   292k   3483k   1090k (+69% saved) | cost $0.14 $1.41 $0.56 | sec 36 474 155 | tests 21.7->8.8 | orig ok 16/16/16
+hard               n=24 | hidden% plain  86.4  mag0.14  94.2  mag-next  94.0 | full 17/20/21 | tok   250k   2480k    806k (+68% saved) | cost $0.10 $1.10 $0.37 | sec 20 284 102 | tests 6.9->3.0 | orig ok 22/23/24
+
+diff ('c1-order-totals', 'claude-haiku-4-5') plain 8 m0 7 m1 8 / 8
+diff ('c2-rate-limit', 'claude-haiku-4-5') plain 8 m0 9 m1 8 / 9
+diff ('h1-rounding-trap', 'claude-haiku-4-5') plain 4 m0 4 m1 6 / 6
+diff ('h3-invoice-download', 'claude-haiku-4-5') plain 4 m0 6 m1 7 / 7
+diff ('h3-invoice-download', 'claude-sonnet-5-5') plain 4 m0 7 m1 4 / 7
+diff ('h5-orders-format', 'claude-sonnet-5') plain 3 m0 4 m1 3 / 4
+diff ('h6-split-utils', 'claude-haiku-4-5') plain 1 m0 3 m1 3 / 3
+diff ('h6-split-utils', 'claude-sonnet-5') plain 1 m0 1 m1 3 / 3
+diff ('s2-discount', 'claude-haiku-4-5') plain 8 m0 6 m1 6 / 8
+diff ('s4-email-refactor', 'claude-haiku-4-5') plain 7 m0 6 m1 7 / 7

@@ -47,7 +47,8 @@ class ConductorBuildTest(unittest.TestCase):
         self.assertEqual(meta["name"], "magenta")
         self.assertIn("argument-hint", meta)
         self.assertIn("$ARGUMENTS", body)
-        self.assertIn("# Magenta constitution", body)
+        self.assertIn("## The Result block of the agents", body)
+        self.assertNotIn("# Magenta constitution", body)  # the agents have it; the conductor stays short
         self.assertIn("| `magenta-qa` |", body)                 # roster
         self.assertIn("`magenta-engineer`", body)                # rewritten references
         self.assertIn("skill `magenta-workflow`", body)

@@ -105,6 +105,16 @@ Use team mode when one of these applies. Write the trigger in the brief.
 
 The playbooks and the lanes below describe team mode. In the default mode, the agents use the same skills (for example `magenta:performance-investigation`, `magenta:root-cause-analysis`, and `magenta:safe-refactoring`) inside the steps of the conductor.
 
+### Collaboration patterns (team mode)
+
+| ID | Pattern | Use it for |
+|---|---|---|
+| P3 | Maker and checker loop | One agent makes, another checks. Three rounds at most. |
+| P6 | Review panel | QA, Architect, and Principal review at the same time, read-only. |
+| P8 | Tournament | Two promising solutions: two makers in separate git worktrees, the same checks for both. Verify in a worktree uses the approvals of the main working tree. |
+| P9 | Competing hypotheses | A difficult bug or a performance problem with no clear cause: two or three investigators, read-only. |
+| P5 | Design Review Board | A one-way-door decision (workflow `design-review`). |
+
 ### Lenses
 
 A lens is a read-only review from the view of one role. Each role describes its lens in the section "Review lens". Select one to three lenses by risk:
@@ -139,6 +149,8 @@ A lens is a read-only review from the view of one role. Each role describes its 
 | lite | One module, low risk, easy to revert, the change is obvious. | Checks gate (only when there are new checks), done gate. |
 | standard | One bounded context, or the solution is not obvious, or a measurable target. | Checks gate or plan gate, done gate. Feature tasks also have the PRD gate. |
 | full | More than one bounded context, data migration, money or security flows, a one-way-door decision. | PRD gate (features), plan and design gate, done gate, release gate. |
+
+The test budget of a lane: lite, three new tests at most; standard, ten at most; full, as the plan says. Each test proves one success criterion or one risk.
 
 If more than one lane matches, use the heavier lane. Money, security, data migration, or a one-way-door decision always means the full lane. A task that only writes a design, an RFC, or an ADR uses the standard lane: the one-way-door decision is a decision of the human in it, not the change itself.
 

@@ -45,3 +45,20 @@ mkdir src && git -C <magenta-agents> archive v0.14.0 | tar -x -C src
 python3 bench.py claude-opus-5-5,claude-sonnet-5-5 plain,magenta all 1 6
 python3 analyze.py && python3 charts.py
 ```
+
+# Magenta 0.15 (2026-11-03)
+
+![0.15](benchmark-0.15.png)
+
+0.15 changes: direct mode for small tasks (the conductor does the work itself, with the project checks), `verify begin`, `gate`, and `close` (fewer conductor turns), a conductor skill of 15 KB in place of 34 KB, a one-line result when all checks pass, and `verify context` (a script that finds the rule files and the callers of the changed functions, with no model tokens). Same tasks, same models, one run each.
+
+| | Plain prompt | Magenta 0.14 | Magenta 0.15 |
+|---|---|---|---|
+| Hidden tests passed | 93.4% | 95.3% | **96.3%** |
+| Tasks with all hidden tests passed | 47 of 56 | 48 of 56 | **50 of 56** |
+| Old tests still pass | 54 of 56 | 55 of 56 | **56 of 56** |
+| Tokens for each task | 252k | 2.64M | **836k** (−68%) |
+| Cost for each task | $0.11 | $1.12 | **$0.40** (−64%) |
+| Time for each task | 24 s | 321 s | **106 s** |
+
+By model (hidden tests, 0.14 → 0.15; tokens saved): Opus 5.5 100% → 100% (−59%), Sonnet 5.5 100% → 97% (−71%; one security task raised `PermissionError` where the rule says `ValueError`), Sonnet 5 95% → 98% (−59%), Haiku 4.5 86% → 90% (−82%). By difficulty: simple 93% → 97%, complex 99% → 99%, hard 94% → 94%. The conductor selected direct mode in 34 of 56 runs.

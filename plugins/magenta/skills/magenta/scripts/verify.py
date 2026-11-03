@@ -815,6 +815,58 @@ def exit_code(outcome: dict) -> int:
     return 3 if outcome["pending"] else 0
 
 
+RULE_FILE = re.compile(r"(RULES|SPEC|SECURITY|ARCHITECTURE|CONTRIBUTING|CONVENTIONS|DESIGN|AGENTS|CLAUDE)[^/]*\.md$", re.I)
+DEF_KEYWORDS = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?(def|class|function|func|fn)\s+([A-Za-z_]\w*)")
+
+
+def context(repo: Path, paths: list[str], limit: int = 2500) -> str:
+    """The rules and the callers for a change, found by a script (no model tokens): the rule files of the
+    repository with their rule lines, and, for each function or class in the given files, where other files use it."""
+    lines = ["## Rule files"]
+    raw = _git(repo, "ls-files", "-z") or b""
+    files = [n.decode("utf-8", "replace") for n in raw.split(b"\0") if n]
+    rules = [f for f in files if (RULE_FILE.search(f) and f.count("/") <= 1) or f.startswith("docs/adr/")]
+    rules += [p for p in (".magenta/project-context.md", ".magenta/lessons.md") if (repo / p).is_file()]
+    for name in rules[:20]:
+        try:
+            text = (repo / name).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        keep = [l.rstrip() for l in text.splitlines()
+                if l.strip() and (l.lstrip()[:1] in "-*#|" or l.lstrip()[:2].rstrip(".").isdigit())]
+        lines += [f"### {name}", ("\n".join(keep) or text)[:limit]]
+    if len(lines) == 1:
+        lines.append("(none)")
+    lines.append("## Callers")
+    for path in paths:
+        try:
+            text = (repo / path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            lines.append(f"{path}: not found")
+            continue
+        names = []
+        for l in text.splitlines():
+            m = DEF_KEYWORDS.match(l)
+            if m and not m.group(2).startswith("_") and m.group(2) not in names:
+                names.append(m.group(2))
+        for name in names[:30]:
+            pattern = rf"\b{name}\s*\(|\bimport\b.*\b{name}\b|\b{name}\b.*\bimport\b|\.{name}\b"
+            out = _git(repo, "grep", "-n", "-I", "-E", pattern, "--", ".", f":(exclude){path}", ":(exclude).magenta",
+                       ":(exclude)*.md", ":(exclude)*.txt", ":(exclude)*.json", ":(exclude)*.lock")
+            hits = [h[:120].rstrip() for h in _text(out).splitlines() if h] if out else []
+            shown = "; ".join(hits[:8]) + (f" (+{len(hits) - 8})" if len(hits) > 8 else "")
+            lines.append(f"- {path}: {name}: " + (shown if hits else "no other use"))
+    return "\n".join(lines)
+
+
+def short_summary(outcome: dict) -> str | None:
+    """One line for a run where all checks pass: the agent needs no table then (fewer tokens in its context)."""
+    if exit_code(outcome) != 0:
+        return None
+    n = len(outcome["results"])
+    return f"Magenta verify: PASS. {n} checks passed on the current code (set {outcome['state'].get('set')})."
+
+
 def summary(outcome: dict) -> str:
     results, pending = outcome["results"], outcome["pending"]
     passed = sum(1 for r in results if r["status"] == PASS)
@@ -1311,6 +1363,17 @@ def main(argv=None) -> int:
     p_run = sub.add_parser("run", parents=[shared], help="run the approved checks")
     p_run.add_argument("--set", choices=RUN_SETS, default="quick")
     p_run.add_argument("--only", default="", help="comma-separated check ids")
+    p_run.add_argument("--table", action="store_true", help="print the table also when all checks pass")
+    p_begin = sub.add_parser("begin", parents=[shared], help="start or resume a task and run the baseline")
+    p_begin.add_argument("item")
+    p_begin.add_argument("--session", default="")
+    p_begin.add_argument("--auto", action="store_true", help="no permission prompt for each tool call (human asked)")
+    p_gate = sub.add_parser("gate", parents=[shared], help="lock the test files and show the checks that wait")
+    p_gate.add_argument("item")
+    p_gate.add_argument("files", nargs="*")
+    sub.add_parser("close", parents=[shared], help="run the checks of the task, and finish it when they pass")
+    p_ctx = sub.add_parser("context", parents=[shared], help="show the rule files and the callers for a change")
+    p_ctx.add_argument("paths", nargs="*")
     sub.add_parser("list", parents=[shared], help="show the checks, the locks, and their approval")
     sub.add_parser("status", parents=[shared], help="show the active task and the result for the current code")
     p_app = sub.add_parser("approve", parents=[shared], help="approve checks and seal test locks (human only)")
@@ -1343,8 +1406,54 @@ def main(argv=None) -> int:
         if cmd == "run":
             only = [x.strip() for x in getattr(args, "only", "").split(",") if x.strip()]
             outcome = run(repo, getattr(args, "set", "quick"), only or None)
-            print(summary(outcome))
+            print((not args.table and short_summary(outcome)) or summary(outcome))
             return exit_code(outcome)
+        if cmd == "context":
+            print(context(repo, args.paths))
+            return 0
+        if cmd == "begin":
+            data = start(repo, args.item, args.session, False, args.auto)
+            print(f"Task {args.item} {'resumed' if data.get('resumed_at') else 'started'}"
+                  + (" (auto)" if data.get("auto") else "") + "." + (f" Note: {data['note']}." if data.get("note") else ""))
+            if not data.get("session"):
+                print("Note: no session id, so the Claude Code Stop hook does not enforce this task.")
+            if hook_status(repo) == "missing":
+                print(f"Note: the Stop hook is not installed. The human can install it with: {self_command()} install-hook")
+            outcome = run(repo, "quick")
+            print("Baseline: " + (short_summary(outcome) or summary(outcome)))
+            return exit_code(outcome)
+        if cmd == "gate":
+            if args.files:
+                target = test_lock.lock(repo, args.item, args.files)
+                count = len(json.loads(target.read_text(encoding="utf-8"))["files"])
+                print(f"Locked {count} test files of {args.item}.")
+            _runnable, pending, invalid = required(repo, "task")
+            ids = [c["id"] for c in pending] + [c["id"] for c in invalid]
+            if not ids:
+                print("No check waits for approval.")
+                return 0
+            print("| Check | Set | Command |\n|---|---|---|")
+            for c in pending:
+                print(f"| {c['id']} | {c.get('set', '-')} | `{c.get('command') or 'the locked tests'}`{pipe_note(c.get('command') or '')} |")
+            for c in invalid:
+                print(f"| {c['id']} | {c.get('set', '-')} | CHANGED or REMOVED after the approval |")
+            print(f"Request the approval of the human: {self_command()} approve {' '.join(ids)}")
+            return 3
+        if cmd == "close":
+            outcome = run(repo, "task")
+            print(summary(outcome))
+            code = exit_code(outcome)
+            if code == 0 or (code == 4 and not active(repo).get("work_item")):
+                data = finish(repo)
+                print(f"Task {data['last'] or '(none)'} finished: {data['last_status']}.")
+                return 0
+            if code == 4:
+                data = finish(repo)
+                print(f"Task {data['last']} finished: {data['last_status']} (no check exists).")
+                return 0
+            print(f"The task stays open. Fix the failures and run close again. To close it anyway, the human runs: "
+                  f"{self_command()} finish --force")
+            return code
         if cmd == "list":
             _print_list(repo)
             return 0
