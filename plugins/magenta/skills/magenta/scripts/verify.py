@@ -418,7 +418,7 @@ def _tree_fingerprint(repo: Path) -> str | None:
     try:
         temp_index = tmp / "index"
         if index is not None and index.is_file():
-            shutil.copyfile(index, temp_index)
+            shutil.copy2(index, temp_index)
         env = dict(os.environ, GIT_INDEX_FILE=str(temp_index))
         hidden = [e[2:] for e in (_git(repo, "ls-files", "-v", "-z", env=env) or b"").split(b"\0")
                   if e[:1].islower() or e[:1] == b"S"]  # assume-unchanged and skip-worktree files
