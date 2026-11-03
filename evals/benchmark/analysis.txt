@@ -1,0 +1,86 @@
+model kind mode | n | hidden% | all-pass | cost$ | tokens/run | out/run | sec/run | tests added | original ok
+opus-5-5    simple  plain   | 4 | 100.0 | 4/4 |   0.53 |     119k |   1.1k |   17 |  2.0 | 4/4
+opus-5-5    simple  magenta | 4 | 100.0 | 4/4 |   5.64 |    1537k |  22.3k |  200 |  6.2 | 4/4
+opus-5-5    complex plain   | 4 | 100.0 | 4/4 |   0.78 |     183k |   2.8k |   30 |  6.0 | 4/4
+opus-5-5    complex magenta | 4 | 100.0 | 4/4 |   6.19 |    1394k |  28.9k |  270 | 23.8 | 4/4
+opus-5-5    hard    plain   | 6 | 100.0 | 6/6 |   0.88 |     153k |   1.5k |   22 |  2.8 | 6/6
+opus-5-5    hard    magenta | 6 | 100.0 | 6/6 |  10.91 |    1823k |  33.4k |  295 | 10.0 | 6/6
+opus-5-5    all     plain   | 14 | 100.0 | 14/14 |   2.20 |     152k |   1.8k |   23 |  3.5 | 14/14
+opus-5-5    all     magenta | 14 | 100.0 | 14/14 |  22.74 |    1619k |  28.9k |  261 | 12.9 | 14/14
+sonnet-5-5  simple  plain   | 4 | 100.0 | 4/4 |   0.26 |     147k |   0.8k |   10 |  0.2 | 4/4
+sonnet-5-5  simple  magenta | 4 | 100.0 | 4/4 |   1.36 |     680k |   8.3k |   71 |  7.5 | 4/4
+sonnet-5-5  complex plain   | 4 | 100.0 | 4/4 |   0.28 |     158k |   1.3k |   13 |  0.2 | 4/4
+sonnet-5-5  complex magenta | 4 | 100.0 | 4/4 |   1.83 |     876k |  14.4k |  105 | 31.5 | 4/4
+sonnet-5-5  hard    plain   | 6 |  92.9 | 5/6 |   0.39 |     157k |   0.9k |   11 |  0.5 | 6/6
+sonnet-5-5  hard    magenta | 6 | 100.0 | 6/6 |   2.38 |     864k |  10.6k |   89 |  8.3 | 6/6
+sonnet-5-5  all     plain   | 14 |  96.9 | 13/14 |   0.93 |     155k |   1.0k |   11 |  0.4 | 14/14
+sonnet-5-5  all     magenta | 14 | 100.0 | 14/14 |   5.57 |     815k |  11.0k |   88 | 14.7 | 14/14
+sonnet-5    simple  plain   | 4 | 100.0 | 4/4 |   0.74 |     268k |   1.4k |   18 |  0.0 | 4/4
+sonnet-5    simple  magenta | 4 | 100.0 | 4/4 |   4.33 |    2694k |  24.2k |  283 |  9.0 | 4/4
+sonnet-5    complex plain   | 4 | 100.0 | 4/4 |   0.76 |     402k |   4.6k |   50 |  0.0 | 4/4
+sonnet-5    complex magenta | 4 | 100.0 | 4/4 |  10.04 |    6107k |  66.1k |  777 | 12.2 | 4/4
+sonnet-5    hard    plain   | 6 |  84.7 | 4/6 |   0.79 |     349k |   1.6k |   20 |  0.0 | 5/6
+sonnet-5    hard    magenta | 6 |  88.9 | 5/6 |   9.74 |    4212k |  34.9k |  431 |  3.5 | 5/6
+sonnet-5    all     plain   | 14 |  93.5 | 12/14 |   2.29 |     341k |   2.4k |   28 |  0.0 | 13/14
+sonnet-5    all     magenta | 14 |  95.2 | 13/14 |  24.11 |    4320k |  40.8k |  488 |  7.6 | 13/14
+haiku-4-5   simple  plain   | 4 |  92.9 | 3/4 |   0.26 |     326k |   2.7k |   28 |  0.0 | 4/4
+haiku-4-5   simple  magenta | 4 |  72.3 | 1/4 |   2.49 |    3242k |  32.0k |  333 | 10.2 | 4/4
+haiku-4-5   complex plain   | 4 |  97.2 | 3/4 |   0.37 |     425k |   5.3k |   50 |  0.0 | 4/4
+haiku-4-5   complex magenta | 4 |  96.9 | 3/4 |   4.44 |    5555k |  69.0k |  745 | 19.2 | 4/4
+haiku-4-5   hard    plain   | 6 |  67.9 | 2/6 |   0.38 |     340k |   2.4k |   28 |  0.0 | 5/6
+haiku-4-5   hard    magenta | 6 |  87.9 | 3/6 |   3.37 |    3020k |  27.5k |  320 |  5.7 | 6/6
+haiku-4-5   all     plain   | 14 |  83.4 | 8/14 |   1.01 |     360k |   3.3k |   34 |  0.0 | 13/14
+haiku-4-5   all     magenta | 14 |  86.0 | 7/14 |  10.31 |    3808k |  40.7k |  445 | 10.9 | 14/14
+
+plain {'n': 56, 'rate': 93.45, 'full': 47, 'cost': 6.42, 'tok': 251916.66, 'out': 2118.62, 'sec': 24.07, 'tests': 0.96, 'orig': 54}
+magenta {'n': 56, 'rate': 95.31, 'full': 48, 'cost': 62.72, 'tok': 2640134.62, 'out': 30338.88, 'sec': 320.52, 'tests': 11.5, 'orig': 55}
+
+hard tasks, each run:
+h1-rounding-trap     mag haiku-4-5   4/6 $0.32 1775k
+h1-rounding-trap     mag opus-5-5    6/6 $1.03 904k
+h1-rounding-trap     mag sonnet-5    6/6 $1.73 4937k
+h1-rounding-trap     mag sonnet-5-5  6/6 $0.15 225k
+h1-rounding-trap     pla haiku-4-5   4/6 $0.06 352k
+h1-rounding-trap     pla opus-5-5    6/6 $0.15 160k
+h1-rounding-trap     pla sonnet-5    6/6 $0.15 438k
+h1-rounding-trap     pla sonnet-5-5  6/6 $0.07 196k
+h2-duplicates-speed  mag haiku-4-5   5/5 $0.21 1238k
+h2-duplicates-speed  mag opus-5-5    5/5 $1.46 1671k
+h2-duplicates-speed  mag sonnet-5    5/5 $1.19 3346k
+h2-duplicates-speed  mag sonnet-5-5  5/5 $0.57 1138k
+h2-duplicates-speed  pla haiku-4-5   5/5 $0.06 285k
+h2-duplicates-speed  pla opus-5-5    5/5 $0.14 159k
+h2-duplicates-speed  pla sonnet-5    5/5 $0.12 292k
+h2-duplicates-speed  pla sonnet-5-5  5/5 $0.06 157k
+h3-invoice-download  mag haiku-4-5   6/7 $0.66 3744k
+h3-invoice-download  mag opus-5-5    7/7 $2.34 2141k
+h3-invoice-download  mag sonnet-5    7/7 $2.20 5004k
+h3-invoice-download  mag sonnet-5-5  7/7 $0.61 1285k
+h3-invoice-download  pla haiku-4-5   4/7 $0.03 103k
+h3-invoice-download  pla opus-5-5    7/7 $0.15 159k
+h3-invoice-download  pla sonnet-5    7/7 $0.12 248k
+h3-invoice-download  pla sonnet-5-5  4/7 $0.06 117k
+h4-price-cache       mag haiku-4-5   4/4 $0.31 1774k
+h4-price-cache       mag opus-5-5    4/4 $2.29 2453k
+h4-price-cache       mag sonnet-5    4/4 $1.54 4047k
+h4-price-cache       mag sonnet-5-5  4/4 $0.46 1166k
+h4-price-cache       pla haiku-4-5   4/4 $0.06 317k
+h4-price-cache       pla opus-5-5    4/4 $0.15 159k
+h4-price-cache       pla sonnet-5    4/4 $0.11 289k
+h4-price-cache       pla sonnet-5-5  4/4 $0.06 157k
+h5-orders-format     mag haiku-4-5   3/4 $0.82 4208k
+h5-orders-format     mag opus-5-5    4/4 $1.65 1806k
+h5-orders-format     mag sonnet-5    4/4 $2.04 5298k
+h5-orders-format     mag sonnet-5-5  4/4 $0.40 907k
+h5-orders-format     pla haiku-4-5   2/4 $0.09 512k
+h5-orders-format     pla opus-5-5    4/4 $0.14 120k
+h5-orders-format     pla sonnet-5    3/4 $0.13 341k
+h5-orders-format     pla sonnet-5-5  4/4 $0.08 199k
+h6-split-utils       mag haiku-4-5   3/3 $1.05 5381k
+h6-split-utils       mag opus-5-5    3/3 $2.14 1961k
+h6-split-utils       mag sonnet-5    1/3 $1.03 2642k
+h6-split-utils       mag sonnet-5-5  3/3 $0.20 461k
+h6-split-utils       pla haiku-4-5   1/3 $0.08 470k
+h6-split-utils       pla opus-5-5    3/3 $0.14 158k
+h6-split-utils       pla sonnet-5    1/3 $0.16 488k
+h6-split-utils       pla sonnet-5-5  3/3 $0.06 118k
