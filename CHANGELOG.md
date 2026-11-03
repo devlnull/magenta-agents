@@ -4,6 +4,16 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+### Added
+
+- **A benchmark at each release.** `evals/benchmark/release.py` runs the benchmark (a plain prompt against `/magenta`, 18 tasks with hidden tests, 4 Claude models, 3 runs), writes `evals/benchmark/results/v<version>.json`, makes the images in `docs/assets/benchmark/`, and updates the benchmark block of the README. The release workflow stops when the results of the tag are missing or not published (`release.py check`).
+- The results of 0.14.0, 0.15.0, and 0.16.0 in `evals/benchmark/results/`, and a chart that compares the versions.
+- A new README with a banner, the benchmark results, and a table that tells when to use Magenta and when a plain prompt is enough.
+
+### Changed
+
+- The older benchmark notes and scripts are in `evals/benchmark/archive/`.
+
 ## [0.16.0] - 2026-11-03
 
 ### Added

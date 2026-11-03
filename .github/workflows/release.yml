@@ -39,6 +39,10 @@ jobs:
         run: |
           VERSION="${TAG#v}"
           grep -qx "release: $VERSION" magenta.yaml || { echo "magenta.yaml has no 'release: $VERSION'"; exit 1; }
+      - name: The benchmark of this version is present and current
+        # evals/benchmark/release.py: run, collect, and publish before the tag. Older tags have no release benchmark.
+        run: |
+          if [ -f evals/benchmark/release.py ]; then python evals/benchmark/release.py check "${TAG#v}"; fi
       - name: Build the release assets
         run: python magenta.py package --out release-assets
       - name: Publish the GitHub release

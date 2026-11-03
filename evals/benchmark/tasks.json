@@ -1,0 +1,20 @@
+[
+ {"id": "s1-pagination", "kind": "simple", "checks": "Fix an off-by-one in paginate; bad page and size raise the error that the docstring gives"},
+ {"id": "s2-discount", "kind": "simple", "checks": "Round a discount half up; reject a percent outside 0 to 100 as the docstring says"},
+ {"id": "s3-slugify", "kind": "simple", "checks": "Add max_length to slugify: cut at a word, no last dash, old behavior kept"},
+ {"id": "s4-email-refactor", "kind": "simple", "checks": "Merge two email checks into one function; each caller keeps its own behavior"},
+ {"id": "c1-order-totals", "kind": "complex", "checks": "Order totals follow RULES.md: discount order, VAT after discount, free shipping, half-up rounding"},
+ {"id": "c2-rate-limit", "kind": "complex", "checks": "A token-bucket login limit for each IP and each user, with retry-after (SPEC.md)"},
+ {"id": "c3-csv-import", "kind": "complex", "checks": "A CSV product import with validation, line numbers, and duplicate SKUs (SPEC.md)"},
+ {"id": "c4-idempotent-save", "kind": "complex", "checks": "Idempotent order save: the same request gives the same order, a paid order is not reused (SPEC.md)"},
+ {"id": "h1-rounding-trap", "kind": "hard", "checks": "VAT rounds half up, but refunds must still round down (a rule in a comment)"},
+ {"id": "h2-duplicates-speed", "kind": "hard", "checks": "Make find_duplicates fast, and keep the form and the order of the result"},
+ {"id": "h3-invoice-download", "kind": "hard", "checks": "Download an invoice: owner or admin only, no path traversal, only PDF (SECURITY.md)"},
+ {"id": "h4-price-cache", "kind": "hard", "checks": "Cache prices, but never return an old price after set_price"},
+ {"id": "h5-orders-format", "kind": "hard", "checks": "Add a field to a stored file format: old files still load, bad values are rejected"},
+ {"id": "h6-split-utils", "kind": "hard", "checks": "Split a module: the old imports still work, no copied code"},
+ {"id": "h7-user-export", "kind": "held-out", "checks": "Export users as CSV: support staff see masked email and phone, deleted users are hidden"},
+ {"id": "h8-api-field", "kind": "held-out", "checks": "Add a field to an API response with the naming rules of the API (snake_case, _rials, int)"},
+ {"id": "h9-catalog-cache", "kind": "held-out", "checks": "Cache a parsed file, but see a change to the file, and keep two files separate"},
+ {"id": "h10-retry-client", "kind": "held-out", "checks": "Retry GET on a timeout or 503, at most 3 tries; never retry POST or a 4xx"}
+]

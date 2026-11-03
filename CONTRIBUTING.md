@@ -30,7 +30,7 @@ After a change, run `python3 magenta.py build`. It also updates the committed pl
 4. **One owner for each file.** Each artifact and each checks file has one owner agent. `magenta.py validate` checks this.
 5. **Decisions as ADRs.** Record each durable decision in `docs/adr/` with the next number.
 6. **Tests.** Add or change tests in `tests/` for each change of behavior. Tests run on macOS, Linux, and Windows, with Python 3.9 and 3.13.
-7. **Evals.** After a change to the rules, the agents, the skills, or the model mapping, run the evals ([evals/README.md](evals/README.md)).
+7. **Evals.** After a change to the rules, the agents, the skills, or the model mapping, run the evals ([evals/README.md](evals/README.md)). A new benchmark task is welcome: a small repository in `evals/benchmark/fixtures.tar`, its hidden tests, a line in `bench.py` and in `evals/benchmark/tasks.json` ([evals/benchmark/README.md](evals/benchmark/README.md)).
 8. **Changelog.** Add a line under "Unreleased" in [CHANGELOG.md](CHANGELOG.md).
 
 ## Send a change

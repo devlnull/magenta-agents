@@ -3,11 +3,20 @@
 1. Optional: copy `standards/organization.example.md` to `standards/organization.md` and write your organization standards.
 2. Increase `release` in `magenta.yaml`.
 3. Add the changes to [`CHANGELOG.md`](../CHANGELOG.md). Optional: write longer release notes in `docs/releases/v<version>.md`.
-4. Run `python3 magenta.py build`. It also updates the committed plugin (`plugins/magenta/`, `.claude-plugin/marketplace.json`).
-5. Run `python3 magenta.py check` and `python3 -m unittest discover -s tests`. Commit and push.
-6. Create and push the tag: `git tag v<version> && git push origin v<version>`.
+4. Run the release benchmark (about 1 to 2 hours; it uses API credit). Commit the plugin first: the benchmark uses the committed plugin.
 
-The tag starts the `release` workflow. It runs the full CI on macOS, Linux, and Windows, checks that the tag agrees with `magenta.yaml`, builds the assets with `python3 magenta.py package`, and publishes the GitHub release:
+   ```bash
+   python3 magenta.py build && git commit -am "Build <version>"
+   cd evals/benchmark
+   python3 release.py run <version> && python3 release.py collect <version> && python3 release.py publish
+   ```
+
+   This writes `evals/benchmark/results/v<version>.json`, the images in `docs/assets/benchmark/`, and the benchmark block of `README.md`. Read the result. If the new version is worse than the last one, find the cause before the release. Write the main numbers in the changelog and the release notes.
+5. Run `python3 magenta.py build`. It also updates the committed plugin (`plugins/magenta/`, `.claude-plugin/marketplace.json`).
+6. Run `python3 magenta.py check` and `python3 -m unittest discover -s tests`. Commit and push.
+7. Create and push the tag: `git tag v<version> && git push origin v<version>`.
+
+The tag starts the `release` workflow. It runs the full CI on macOS, Linux, and Windows, checks that the tag agrees with `magenta.yaml`, checks that the benchmark of the version is present and current (`release.py check`), builds the assets with `python3 magenta.py package`, and publishes the GitHub release:
 
 | Asset | Content |
 |---|---|

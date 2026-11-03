@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 .magenta/
 .DS_Store
+evals/benchmark/fixtures/
+evals/benchmark/src*/
+evals/benchmark/runs*/
+evals/benchmark/plugins*/
