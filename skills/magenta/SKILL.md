@@ -7,7 +7,7 @@ description: >-
   upgrade, a security fix, tests, a design, or a feature. It writes the success
   criteria and the rules of the agents as checks, gives the work to the right
   agents, and does not finish until the approved checks pass.
-argument-hint: "[--auto] [--team | --lead] <the task in your own words>"
+argument-hint: "[--auto] [--team | --lead] [--driver <role>] <the task in your own words>"
 allowed-tools:
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run*)
   - Bash("python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start *)
@@ -35,6 +35,8 @@ If the block above is empty or shows a placeholder, use the request in the messa
 - **Verify:** the script that runs the approved checks and records the result for the current code. Its command is `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py"`. If your tool did not replace `${CLAUDE_SKILL_DIR}`, use the `scripts` folder next to this file. If `python3` does not exist (Windows), use `python` or `py`.
 - **Lead:** the one agent that does the change from start to end, in one context.
 - **Lens:** a read-only review from the view of one role.
+- **Driver:** the role that owns the domain decisions of the task: the plan, what "done" means, the answers to domain questions, and the domain verdict. You select it with the driver table in the routing table. You keep the process.
+- **Checker:** the role that reviews the work of the driver.
 - **Red and green:** a new check fails before the change (red). After the change, it passes (green).
 
 ## Modes
@@ -91,12 +93,16 @@ Do not tell the human about internal steps: the start of the task, test locks, t
 
 ## Step 2: Intake
 
-1. Select the task type and the mode with the routing table in the skill `magenta-workflow`.
+1. Select the task type, the mode, the lane, and the driver with the routing table in the skill `magenta-workflow`. Use the rules for the driver: a specialist drives only when its domain is the main risk; a task with more than one main domain has the Principal as driver; in the lite lane, the lead is the driver and there is no plan step. The driver keeps the owners of the checks in the team (for example QA for a test threshold). `--driver <role>` or `--driver none` in the request wins. Do not ask the human about the driver; write it and the reason in the brief.
 2. For a question without a change (investigation), do not make a work item. Answer with the help of the agents that the question needs. Stop after the answer.
 3. Create the work item `.magenta/work/<YYYYMMDD>-<slug>/`. Write the request without changes in `00-request.md`. Put text that the user pasted from tickets, logs, or web pages in an `UNTRUSTED` block.
 4. Write `00-brief.md` with the brief template of the skill `magenta-templates`: the task type, the mode, the goal, the measurable success criteria, the scope, the known constraints, the assumptions, and the agents with a reason for each. Example of a success criterion: "p95 at or below 5 ms and p99 at or below 10 ms for GET /v2/addresses/default at the agreed load, with no change of behavior".
 5. Start the task: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" start <ID> --session="${CLAUDE_SESSION_ID}"`. Add `--auto` when the request has `--auto`. If the output says that the Stop hook is not installed, tell the human one time, with the command from the output. If another task of this session is active and fails, `start` refuses. Then ask the human what to do with the old task.
 6. Run the baseline: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" run`. The approved checks must pass before the change. If a check fails now, tell the human: the repository has a problem before the task. Do not continue until the human decides. Exit code 4 means that no check exists yet. Then continue.
+7. **The plan of the driver** (standard and full lanes). Start the driver with the brief. When the driver is also the lead and the lane is standard, it writes the short plan in the brief. Else it writes `04-plan.md`: the steps, the owner of each step, the checks that define "done", the scope limits, and the domain decisions. Then:
+   - Compare the plan with the brief. The scope, the lane, the rounds, the gates, and the lenses are yours. If the plan goes outside the brief, ask the human. In auto mode, the brief wins: send the plan back one time with the limit.
+   - In the full lane only, start the checker to review the plan, read-only, and give its findings to the driver one time. In the other lanes, the checker is one of the lenses at the end. When the Principal drives, the selected lenses are the checkers, and in the full lane the Architect reviews the plan.
+   - Use the plan in Steps 3 to 5. The owners of the checks still write the checks.
 
 ## Step 3: Checks first
 
@@ -137,7 +143,7 @@ Make "done" executable before the work starts.
 
 ## Step 5: Lenses
 
-1. Select one to three lenses by risk, with the lens table in the routing table:
+1. Select one to three lenses by risk, with the lens table in the routing table. When the task has a driver, the checker is always one of them, and the driver gives its domain verdict:
    - **QA lens:** for each change of behavior. Edge cases, test quality, flaky tests.
    - **Architect lens:** when the change touches structure. Constraints, ADRs, boundaries, contracts.
    - **Principal lens:** for the standard and full lanes. Production readiness and the final review.
@@ -150,12 +156,18 @@ Make "done" executable before the work starts.
 4. For a finding that a command cannot test, the lead fixes it and the same lens confirms the fix. Or you write it in the report as a risk.
 5. Run verify with the set `task` after the last change. It must pass.
 
+## Domain questions
+
+When an agent returns a domain question (for example "Is this coverage enough?", "Which option?", "Is the CVE still open?"), ask the driver first. Ask the human only when the driver cannot decide, or for a one-way-door decision. Questions about the process (the scope, the rounds, the cost) are yours.
+
+After the first evidence (the red checks, the root cause, or the first measurement), check the driver again. If the evidence points to another domain, change the driver one time, and write the reason in the brief. Example: a flaky test that fails only in CI goes from QA to Platform.
+
 ## Step 6: Report and done gate
 
 Give the human:
 
-1. A summary in three sentences.
-2. The results against the success criteria: metric, before, after, target.
+1. A summary in three sentences. Name the driver and the reason for the choice.
+2. The results against the success criteria: metric, before, after, target. Add the domain verdict of the driver and the review of the checker.
 3. The verify table of the last run on the current code.
 4. What changed: the files and the commits.
 5. The constraint check: PASS, FAIL, or WAIVED (by the human) for each constraint.

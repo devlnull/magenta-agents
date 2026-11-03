@@ -4,6 +4,19 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-11-03
+
+### Added
+
+- **A driver for each task (ADR-0016).** The conductor stays the orchestrator and keeps the process. The driver owns the domain decisions: QA for tests, the Architect for a design, the SRE for an incident or reliability, Security for a vulnerability, Database for data changes, Platform for infrastructure, the Writer for docs, and the Principal for the other tasks and for tasks with more than one main domain. A different role checks the work of the driver. The conductor selects the driver from your request; `--driver <role>` or `--driver none` selects it by hand.
+- The rule `driver` for all agents, and the driver fields in the brief and plan templates.
+- `evals/driver/`: 26 scenarios, the runner, and the results of the comparison with 0.12.0.
+
+### Changed
+
+- Signal precedence in the routing: a CVE is a security task (also in an upgrade), a slow query whose fix is an index or a schema change is a data task, a CI/CD change is an infrastructure task. A task that only writes a design, an RFC, or an ADR uses the standard lane.
+- Domain questions of the agents go to the driver first, and to you only when the driver cannot decide or for a one-way-door decision.
+
 ## [0.12.0] - 2026-11-02
 
 ### Added
@@ -171,7 +184,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.12.0...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.13.0...HEAD
+[0.13.0]: https://github.com/devlnull/magenta-agents/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/devlnull/magenta-agents/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/devlnull/magenta-agents/compare/v0.10.3...v0.11.0
 [0.10.3]: https://github.com/devlnull/magenta-agents/compare/v0.10.2...v0.10.3

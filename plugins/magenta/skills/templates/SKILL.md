@@ -45,6 +45,7 @@ One-way door / two-way door. Reason:
 - Mode: <default | team>. Reason (the team trigger, or `--lead`):
 - Playbook (team mode): <name>
 - Lane: <lite | standard | full>. Reason:
+- Driver: <role | none (lite lane)>. Checker: <role>. Reason (the main domain risk, or `--driver`):
 - Goal (one sentence):
 
 ## Success criteria
@@ -234,6 +235,19 @@ flowchart LR
 ## Task type, playbook, and lane
 - Task type and playbook:
 - Lane: <lite|standard|full>. Reason:
+- Driver: <role>. Checker: <role>.
+
+## Done (the checks)
+| Success criterion | Check | Owner |
+|---|---|---|
+
+## Domain decisions
+| ID | Decision | Options | Reason |
+|---|---|---|---|
+
+## Scope limits
+- In the brief:
+- Not in this task:
 
 ## Constraint ledger
 | ID | Source (Architect, QA, Principal, SRE, Security, Database, Project, Human) | Constraint | How we verify |

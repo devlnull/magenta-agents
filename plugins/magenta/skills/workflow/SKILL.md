@@ -27,14 +27,47 @@ The conductor (skill `magenta`) and the Principal use these tables. First select
 | incident | production is down or degraded, urgent, hotfix | `incident` | `magenta:sre`, `magenta:principal`, `magenta:engineer`, `magenta:qa` | `magenta:architect`: after the mitigation, for the root cause. `magenta:platform`: a deployment or infrastructure cause. |
 | security | vulnerability, CVE, authentication, authorization, secrets | `security-fix` | `magenta:security`, `magenta:principal`, `magenta:engineer`, `magenta:qa` | `magenta:architect`: a structural fix. `magenta:platform`: a pipeline, image, or infrastructure fix. |
 | upgrade | upgrade a library, a framework, or a runtime | `upgrade` | `magenta:engineer`, `magenta:qa`, `magenta:principal` | `magenta:architect`: a major version or a breaking change. `magenta:security`: the upgrade fixes a CVE. `magenta:platform`: a runtime or base image upgrade. |
-| infrastructure | CI, CD, pipeline, Docker, Kubernetes, Helm, Terraform, deployment, build speed | `infrastructure` | `magenta:platform`, `magenta:sre` | `magenta:security`: secrets, permissions, or network exposure. |
+| infrastructure | CI, CD, pipeline, Docker, Kubernetes, Helm, Terraform, deployment, build speed | `infrastructure` | `magenta:platform`, `magenta:sre` | `magenta:security`: secrets, permissions, or network exposure. `magenta:qa`: the pipeline runs or gates tests (QA owns the thresholds). |
 | reliability | SLO, alert, dashboard, observability, timeout, retry, circuit breaker, capacity, postmortem action | `reliability` | `magenta:sre`, `magenta:engineer` or `magenta:platform`, `magenta:qa` | `magenta:principal`: a change of the SLOs of the team. |
 | data | schema change, migration, backfill, index, data cleanup | `standard` or `full` | `magenta:database`, `magenta:architect`, `magenta:engineer`, `magenta:qa` | `magenta:sre`: a long backfill or a large table. |
 | docs | documentation, README, guide, release notes, changelog | `docs` | `magenta:writer` | The owner of the subject reviews (for example `magenta:architect` for a design guide). |
 | tests | add tests, coverage, flaky tests, test speed | `tests` | `magenta:qa`, `magenta:engineer` | `magenta:principal`: the change affects CI for the team. |
 | design | design a solution, write an RFC or an ADR, select a technology | `design` | `magenta:architect`, `magenta:principal` | `magenta:product-manager`: scope or value questions. `magenta:qa`: testability. |
 
-If a request has two types (for example "find out the performance issue and fix it"), use the type of the final result (performance). Use the steps of the other type inside it.
+If a request has two types (for example "find out the performance issue and fix it"), use the type of the final result (performance). Use the steps of the other type inside it. These signals win over the others:
+
+- a CVE or a vulnerability, also in an upgrade: **security**;
+- a slow query whose fix is an index, a schema change, or a backfill: **data**;
+- production is down or degraded now: **incident**;
+- a change of a CI/CD pipeline, also for tests: **infrastructure**.
+
+### Driver
+
+The conductor runs the process. The **driver** owns the domain decisions of the task: it writes the plan (`04-plan.md`), says what "done" means as checks, answers the domain questions of the other agents, and gives the domain verdict at the end. A different role, the **checker**, reviews the work of the driver.
+
+| Task type | Driver | Checker of the driver |
+|---|---|---|
+| tests | `magenta:qa` | `magenta:principal`; `magenta:sre` for a load test |
+| design | `magenta:architect` | `magenta:principal`, and the specialists of the main risks as lenses on the draft |
+| incident, reliability | `magenta:sre` | `magenta:principal` |
+| security | `magenta:security` | `magenta:principal` |
+| data | `magenta:database` | `magenta:architect` |
+| infrastructure | `magenta:platform` | `magenta:sre` |
+| docs | `magenta:writer` | the owner of the subject |
+| bug, performance, improvement, feature, upgrade, review, investigation | `magenta:principal` | the selected lenses; in the full lane, also `magenta:architect` for the plan |
+
+Rules for the driver:
+
+1. **One domain.** A specialist drives when the task type is its domain. The Principal drives instead only when the task also has the main risk of another domain (team rules 5 to 7: SRE, Security, Database) or crosses more than one bounded context. Example: a new endpoint with a schema change, authentication, and a UI has the Principal as driver. The Architect always drives a design task, and the SRE always drives an incident.
+2. **Small tasks have no plan step.** In the lite lane, the lead is the driver: the conductor writes the short plan in the brief, the lead makes the domain decisions (for example QA decides when the tests are enough), and the lens checks the result. No checker reviews a plan.
+3. **The conductor keeps the process.** The scope of the brief, the lane, the maximum of three rounds, the gates, the checks, the lenses, and the cost belong to the conductor. The driver decides the domain questions inside the brief. If the plan of the driver goes outside the brief, the conductor asks the human. In auto mode, the brief wins: the conductor sends the plan back one time with the limit.
+4. **Evidence can change the driver.** After the first evidence (for example the red checks or the root cause), the conductor checks the driver again. If the evidence points to another domain, it changes the driver one time and writes the reason. Example: a flaky test that fails only in CI goes from QA to Platform.
+5. **The human can select.** `--driver <role>` selects the driver. `--driver none` uses no driver.
+6. **The driver keeps the owners.** The team of the driver has the owner of each check that "done" needs, and the owner of each kind of file that the plan changes. Examples: QA defines a threshold for test quality (coverage, mutation score), also when Platform drives. Platform changes the CI files, also when QA drives.
+7. **An incident is mitigated first.** The SRE drives the mitigation (rollback or flag) at once. The plan comes after the mitigation.
+8. **The checker is another role, without extra steps.** The checker is one of the lenses at the end. Only in the full lane, it also reviews the plan before the checks gate. The driver never reviews its own plan, checks, or design.
+9. **A design is done by review, not by checks.** For a design, an RFC, or an ADR, "done" is the review of the lenses on the draft and the decision of the human. Do not add a checks-first step.
+10. **No plan document when the driver is the lead.** When the driver also does the work (for example QA writes a load test, Platform makes the build faster), it writes the short plan in the brief. A separate `04-plan.md` is for the full lane, or when the driver and the lead are different roles.
 
 ### Modes
 
@@ -89,7 +122,7 @@ A lens is a read-only review from the view of one role. Each role describes its 
 
 1. Use the smallest team that covers the risks. Each agent in the team has a reason. Write the reason in the brief.
 2. QA is in the team for each change of behavior, performance, or tests.
-3. The Principal plans each standard or full task and does each final review.
+3. The driver plans each standard or full task (see Driver). The Principal does each final review.
 4. Add the Architect when the change crosses a module or service boundary, changes a data model, a schema, a cache, a public API, or an event contract, adds a dependency or a technology, or touches an area with an ADR.
 5. Add the SRE when the change affects production behavior: new or changed endpoints, remote calls, timeouts, retries, resource use, configuration, or rollout.
 6. Add the Security Engineer when the change touches authentication, authorization, input from outside, secrets, money, personal data, or adds a dependency.
@@ -107,7 +140,7 @@ A lens is a read-only review from the view of one role. Each role describes its 
 | standard | One bounded context, or the solution is not obvious, or a measurable target. | Checks gate or plan gate, done gate. Feature tasks also have the PRD gate. |
 | full | More than one bounded context, data migration, money or security flows, a one-way-door decision. | PRD gate (features), plan and design gate, done gate, release gate. |
 
-If more than one lane matches, use the heavier lane. Money, security, data migration, or a one-way-door decision always means the full lane.
+If more than one lane matches, use the heavier lane. Money, security, data migration, or a one-way-door decision always means the full lane. A task that only writes a design, an RFC, or an ADR uses the standard lane: the one-way-door decision is a decision of the human in it, not the change itself.
 
 ### Gates for tasks that are not features
 

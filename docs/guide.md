@@ -32,14 +32,14 @@ macOS and Linux:
 ```bash
 curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh
 # another tool or version:
-curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.12.0
+curl -fsSL https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.sh | sh -s -- --target codex --ref v0.13.0
 ```
 
 Windows (PowerShell):
 
 ```powershell
 irm https://raw.githubusercontent.com/devlnull/magenta-agents/main/install.ps1 | iex
-# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.12.0"
+# another tool or version: first set $env:MAGENTA_TARGET = "opencode" and $env:MAGENTA_REF = "v0.13.0"
 ```
 
 The script downloads the source to `~/.magenta-agents`, builds it, and installs it. The hooks use the Python that ran the install. To update, run the script again.
@@ -179,6 +179,23 @@ Approve only commands that you trust. A check runs on your computer. Do not sele
 python3 ~/.magenta-agents/magenta.py verify list      # read the checks
 python3 ~/.magenta-agents/magenta.py verify approve   # approve all new and changed checks
 ```
+
+## The driver of a task
+
+The conductor runs the process. For each task, it also selects a **driver**: the role that owns the domain decisions (the plan, what "done" means, "is it enough?", the domain verdict). Another role, the **checker**, reviews the work of the driver.
+
+| Task | Driver |
+|---|---|
+| tests | QA |
+| design, RFC, ADR | Architect |
+| incident, reliability | SRE |
+| security, CVE | Security |
+| schema, migration, index, backfill | Database |
+| CI/CD, containers, infrastructure | Platform |
+| docs | Writer |
+| bug, performance, refactor, feature, upgrade | Principal |
+
+The conductor selects the driver from your request. A task with more than one main domain has the Principal as driver, and a small task (lite lane) has no driver. To select it yourself: `--driver <role>`, or `--driver none`.
 
 ## Auto mode
 

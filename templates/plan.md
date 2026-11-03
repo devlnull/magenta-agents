@@ -5,6 +5,19 @@
 ## Task type, playbook, and lane
 - Task type and playbook:
 - Lane: <lite|standard|full>. Reason:
+- Driver: <role>. Checker: <role>.
+
+## Done (the checks)
+| Success criterion | Check | Owner |
+|---|---|---|
+
+## Domain decisions
+| ID | Decision | Options | Reason |
+|---|---|---|---|
+
+## Scope limits
+- In the brief:
+- Not in this task:
 
 ## Constraint ledger
 | ID | Source (Architect, QA, Principal, SRE, Security, Database, Project, Human) | Constraint | How we verify |

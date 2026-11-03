@@ -48,6 +48,10 @@ Two rules keep the result honest:
 1. **Maker and checker are different agents.** A maker never writes the checks that judge its work. Only the human approves a check.
 2. **One owner for each file.** Each file in `.magenta/` (checks, plans, reports) has one owner. A maker cannot write the files that its rules give to another role: for example, the Engineer does not change CI pipelines, Dockerfiles, or scanner rules. A maker reports a needed change to the owner. In strict mode ([ADR-0014](adr/0014-guard-modes.md)), the guard blocks all writes to the files of another role.
 
+## The driver of a task
+
+The conductor runs the process for each task. A **driver** role owns the domain decisions: QA for tests, the Architect for a design, the SRE for an incident or reliability, Security for a vulnerability, Database for data changes, Platform for infrastructure, the Writer for docs, and the Principal for the other tasks and for tasks with more than one main domain. A different role checks the work of the driver. See [ADR-0016](adr/0016-task-driver.md) and the driver table in `workflows/routing.md`.
+
 ## File ownership in a product repository
 
 | Files | Owner |

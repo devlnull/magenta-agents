@@ -1,0 +1,497 @@
+[
+ {
+  "id": "s01-cart-rounding-tests",
+  "request": "/magenta add edge-case tests for the cart total rounding",
+  "context": "PHP 8.3 service. PHPUnit tests in tests/Unit. Cart totals use integer rials and a discount percentage.",
+  "type": "tests",
+  "owner": "qa",
+  "must": [
+   "qa"
+  ],
+  "not": [
+   "sre",
+   "platform",
+   "security"
+  ],
+  "points": [
+   "risk-based test strategy: boundaries, zero and negative amounts, percentage rounding direction, large totals, many items",
+   "decides when the tests are enough from risk, not only from a count",
+   "no production code change unless a defect is found; a defect goes to the engineer"
+  ]
+ },
+ {
+  "id": "s02-order-event-contract",
+  "request": "/magenta design the order-created event contract between OMS and fulfillment",
+  "context": "Two bounded contexts. Events on Kafka. Consumers in two teams.",
+  "type": "design",
+  "owner": "architect",
+  "must": [
+   "architect"
+  ],
+  "not": [
+   "platform"
+  ],
+  "points": [
+   "options with trade-offs (fat vs thin event, schema registry, versioning)",
+   "compatibility and versioning rules, idempotency key, ordering per order",
+   "an ADR; a one-way-door decision goes to the human",
+   "a reviewer other than the designer checks the design"
+  ]
+ },
+ {
+  "id": "s03-flaky-ci-test",
+  "request": "/magenta fix the flaky test OrderSyncTest that fails only in CI",
+  "context": "The test passes locally 100 times. In CI it fails 1 of 10 runs. CI runs tests in parallel containers with 1 CPU.",
+  "type": "tests",
+  "owner": "qa|platform",
+  "must": [
+   "qa"
+  ],
+  "not": [],
+  "points": [
+   "reproduce under CI conditions (parallelism, 1 CPU, timing) before a fix",
+   "find the cause (shared state, time, ordering, resources) and fix the cause, not a retry",
+   "if the cause is the CI environment, the pipeline owner (platform) changes it",
+   "no weakening of the test"
+  ]
+ },
+ {
+  "id": "s04-double-order-bug",
+  "request": "/magenta fix the double order on payment save when the user submits twice",
+  "context": "Money path. MySQL. The save endpoint creates an order and a payment link.",
+  "type": "bug",
+  "owner": "principal",
+  "must": [
+   "qa",
+   "engineer"
+  ],
+  "not": [
+   "writer"
+  ],
+  "points": [
+   "a red test that reproduces the double submit",
+   "idempotency or a unique constraint, with the effect of locks considered",
+   "money path: full lane, security or database view, rollback plan"
+  ]
+ },
+ {
+  "id": "s05-endpoint-p95",
+  "request": "/magenta make GET /v2/addresses/default p95 at or below 5 ms; now the average is 10 ms",
+  "context": "Java Spring service. Redis is available. The endpoint reads from MySQL.",
+  "type": "performance",
+  "owner": "principal",
+  "must": [
+   "qa",
+   "engineer"
+  ],
+  "not": [
+   "writer"
+  ],
+  "points": [
+   "baseline measurement with a load test and thresholds as checks",
+   "profile first, then one change at a time",
+   "cache invalidation and staleness rules if a cache is added"
+  ]
+ },
+ {
+  "id": "s06-slow-query-migration",
+  "request": "/magenta fix the slow orders-by-customer query; it needs a new index on a 40M-row table",
+  "context": "MySQL 8, orders table 40M rows, online traffic all day.",
+  "type": "data",
+  "owner": "database",
+  "must": [
+   "database",
+   "engineer"
+  ],
+  "not": [
+   "writer"
+  ],
+  "points": [
+   "online index build without a blocking lock (ALGORITHM=INPLACE, LOCK=NONE or a tool)",
+   "verify the plan with EXPLAIN before and after",
+   "rollout and rollback of the migration; the old and the new code work at the same time"
+  ]
+ },
+ {
+  "id": "s07-cross-domain-feature",
+  "request": "/magenta add an endpoint to let customers save a delivery note on an order, with a new column, an auth check, and a field in the web checkout",
+  "context": "PHP API, MySQL, React web app. Customers can only change their own orders.",
+  "type": "feature",
+  "owner": "principal",
+  "must": [
+   "engineer",
+   "frontend",
+   "qa"
+  ],
+  "not": [],
+  "points": [
+   "balanced coverage of schema change, authorization (own orders only), input validation, and UI",
+   "no single specialist dominates the plan",
+   "acceptance tests for the behavior and an authorization test"
+  ]
+ },
+ {
+  "id": "s08-rename-config-key",
+  "request": "/magenta rename the config key payment.timeout to payment.timeout_ms",
+  "context": "One service. The key is read in one file. A default value exists.",
+  "type": "improvement",
+  "owner": "none|conductor|principal",
+  "must": [
+   "engineer"
+  ],
+  "not": [
+   "sre",
+   "security",
+   "database",
+   "platform",
+   "architect"
+  ],
+  "points": [
+   "small, lite lane: minimal agents and steps",
+   "keep backward compatibility or update all readers",
+   "no extra planning round"
+  ]
+ },
+ {
+  "id": "s09-cve-upgrade",
+  "request": "/magenta upgrade guzzlehttp/guzzle to fix CVE-2022-31090",
+  "context": "PHP service uses Guzzle 7.4.1 for remote calls.",
+  "type": "security",
+  "owner": "security",
+  "must": [
+   "security",
+   "engineer"
+  ],
+  "not": [
+   "writer"
+  ],
+  "points": [
+   "confirm the vulnerable version and whether the code path is reachable",
+   "the upgrade fixes it; a scanner or a version check as evidence",
+   "regression tests for the remote calls"
+  ]
+ },
+ {
+  "id": "s10-scope-creep",
+  "request": "/magenta --auto add a unit test for the PriceFormatter thousands separator",
+  "context": "PHP service. PriceFormatter has no tests. Many other classes also have no tests.",
+  "type": "tests",
+  "owner": "qa",
+  "must": [
+   "qa"
+  ],
+  "not": [
+   "sre",
+   "platform",
+   "security",
+   "database"
+  ],
+  "points": [
+   "stays in scope: tests for PriceFormatter only",
+   "no questions to the human except the checks approval",
+   "does not start a coverage program for other classes"
+  ]
+ },
+ {
+  "id": "s11-lcp-mobile",
+  "request": "/magenta make the checkout page LCP at or below 2.5 s on mobile; now it is 4 s",
+  "context": "React web app. Large hero image, two blocking scripts.",
+  "type": "performance",
+  "owner": "principal",
+  "must": [
+   "frontend",
+   "qa"
+  ],
+  "not": [
+   "database"
+  ],
+  "points": [
+   "lab measurement with a defined profile (device, network) as a check",
+   "find the LCP element and the cause first",
+   "budgets as checks; no change of behavior"
+  ]
+ },
+ {
+  "id": "s12-adr-sessions",
+  "request": "/magenta write an ADR for moving user sessions from Redis to the database",
+  "context": "Sessions in Redis today. 2M active users. The team wants fewer moving parts.",
+  "type": "design",
+  "owner": "architect",
+  "must": [
+   "architect"
+  ],
+  "not": [
+   "frontend"
+  ],
+  "points": [
+   "options and consequences (latency, load on the DB, expiry, failover)",
+   "capacity numbers or a question for them",
+   "a one-way-door note and a review by another role"
+  ]
+ },
+ {
+  "id": "s13-noisy-alerts",
+  "request": "/magenta our payment service alerts fire too often at night; tune them",
+  "context": "Prometheus alert rules in the repository. SLO 99.9% for payment save.",
+  "type": "reliability",
+  "owner": "sre",
+  "must": [
+   "sre"
+  ],
+  "not": [
+   "frontend",
+   "database"
+  ],
+  "points": [
+   "alerts based on the SLO (burn rate), not on raw thresholds",
+   "lint of the rules (promtool) as a check",
+   "no loss of real incident detection"
+  ]
+ },
+ {
+  "id": "s14-backfill",
+  "request": "/magenta backfill the new delivery_zone column for 50M orders",
+  "context": "MySQL 8, orders 50M rows, replicas used for reports.",
+  "type": "data",
+  "owner": "database",
+  "must": [
+   "database",
+   "engineer"
+  ],
+  "not": [
+   "frontend"
+  ],
+  "points": [
+   "batched backfill with throttling and replica lag control",
+   "resumable and idempotent",
+   "SRE view for the load during the backfill"
+  ]
+ },
+ {
+  "id": "s15-incident-5xx",
+  "request": "/magenta production has a 5xx spike on payment save since the deploy 20 minutes ago",
+  "context": "Deploy at 10:40. Error rate 8%. Rollback is possible.",
+  "type": "incident",
+  "owner": "sre",
+  "must": [
+   "sre"
+  ],
+  "not": [
+   "writer",
+   "product-manager"
+  ],
+  "points": [
+   "mitigate first (rollback or flag), before the root cause",
+   "no long planning before the mitigation",
+   "a test for the failure mode later, and a postmortem action"
+  ]
+ },
+ {
+  "id": "s16-readme-option",
+  "request": "/magenta add the new PAYMENT_TIMEOUT_MS option to the README",
+  "context": "One README. The option exists in the code.",
+  "type": "docs",
+  "owner": "none|writer",
+  "must": [
+   "writer"
+  ],
+  "not": [
+   "sre",
+   "security",
+   "database",
+   "platform",
+   "architect",
+   "principal"
+  ],
+  "points": [
+   "small, lite lane: one agent",
+   "the text agrees with the code (default value, unit)",
+   "no extra planning or review round"
+  ]
+ },
+ {
+  "id": "s17-mutation-ci",
+  "request": "/magenta add a mutation testing step to the CI pipeline for the payment module",
+  "context": "GitLab CI. PHP. Infection is the mutation tool. CI time today is 12 minutes.",
+  "type": "infrastructure|tests",
+  "owner": "platform|qa",
+  "must": [
+   "platform",
+   "qa"
+  ],
+  "not": [],
+  "points": [
+   "the pipeline file changes (platform owns it)",
+   "a threshold for the mutation score that QA defines",
+   "limit the CI time (only the payment module, cache)"
+  ]
+ },
+ {
+  "id": "s18-driver-override",
+  "request": "/magenta --driver qa fix the wrong VAT on discounted items",
+  "context": "PHP service. VAT is 10% of the price after the discount.",
+  "type": "bug",
+  "owner": "qa",
+  "must": [
+   "qa",
+   "engineer"
+  ],
+  "not": [],
+  "points": [
+   "a red test that reproduces the wrong VAT",
+   "the engineer fixes the code",
+   "the human choice of the driver is respected (0.13) or ignored (0.12)"
+  ]
+ },
+ {
+  "id": "s19-investigation",
+  "request": "/magenta find out why some orders get two shipments",
+  "context": "No fix requested now. Logs and code are available.",
+  "type": "investigation",
+  "owner": "principal|conductor",
+  "must": [],
+  "not": [
+   "engineer",
+   "frontend",
+   "platform"
+  ],
+  "points": [
+   "no work item and no code change",
+   "an answer with evidence (code paths, logs)",
+   "only the experts that the question needs"
+  ]
+ },
+ {
+  "id": "s20-auth-refactor",
+  "request": "/magenta refactor the token validation into one class; it is copied in four controllers",
+  "context": "PHP API. JWT tokens. The four copies differ a little.",
+  "type": "improvement",
+  "owner": "principal|security",
+  "must": [
+   "engineer",
+   "qa"
+  ],
+  "not": [
+   "frontend"
+  ],
+  "points": [
+   "characterization tests of the four current behaviors first",
+   "the differences are found and decided, not lost",
+   "a security view, because it is authentication"
+  ]
+ },
+ {
+  "id": "s21-spring-boot-3",
+  "request": "/magenta upgrade Spring Boot from 2.7 to 3.2",
+  "context": "Java 17 service, javax imports, Spring Security 5 config, 400 unit tests.",
+  "type": "upgrade",
+  "owner": "principal",
+  "must": [
+   "engineer",
+   "qa"
+  ],
+  "not": [
+   "writer"
+  ],
+  "points": [
+   "breaking changes found first (javax to jakarta, Security 6 config)",
+   "the project checks and smoke tests stay green",
+   "architect view for a major version; small steps with a rollback"
+  ]
+ },
+ {
+  "id": "s22-k6-load-test",
+  "request": "/magenta write a k6 load test for the checkout API at 500 requests per second",
+  "context": "Staging environment exists. No load tests in the repository.",
+  "type": "tests",
+  "owner": "qa",
+  "must": [
+   "qa"
+  ],
+  "not": [
+   "frontend",
+   "writer"
+  ],
+  "points": [
+   "a defined load profile, warm-up, and thresholds (p95, error rate) as a check",
+   "test data and the target environment named; never production",
+   "QA decides when the test is valid, SRE view optional"
+  ]
+ },
+ {
+  "id": "s23-dashboard-alerts",
+  "request": "/magenta add a dashboard and alerts for the new order service",
+  "context": "Prometheus and Grafana as code in the repository. The service has an SLO draft.",
+  "type": "reliability",
+  "owner": "sre",
+  "must": [
+   "sre"
+  ],
+  "not": [
+   "frontend",
+   "database"
+  ],
+  "points": [
+   "SLO-based alerts and a runbook for each alert",
+   "lint of the rules and the dashboards as checks",
+   "the platform or engineer writes the files, SRE defines them"
+  ]
+ },
+ {
+  "id": "s24-docker-build-speed",
+  "request": "/magenta our Docker image build takes 9 minutes; make it faster",
+  "context": "One multi-stage Dockerfile, composer install in the image, GitLab CI.",
+  "type": "infrastructure",
+  "owner": "platform",
+  "must": [
+   "platform"
+  ],
+  "not": [
+   "frontend",
+   "database"
+  ],
+  "points": [
+   "measure the build stages first",
+   "layer order and cache for dependencies, smaller context",
+   "the image behaves the same (smoke test), build time as a measured result"
+  ]
+ },
+ {
+  "id": "s25-login-rate-limit",
+  "request": "/magenta add rate limiting to the login endpoint against password guessing",
+  "context": "PHP API behind nginx. Redis available. Mobile and web clients.",
+  "type": "security",
+  "owner": "security",
+  "must": [
+   "security",
+   "engineer",
+   "qa"
+  ],
+  "not": [
+   "writer"
+  ],
+  "points": [
+   "a threat model: per account and per IP, lockout abuse",
+   "limits as tests (the 6th try in a minute is refused), no lockout of all users",
+   "SRE view: Redis failure behavior"
+  ]
+ },
+ {
+  "id": "s26-test-suite-speed",
+  "request": "/magenta the test suite takes 25 minutes; make it faster without losing coverage",
+  "context": "PHPUnit, 3000 tests, many use a real MySQL. CI in GitLab.",
+  "type": "tests",
+  "owner": "qa|platform",
+  "must": [
+   "qa"
+  ],
+  "not": [
+   "frontend"
+  ],
+  "points": [
+   "measure where the time goes first",
+   "keep the coverage and the test results the same (a check)",
+   "parallel runs or the CI change go through platform"
+  ]
+ }
+]

@@ -7,6 +7,7 @@
 - Mode: <default | team>. Reason (the team trigger, or `--lead`):
 - Playbook (team mode): <name>
 - Lane: <lite | standard | full>. Reason:
+- Driver: <role | none (lite lane)>. Checker: <role>. Reason (the main domain risk, or `--driver`):
 - Goal (one sentence):
 
 ## Success criteria
