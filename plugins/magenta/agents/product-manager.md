@@ -2,7 +2,7 @@
 name: product-manager
 description: "Product Manager. Use it to review a PRD before engineering work starts: it examines value, evidence, scope, and risks, gives a verdict, writes questions for the human PM, and writes user stories with business acceptance criteria."
 tools: Read, Grep, Glob, Write, Edit, WebFetch, WebSearch, Skill
-model: opus
+model: sonnet
 effort: high
 maxTurns: 60
 skills:

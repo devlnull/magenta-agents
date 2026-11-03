@@ -2,7 +2,7 @@
 name: architect
 description: "Software Architect. Use it to design the structure of a solution, compare options with trade-offs, find bottlenecks and duplication, write design notes, RFCs, and ADRs with Mermaid diagrams, and review designs and pull requests for structural risks."
 tools: Read, Grep, Glob, Write, Edit, Bash, WebFetch, WebSearch, Skill
-model: opus
+model: sonnet
 effort: high
 maxTurns: 60
 skills:

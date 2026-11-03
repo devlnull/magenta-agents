@@ -190,9 +190,36 @@ class ContextTest(RepoCase):
     def test_rule_files_and_callers(self):
         write(self.repo / "shop" / "money.py", "def to_rials(a):\n    return int(a)\n")
         write(self.repo / "shop" / "refunds.py", "from .money import to_rials\n\ndef refund(p):\n    return to_rials(p)\n")
-        write(self.repo / "SECURITY.md", "# Security\n\n- A user reads only their own data.\n")
+        write(self.repo / "SECURITY.md", "# Security\n\n- A user reads only their own data.\n- Only names that match\n  a pattern are valid; else raise `ValueError`.\nOther text.\n")
         git(self.repo, "add", "-A")
         text = verify.context(self.repo, ["shop/money.py"])
         self.assertIn("### SECURITY.md", text)
         self.assertIn("A user reads only their own data.", text)
+        self.assertIn("else raise `ValueError`", text)  # the continuation line of a rule
+        self.assertNotIn("Other text", text)
         self.assertIn("to_rials: shop/refunds.py:1:", text)
+
+
+class DirectRiskTest(RepoCase):
+    def ctx(self, *paths):
+        git(self.repo, "add", "-A")
+        return verify.context(self.repo, list(paths)).split("## Direct mode", 1)[1]
+
+    def test_a_plain_helper_is_direct(self):
+        write(self.repo / "shop" / "pages.py", "def paginate(items, page, size):\n    return items\n")
+        self.assertIn("Allowed", self.ctx("shop/pages.py"))
+
+    def test_a_rule_file_that_names_the_module(self):
+        write(self.repo / "shop" / "utils.py", "def slug(t):\n    return t\n")
+        write(self.repo / "CONTRIBUTING.md", "- `shop.utils` is a public API.\n")
+        self.assertIn("CONTRIBUTING.md names shop/utils.py", self.ctx("shop/utils.py"))
+
+    def test_sensitive_format_and_shared_callers(self):
+        write(self.repo / "shop" / "store.py", "import json\n\ndef save(p, o):\n    p.write_text(json.dumps(o))\n")
+        self.assertIn("stored format", self.ctx("shop/store.py"))
+        write(self.repo / "shop" / "login.py", "def login(user, password):\n    return user\n")
+        self.assertIn("sensitive area", self.ctx("shop/login.py"))
+        write(self.repo / "shop" / "conv.py", "def to_int(a):\n    return int(a)\n")
+        write(self.repo / "shop" / "a.py", "from .conv import to_int\n")
+        write(self.repo / "shop" / "b.py", "from .conv import to_int\n")
+        self.assertIn("to_int in shop/conv.py is used by 2 other files", self.ctx("shop/conv.py"))

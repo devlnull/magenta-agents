@@ -2,7 +2,8 @@
 import json, os, re, shutil, subprocess, sys, time, concurrent.futures as cf
 from pathlib import Path
 B = Path(__file__).resolve().parent
-SRC, FIX, RUNS = B / "src", B / "fixtures", B / "runs"
+TAG = os.environ.get("BENCH_TAG", "")
+SRC, FIX, RUNS = B / ("src" + TAG), B / "fixtures", B / ("runs" + TAG)
 TASKS = {
  "s1-pagination": ("simple", "Fix the bug: page 2 of paginate returns the wrong items. Follow the docstring."),
  "s2-discount": ("simple", "Discounts are rounded wrong: 15% of 1005 should give 854. Fix apply_discount. Follow the docstring."),
@@ -18,11 +19,15 @@ TASKS = {
  "h4-price-cache": ("hard", "get_price reads the database each time. Add a cache to make it fast."),
  "h5-orders-format": ("hard", "Add a status field (unpaid or paid) to the saved orders."),
  "h6-split-utils": ("hard", "Split shop/utils.py into shop/money.py (format_rials, parse_rials) and shop/text.py (slug, initials)."),
+ "h7-user-export": ("held-out", "Add export_users_csv(viewer) to shop/users.py. It returns the users as CSV text with the columns id, name, email, phone."),
+ "h8-api-field": ("held-out", "Add the discount of the order to the order response of the API."),
+ "h9-catalog-cache": ("held-out", "load_catalog reads and parses the file at each call. Add a cache."),
+ "h10-retry-client": ("held-out", "Remote calls fail sometimes with a timeout or a 503. Add retries to shop/http.py call(); use the sleep argument to wait."),
 }
 NOTE = " Work without questions: nobody can answer them. When the task is done, stop."
 
 def plugin_for(model):
-    dst = B / "plugins" / model
+    dst = B / ("plugins" + TAG) / model
     if dst.exists():
         return dst
     shutil.copytree(SRC / "plugins" / "magenta", dst)
@@ -50,7 +55,7 @@ def prepare(task, mode, model, k):
               "git commit -qm start"):
         sh(c, run)
     if mode == "magenta":
-        verify = B / "plugins" / model / "magenta" / "verify.py"
+        verify = B / ("plugins" + TAG) / model / "magenta" / "verify.py"
         (run / ".magenta" / "checks").mkdir(parents=True)
         (run / ".magenta" / "project-context.md").write_text(
             "# Project Context Profile\n\n- Status: CONFIRMED\n\nPython 3, pytest. Code in shop/, tests in tests/. "

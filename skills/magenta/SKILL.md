@@ -41,7 +41,7 @@ If the block above is empty or shows a placeholder, use the request in the messa
 
 ## Select the mode
 
-First run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" context <the files that the task changes>`. It lists the rule files of the repository and, for each function in these files, the other files that use it. Read the rules that apply. Then select one mode, and write the mode and the reason in one line.
+First run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" context <the files that the task changes>`. It lists the rule files of the repository and, for each function in these files, the other files that use it. Read the rules that apply. Its last section says whether direct mode is allowed: when it says "Not allowed", do not use direct mode. Then select one mode, and write the mode and the reason in one line.
 
 | Mode | Use it when | Cost |
 |---|---|---|
@@ -54,11 +54,12 @@ First run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" context <the files 
 ## Rules
 
 1. Read the rules near the change before you decide: the output of `context`, the docstrings and the comments of the changed code, and the rule files that apply. Keep the meaning that each caller needs. Before the report, check the result against each rule and caller that applies.
-2. Only the human approves checks and closes a task with failing checks. You may request `approve` or `--force`; Claude Code asks the human. Never try to avoid the dialog. Do not write `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, or `acceptance.lock`.
-3. Never make a check pass with a change to the check or to a locked test.
-4. Use the smallest team that covers the risks. Each agent has a reason.
-5. Never push, merge, or deploy.
-6. Talk to the human only for a question that only the human can answer, the checks to approve, and the final report. Do not report internal steps (verify, locks, hooks, which agent runs). Write each decision of the human in the brief.
+2. Follow the rules of the repository exactly: the names, the exception types, the formats, the defaults, and the behavior that the docstrings and the rule files give. Do not replace a rule by your own idea, also when you think that it is safer or better. Write the idea in the report, and let the human decide.
+3. Only the human approves checks and closes a task with failing checks. You may request `approve` or `--force`; Claude Code asks the human. Never try to avoid the dialog. Do not write `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, or `acceptance.lock`.
+4. Never make a check pass with a change to the check or to a locked test.
+5. Use the smallest team that covers the risks. Each agent has a reason.
+6. Never push, merge, or deploy.
+7. Talk to the human only for a question that only the human can answer, the checks to approve, and the final report. Do not report internal steps (verify, locks, hooks, which agent runs). Write each decision of the human in the brief.
 
 ## Auto mode (`--auto`)
 
@@ -67,7 +68,7 @@ First run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" context <the files 
 ## Direct mode
 
 1. `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" begin <ID> --session="${CLAUDE_SESSION_ID}"` (add `--auto` when requested). `<ID>` is `<YYYYMMDD>-<slug>`. You do not write work item files.
-2. Apply rule 1. If you find more risk than you expected (a rule, a caller with another meaning, money, security, a public API), stop direct mode and use the default mode.
+2. Apply rules 1 and 2. If you find more risk than you expected (a rule, a caller with another meaning, money, security, a public API), stop direct mode and use the default mode.
 3. For a bug or new behavior, write the test first in the project tests, and see it fail. Then change the code. Keep the change small. Do not start agents.
 4. `verify close`. It runs the checks and closes the task when they pass. If a check fails, fix the code and run `verify close` again (three rounds at most).
 5. Report in three to five lines: what changed, why, and the verify result.

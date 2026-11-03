@@ -819,6 +819,48 @@ RULE_FILE = re.compile(r"(RULES|SPEC|SECURITY|ARCHITECTURE|CONTRIBUTING|CONVENTI
 DEF_KEYWORDS = re.compile(r"^\s*(?:export\s+)?(?:async\s+)?(def|class|function|func|fn)\s+([A-Za-z_]\w*)")
 
 
+RISKY_WORDS = re.compile(r"auth|login|passw|token|secret|permission|role|admin|payment|refund|invoice|money|price|"
+                         r"wallet|migration|schema|personal|privacy|email|phone|address", re.I)
+FORMAT_CALLS = re.compile(r"\b(json\.(dump|load)s?|csv\.|pickle\.|yaml\.|open\(|write_text|read_text|\.to_json|serializ)", re.I)
+STOP = {"this", "that", "with", "from", "when", "then", "else", "each", "only", "must", "never", "always", "return",
+        "returns", "other", "never", "self", "none", "true", "false", "file", "files", "line", "lines", "value", "list"}
+
+
+def _words(text: str) -> set[str]:
+    return {w.lower() for w in re.findall(r"[A-Za-z_][A-Za-z0-9_]{3,}", text)} - STOP
+
+
+def direct_risks(repo: Path, paths: list[str], rules: dict[str, str], callers: dict[str, list[str]]) -> list[str]:
+    """The reasons why a change of these files is not a direct (small, low-risk) task. Found by a script."""
+    reasons = []
+    for path in paths:
+        try:
+            code = (repo / path).read_text(encoding="utf-8", errors="replace")
+        except OSError:
+            continue
+        module = Path(path).with_suffix("").as_posix()
+        names = _words(code)
+        for rule_file, text in rules.items():
+            dotted, slashed = module.replace("/", "."), module
+            shared = sorted(names & _words(text))
+            if dotted in text or slashed in text or Path(path).name in text:
+                reasons.append(f"{rule_file} names {path}")
+            elif len(shared) >= 3:
+                reasons.append(f"{rule_file} applies to {path} (shared words: {', '.join(shared[:6])})")
+        risky = sorted({m.group(0).lower() for m in RISKY_WORDS.finditer(path + " " + code)})
+        if risky:
+            reasons.append(f"{path} touches a sensitive area ({', '.join(risky[:6])})")
+        if FORMAT_CALLS.search(code):
+            reasons.append(f"{path} reads or writes a stored format (files or serialized data)")
+        for name, hits in callers.items():
+            if not name.startswith(path + ":"):
+                continue
+            modules = {h.split(":", 1)[0] for h in hits}
+            if len(modules) >= 2:
+                reasons.append(f"{name.split(':', 1)[1]} in {path} is used by {len(modules)} other files")
+    return reasons
+
+
 def context(repo: Path, paths: list[str], limit: int = 2500) -> str:
     """The rules and the callers for a change, found by a script (no model tokens): the rule files of the
     repository with their rule lines, and, for each function or class in the given files, where other files use it."""
@@ -827,14 +869,22 @@ def context(repo: Path, paths: list[str], limit: int = 2500) -> str:
     files = [n.decode("utf-8", "replace") for n in raw.split(b"\0") if n]
     rules = [f for f in files if (RULE_FILE.search(f) and f.count("/") <= 1) or f.startswith("docs/adr/")]
     rules += [p for p in (".magenta/project-context.md", ".magenta/lessons.md") if (repo / p).is_file()]
+    rule_text: dict[str, str] = {}
+    caller_hits: dict[str, list[str]] = {}
     for name in rules[:20]:
         try:
             text = (repo / name).read_text(encoding="utf-8", errors="replace")
         except OSError:
             continue
-        keep = [l.rstrip() for l in text.splitlines()
-                if l.strip() and (l.lstrip()[:1] in "-*#|" or l.lstrip()[:2].rstrip(".").isdigit())]
+        keep, inside = [], False  # rule lines (bullets, numbers, headings, tables) and their continuation lines
+        for l in text.splitlines():
+            start = l.strip() and (l.lstrip()[:1] in "-*#|" or l.lstrip()[:2].rstrip(".").isdigit())
+            if start or (inside and l.strip() and l[:1] in " \t"):
+                keep.append(l.rstrip())
+            inside = bool(start or (inside and l.strip() and l[:1] in " \t"))
         lines += [f"### {name}", ("\n".join(keep) or text)[:limit]]
+        if not name.startswith(".magenta/"):
+            rule_text[name] = text
     if len(lines) == 1:
         lines.append("(none)")
     lines.append("## Callers")
@@ -854,8 +904,13 @@ def context(repo: Path, paths: list[str], limit: int = 2500) -> str:
             out = _git(repo, "grep", "-n", "-I", "-E", pattern, "--", ".", f":(exclude){path}", ":(exclude).magenta",
                        ":(exclude)*.md", ":(exclude)*.txt", ":(exclude)*.json", ":(exclude)*.lock")
             hits = [h[:120].rstrip() for h in _text(out).splitlines() if h] if out else []
+            caller_hits[f"{path}:{name}"] = hits
             shown = "; ".join(hits[:8]) + (f" (+{len(hits) - 8})" if len(hits) > 8 else "")
             lines.append(f"- {path}: {name}: " + (shown if hits else "no other use"))
+    risks = direct_risks(repo, paths, rule_text, caller_hits)
+    lines.append("## Direct mode")
+    lines.append("Not allowed:\n" + "\n".join(f"- {r}" for r in risks) if risks else
+                 "Allowed: no rule file, sensitive area, stored format, or shared caller found.")
     return "\n".join(lines)
 
 

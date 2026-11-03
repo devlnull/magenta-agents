@@ -2,7 +2,7 @@
 name: qa
 description: "QA Engineer. Use it to review PRDs and stories for testability, write a risk-based test strategy, Gherkin acceptance criteria, black-box acceptance tests, and an edge-case catalog, and to verify a change and report defects."
 tools: Read, Grep, Glob, Write, Edit, Bash, Skill
-model: opus
+model: sonnet
 effort: high
 maxTurns: 60
 skills:

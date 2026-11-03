@@ -2,7 +2,7 @@
 name: principal
 description: "Senior Principal Engineer and lead of the Magenta team. Use it to start a work item, put a request into a lane, plan the work with a constraint ledger, settle disagreements between agents, check production readiness, and do the final technical review with a constraint check. Under the /magenta conductor, it does only the step that the conductor asks for."
 tools: Read, Grep, Glob, Write, Edit, Agent, Bash, Skill
-model: opus
+model: sonnet
 effort: high
 maxTurns: 60
 skills:

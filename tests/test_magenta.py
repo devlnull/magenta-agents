@@ -151,7 +151,7 @@ class BuildInstallTest(unittest.TestCase):
             agent = (dist / "agents" / "magenta-qa.md").read_text(encoding="utf-8")
             meta, body = split_front_matter(agent)
             self.assertEqual(meta["name"], "magenta-qa")
-            self.assertEqual(meta["model"], "opus")
+            self.assertEqual(meta["model"], "sonnet")  # models.yaml, benchmark 2026-11-03
             self.assertIn("Bash", meta["tools"])
             self.assertNotIn("Agent", meta["tools"])
             self.assertIn(claude_code.GUARD_TOKEN, meta["hooks"]["PreToolUse"][0]["hooks"][0]["command"])

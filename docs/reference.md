@@ -27,7 +27,7 @@ All commands run with `python3 magenta.py <command>` from the Magenta folder (fo
 | `verify begin <ID> --session=<id> [--auto]` | Start or resume a task, and run the baseline (the conductor uses it). |
 | `verify gate <ID> [test files]` | Lock the test files of the task, and show the checks that wait for approval with the approve command. |
 | `verify close` | Run the checks of the task, and finish the task when they pass. A failing task stays open. |
-| `verify context [files]` | Show the rule files of the repository and, for each function in the files, the other files that use it. A script: no model tokens. |
+| `verify context [files]` | Show the rule files of the repository, the other files that use each function in the files, and whether direct mode is allowed (not when a rule file applies, the files touch a sensitive area, read or write a stored format, or have callers in two or more files). A script: no model tokens. |
 | `verify status --repo <repo>` | Show the active task and the result for the current code. |
 | `lock <repo> <work-item> [--files FILE ...]` | Lock the tests of a work item. |
 | `check-lock <repo> <work-item>` | Fail if the locked tests changed. |

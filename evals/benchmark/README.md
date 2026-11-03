@@ -62,3 +62,47 @@ python3 analyze.py && python3 charts.py
 | Time for each task | 24 s | 321 s | **106 s** |
 
 By model (hidden tests, 0.14 → 0.15; tokens saved): Opus 5.5 100% → 100% (−59%), Sonnet 5.5 100% → 97% (−71%; one security task raised `PermissionError` where the rule says `ValueError`), Sonnet 5 95% → 98% (−59%), Haiku 4.5 86% → 90% (−82%). By difficulty: simple 93% → 97%, complex 99% → 99%, hard 94% → 94%. The conductor selected direct mode in 34 of 56 runs.
+
+# Magenta 0.16 (2026-11-03)
+
+![0.16](benchmark-0.16.png)
+
+0.16 changes: the direct-mode verdict of `verify context`, the rule "follow the rules of the repository exactly", Sonnet as the default strong model, and a fix that keeps all lines of a rule in the `context` output.
+
+This run is larger: 18 tasks (14 old tasks and 4 held-out tasks, h7 to h10, that were not used to tune Magenta), 2 models, and 3 runs for each cell (108 runs for each mode). The ± value is the standard deviation of the 3 runs.
+
+| | Plain prompt | Magenta 0.16 |
+|---|---|---|
+| Hidden tests passed | 91.4% ±2.3 | **93.1% ±0.9** |
+| Tasks with all hidden tests passed | 85 of 108 | **86 of 108** |
+| Old tests still pass | 106 of 108 | **108 of 108** |
+| Tokens for each task | **261k** | 509k |
+| Cost for each task | **$0.070** | $0.143 |
+| Time for each task | **26 s** | 51 s |
+
+| Scope | Plain prompt | Magenta 0.16 |
+|---|---|---|
+| Sonnet 5.5 | 99.2% | **100%** (54 of 54) |
+| Haiku 4.5 | 83.5% | **86.1%** |
+| Simple tasks | **97.9%** | 93.8% |
+| Complex tasks | **98.0%** | 97.4% |
+| Hard tasks (hidden rules) | 84.7% | **94.7%** |
+| Held-out tasks | **88.2%** | 85.6% |
+
+## Findings
+
+1. Magenta gives the most on hard tasks with hidden rules (+10 points). Haiku 4.5: 71.8% → 89.4%.
+2. With Sonnet 5.5, Magenta passed all hidden tests in all runs. The plain prompt failed one task once.
+3. Magenta never broke an old test. The plain prompt broke old tests in 2 runs.
+4. With Haiku 4.5, Magenta was worse on simple tasks (95.8% → 87.6%) and on held-out tasks (76.4% → 71.1%). The small model fails the same way in each run (for example s1: 5 of 7, h7: 3 of 6, h8: 2 of 5).
+5. The cost is about two times the cost of a plain prompt. Compare: 0.14 was about ten times.
+6. The conductor did most tasks in direct mode. It started other agents rarely.
+
+## Run it again
+
+```bash
+tar -xf fixtures.tar
+mkdir src-016 && git -C <magenta-agents> archive v0.16.0 | tar -x -C src-016
+BENCH_TAG=016 python3 bench.py claude-sonnet-5-5,claude-haiku-4-5 plain,magenta all 3 6
+python3 final016.py && python3 charts016.py
+```

@@ -2,7 +2,7 @@
 name: database
 description: "Database Engineer. Use it for a schema change, a data migration or backfill, a slow query, an index, or a change of data access patterns. It designs safe, reversible migrations, tunes queries with evidence, and writes migration and query checks. The Engineer writes the migration code from its plan."
 tools: Read, Grep, Glob, Write, Edit, Bash, WebFetch, WebSearch, Skill
-model: opus
+model: sonnet
 effort: high
 maxTurns: 60
 skills:

@@ -15,7 +15,9 @@
 
 profiles:
   reasoning-high:
-    claude-code: opus
+    # Benchmark 2026-11-03 (evals/benchmark): with Magenta, Sonnet passed as many hidden tests as Opus at about a
+    # quarter of the cost. Use opus here for very hard design or review work.
+    claude-code: sonnet
     effort: high
     # opencode: anthropic/<model-id>
     runner: {engine: claude}
@@ -28,8 +30,9 @@ profiles:
     claude-code: haiku
     runner: {engine: claude}
   reviewer-alt:
-    # A model of another family, for independent review (QA and final review).
-    claude-code: opus
+    # A model of another family, for independent review (QA and final review). On Claude Code alone: sonnet
+    # (benchmark 2026-11-03); put a model of another family in the opencode or runner lines for real independence.
+    claude-code: sonnet
     effort: high
     # opencode: openai/<model-id>        # or google/<model-id>, or xai/<model-id>
     # codex: <openai-model-id>

@@ -2,7 +2,7 @@
 name: security
 description: "Security Engineer. Use it for a vulnerability or a CVE, authentication, authorization, secrets, payment or personal data, input from outside the system, or a new dependency. It makes threat models, reviews code for security, triages dependency findings, and writes security scanners as checks."
 tools: Read, Grep, Glob, Write, Edit, Bash, WebFetch, WebSearch, Skill
-model: opus
+model: sonnet
 effort: high
 maxTurns: 60
 skills:

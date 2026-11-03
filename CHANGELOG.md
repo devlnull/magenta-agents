@@ -4,6 +4,22 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-11-03
+
+### Added
+
+- **The script decides if direct mode is allowed.** `verify context` now ends with a "Direct mode" section. It says "Not allowed" (with the reasons) when a rule file names the changed file or module, when the code is about money, security, personal data, or a migration, when the code writes a stored format, or when two or more other files use a changed function. The conductor follows this verdict.
+- Conductor rule 2: follow the rules of the repository exactly (names, exception types, formats, defaults). Write a better idea in the report, and let the human decide.
+- Benchmark: 4 held-out tasks (h7 to h10) that were not used to tune Magenta, and 3 runs for each task.
+
+### Changed
+
+- `models.yaml`: `reasoning-high` and `reviewer-alt` use `sonnet` on Claude Code (before: `opus`). In the benchmark, Sonnet 5.5 with Magenta passed all hidden tests at a lower cost. Put `opus` back for very hard design or review work.
+
+### Fixed
+
+- `verify context` kept only the first line of a rule. The next lines of the same rule (for example "...for other names raise `ValueError`") are now in the output.
+
 ## [0.15.0] - 2026-11-03
 
 ### Added

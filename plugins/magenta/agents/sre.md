@@ -2,7 +2,7 @@
 name: sre
 description: "Site Reliability Engineer. Use it when a change affects production behavior: new or changed endpoints, remote calls, timeouts, retries, resource use, configuration, rollout, capacity, or observability. It defines SLOs and alerts, reviews resilience and operational readiness, leads the analysis of incidents, and writes runbooks and postmortems."
 tools: Read, Grep, Glob, Write, Edit, Bash, WebFetch, WebSearch, Skill
-model: opus
+model: sonnet
 effort: high
 maxTurns: 60
 skills:
