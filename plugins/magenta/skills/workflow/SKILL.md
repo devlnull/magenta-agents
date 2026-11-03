@@ -75,12 +75,12 @@ Use the default mode for most tasks. Use team mode only when a team trigger appl
 
 | Task type | Lead (default mode) | Checks first | Lenses |
 |---|---|---|---|
-| bug | `magenta:engineer` or `magenta:frontend` | QA: a test that reproduces the bug (red). | QA. Architect, when the cause is structural. |
+| bug | `magenta:engineer` or `magenta:frontend` | The lead: a test that reproduces the bug (red). QA writes it when the QA rule applies. | QA, when the QA rule applies. Architect, when the cause is structural. |
 | performance | `magenta:engineer` or `magenta:frontend` | QA: a measurement with the thresholds (red). Architect: the structural constraints (consistency, staleness, boundaries). | QA, Architect, Principal |
-| improvement | `magenta:engineer` or `magenta:frontend` | QA: characterization tests (green). Architect: the target structure as rules (red). | Architect, QA |
+| improvement | `magenta:engineer` or `magenta:frontend` | The existing tests, or characterization tests by the lead (green). Architect: the target structure as rules (red). | Architect. QA, when the QA rule applies. |
 | tests | `magenta:qa` | The project checks. | Principal, when the change affects CI for the team. |
-| upgrade | `magenta:engineer` | The project checks. QA: smoke tests for the changed behavior. | QA, Principal |
-| incident | `magenta:engineer` | QA: a test for the failure mode, when there is time. | SRE, Principal |
+| upgrade | `magenta:engineer` | The project checks. QA: smoke tests, when the QA rule applies. | Principal. QA, when the QA rule applies. |
+| incident | `magenta:engineer` | The lead: a test for the failure mode, when there is time. | SRE, Principal |
 | feature (small and clear) | `magenta:engineer` or `magenta:frontend` | QA: acceptance tests (red). Architect: the contracts. | QA, Architect, Principal |
 | investigation | None. The conductor or `magenta:principal` answers, read-only. | None. | None. |
 | review | None. | None. | The review panel: QA, Architect, Principal. SRE, Security, and Database by the lens table. |
@@ -111,7 +111,7 @@ A lens is a read-only review from the view of one role. Each role describes its 
 
 | Lens | Use it when the change |
 |---|---|
-| QA | changes behavior |
+| QA | changes behavior that users or other systems see, or the QA rule applies |
 | Architect | touches structure: boundaries, dependencies, contracts, data model, areas with an ADR |
 | Principal | is in the standard or full lane (production readiness and final review) |
 | SRE | adds or changes remote calls, timeouts, retries, resource use, configuration, or rollout |
@@ -121,7 +121,7 @@ A lens is a read-only review from the view of one role. Each role describes its 
 ### Team rules
 
 1. Use the smallest team that covers the risks. Each agent in the team has a reason. Write the reason in the brief.
-2. QA is in the team for each change of behavior, performance, or tests.
+2. **The QA rule.** Add QA only when one of these applies: (a) the task type is tests; (b) a feature, or a change of behavior that users or other systems see; (c) money, security, personal data, or a data migration; (d) a performance target (QA measures it); (e) the existing tests do not cover the changed code, and the change is not trivial. Else the lead writes the tests of its change before the change, and the human approves them with the checks. The project checks and the lenses judge the result.
 3. The driver plans each standard or full task (see Driver). The Principal does each final review.
 4. Add the Architect when the change crosses a module or service boundary, changes a data model, a schema, a cache, a public API, or an event contract, adds a dependency or a technology, or touches an area with an ADR.
 5. Add the SRE when the change affects production behavior: new or changed endpoints, remote calls, timeouts, retries, resource use, configuration, or rollout.

@@ -18,6 +18,7 @@ git show v0.12.0:workflows/routing.md > ver/v12/routing.md
 cp ../../skills/magenta/SKILL.md ../../workflows/routing.md ver/v13/
 python3 run.py 3 v13      # 3 runs of each scenario; about 15 USD
 python3 final.py v13 3
+# compare two new versions: python3 run.py 3 <new> <base>; then python3 qa.py (QA use)
 ```
 
 ## Limits

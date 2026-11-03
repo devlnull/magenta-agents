@@ -108,7 +108,7 @@ Do not tell the human about internal steps: the start of the task, test locks, t
 
 Make "done" executable before the work starts.
 
-1. Start `qa` with the brief. Ask it to write, for this work item:
+1. When the QA rule of the routing table applies, start `qa` with the brief. Else start the lead for this step only: it writes the tests of its change before the change, and returns. Ask for, for this work item:
    - one check for each success criterion in `.magenta/checks/qa.yaml`, with `work_item: <ID>`;
    - a test that fails now: a reproduction for a bug, a measurement with the thresholds for performance, an acceptance test for new behavior;
    - for a refactor: characterization tests that pass now.
@@ -118,7 +118,7 @@ Make "done" executable before the work starts.
    - `security` (`security.yaml`): scanner rules and security tests;
    - `database` (`database.yaml`): migration lint, migration tests, query checks. It also writes the migration plan in `03-data.md` for the lead.
    Collect the test requests of the specialists and give them to `qa`. QA writes these tests before the lock.
-3. Lock the test files that QA and the Architect wrote: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" lock <ID> <file> <file> ...`.
+3. Lock the test files that QA, the Architect, or the lead wrote in this step: `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" lock <ID> <file> <file> ...`.
 4. **Checks gate.** Run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" list`. Show the human, as a short table: the success criteria, the new checks with their commands, the locked test files, and the plan in three lines. Then request the approval: run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" approve <id> <id> ... lock.<ID>` with the ids of the new checks and the lock. Claude Code shows its permission dialog with the checks. The human confirms or refuses there. In the default mode, this gate is also the plan gate.
    - If the human confirms, the checks are approved, and the test lock is sealed. Continue.
    - If the human refuses, stop. Ask what to change. The owner of the check changes it, and you request the approval again.
@@ -144,7 +144,7 @@ Make "done" executable before the work starts.
 ## Step 5: Lenses
 
 1. Select one to three lenses by risk, with the lens table in the routing table. When the task has a driver, the checker is always one of them, and the driver gives its domain verdict:
-   - **QA lens:** for each change of behavior. Edge cases, test quality, flaky tests.
+   - **QA lens:** for a change of behavior that users or other systems see, or when the QA rule applies. Edge cases, test quality, flaky tests.
    - **Architect lens:** when the change touches structure. Constraints, ADRs, boundaries, contracts.
    - **Principal lens:** for the standard and full lanes. Production readiness and the final review.
    - **SRE lens:** remote calls, timeouts, retries, resource use, configuration, or rollout.

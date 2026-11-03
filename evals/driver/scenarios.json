@@ -493,5 +493,84 @@
    "keep the coverage and the test results the same (a check)",
    "parallel runs or the CI change go through platform"
   ]
+ },
+ {
+  "id": "s27-debug-log",
+  "request": "/magenta add a debug log line with the order id at the start of the payment save flow",
+  "context": "PHP service with Monolog. Logs are structured JSON.",
+  "type": "improvement",
+  "owner": "none|conductor|principal|engineer",
+  "must": [
+   "engineer"
+  ],
+  "not": [
+   "qa",
+   "sre",
+   "security",
+   "database",
+   "architect"
+  ],
+  "points": [
+   "one small change, lite lane, one agent",
+   "no personal data in the log line",
+   "no extra tests beyond the project checks"
+  ]
+ },
+ {
+  "id": "s28-patch-bump",
+  "request": "/magenta bump monolog/monolog from 3.5.0 to 3.5.1",
+  "context": "Patch release with two bug fixes. composer.lock in the repository. Project checks exist.",
+  "type": "upgrade",
+  "owner": "none|conductor|principal|engineer",
+  "must": [
+   "engineer"
+  ],
+  "not": [
+   "qa",
+   "architect",
+   "database"
+  ],
+  "points": [
+   "lite lane: update the lock file and run the project checks",
+   "read the changelog of the patch",
+   "no new test plan"
+  ]
+ },
+ {
+  "id": "s29-extract-method",
+  "request": "/magenta extract the duplicated price calculation in CartService and OrderService into one method",
+  "context": "PHP. The two copies are the same. Unit tests cover both services well (95% lines).",
+  "type": "improvement",
+  "owner": "principal|engineer|none|conductor",
+  "must": [
+   "engineer"
+  ],
+  "not": [
+   "sre",
+   "database",
+   "security"
+  ],
+  "points": [
+   "the existing tests are the safety net; no new test program",
+   "the behavior stays the same",
+   "small, lite or standard lane"
+  ]
+ },
+ {
+  "id": "s30-refund-rule",
+  "request": "/magenta change the refund rule: a refund above 10,000,000 rials needs the approval of a manager",
+  "context": "PHP service. Refunds are money. A manager role exists.",
+  "type": "feature",
+  "owner": "principal",
+  "must": [
+   "qa",
+   "engineer"
+  ],
+  "not": [],
+  "points": [
+   "acceptance tests for the boundary (exactly 10M, above, below)",
+   "authorization: only a manager approves",
+   "money path: full lane, a security view"
+  ]
  }
 ]

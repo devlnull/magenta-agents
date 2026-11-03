@@ -9,7 +9,7 @@ Magenta has eleven roles. A task uses only the roles that its risks need. The co
 | `principal` | lead | standard and full lanes, conflicts, final review | plan, project context, final review | `project.yaml` | Principal |
 | `product-manager` | advisor | a PRD, or a change of user-facing scope | PRD review, stories | - | - |
 | `architect` | advisor | the change touches structure | design, ADRs, RFCs, architecture tests | `architect.yaml` | Architect |
-| `qa` | reviewer | each change of behavior | test plan, tests, quality verdict | `qa.yaml` | QA |
+| `qa` | reviewer | tests, features, visible behavior changes, money or security, performance targets, and code without tests (the QA rule) | test plan, tests, quality verdict | `qa.yaml` | QA |
 | `engineer` | maker | server code | server code, migration code | - | - |
 | `frontend` | maker | client code | client code | - | - |
 | `sre` | reviewer | production behavior changes, incidents, SLOs | reliability design, runbooks, postmortems | `sre.yaml` | SRE |

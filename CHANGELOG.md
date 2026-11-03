@@ -4,6 +4,12 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-11-03
+
+### Changed
+
+- **QA only when the task needs it.** QA joins for tests, features and behavior changes that users or other systems see, money, security, personal data, data migrations, performance targets, and changed code without tests. For other tasks (a log line, a patch upgrade, a refactor with good tests, alerts, docs), the lead writes the tests of its change before the change; they are locked, and you approve them with the checks. In the evaluation (30 scenarios, 3 runs each), QA took part 24% less, never where it was not wanted, was never missing where it was needed, and the plans won 51 to 26 against 0.13.0 (13 ties). See `evals/driver/results.md`.
+
 ## [0.13.0] - 2026-11-03
 
 ### Added
@@ -184,7 +190,8 @@ The first published release.
 - Headless runner for PRD reviews and pull request reviews, with CI templates.
 - Installers for macOS, Linux, and Windows.
 
-[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.13.0...HEAD
+[Unreleased]: https://github.com/devlnull/magenta-agents/compare/v0.14.0...HEAD
+[0.14.0]: https://github.com/devlnull/magenta-agents/compare/v0.13.0...v0.14.0
 [0.13.0]: https://github.com/devlnull/magenta-agents/compare/v0.12.0...v0.13.0
 [0.12.0]: https://github.com/devlnull/magenta-agents/compare/v0.11.0...v0.12.0
 [0.11.0]: https://github.com/devlnull/magenta-agents/compare/v0.10.3...v0.11.0
