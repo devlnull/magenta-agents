@@ -4,31 +4,28 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
-### Added
-
-- **A benchmark at each release.** `evals/benchmark/release.py` runs the benchmark (a plain prompt against `/magenta`, 18 tasks with hidden tests, 4 Claude models, 3 runs), writes `evals/benchmark/results/v<version>.json`, makes the images in `docs/assets/benchmark/`, and updates the benchmark block of the README. The release workflow stops when the results of the tag are missing or not published (`release.py check`).
-- The results of 0.14.0, 0.15.0, and 0.16.0 in `evals/benchmark/results/`, and a chart that compares the versions.
-- A new README with a banner, the benchmark results, and a table that tells when to use Magenta and when a plain prompt is enough.
-
-### Changed
-
-- The older benchmark notes and scripts are in `evals/benchmark/archive/`.
-
-## [0.16.0] - 2026-11-03
+## [0.16.0] - 2026-11-04
 
 ### Added
 
 - **The script decides if direct mode is allowed.** `verify context` now ends with a "Direct mode" section. It says "Not allowed" (with the reasons) when a rule file names the changed file or module, when the code is about money, security, personal data, or a migration, when the code writes a stored format, or when two or more other files use a changed function. The conductor follows this verdict.
 - Conductor rule 2: follow the rules of the repository exactly (names, exception types, formats, defaults). Write a better idea in the report, and let the human decide.
 - Benchmark: 4 held-out tasks (h7 to h10) that were not used to tune Magenta, and 3 runs for each task.
+- **A benchmark at each release.** `evals/benchmark/release.py` runs the benchmark (a plain prompt against `/magenta`, 18 tasks with hidden tests, 4 Claude models, 3 runs), writes `evals/benchmark/results/v<version>.json`, makes the images in `docs/assets/benchmark/`, and updates the benchmark block of the README. The release workflow stops when the results of the tag are missing or not published (`release.py check`).
+- The results of 0.14.0, 0.15.0, and 0.16.0 in `evals/benchmark/results/`, and a chart that compares the versions.
+- A new README with a banner, the benchmark results, and a table that tells when to use Magenta and when a plain prompt is enough.
 
 ### Changed
 
 - `models.yaml`: `reasoning-high` and `reviewer-alt` use `sonnet` on Claude Code (before: `opus`). In the benchmark, Sonnet 5.5 with Magenta passed all hidden tests at a lower cost. Put `opus` back for very hard design or review work.
+- The older benchmark notes and scripts are in `evals/benchmark/archive/`.
 
 ### Fixed
 
 - `verify context` kept only the first line of a rule. The next lines of the same rule (for example "...for other names raise `ValueError`") are now in the output.
+- On macOS, `verify context` found no callers: the system regex of `git grep -E` has no `\b` and `\s`. It now uses POSIX character classes.
+- On Windows, the guard read a rooted path without a drive (for example the verify script path) as a project file, and blocked verify commands.
+- The fingerprint copy of the git index kept a new modification time. Git could then miss an edit of the same size in the same second, and an old PASS could count for new code.
 
 ## [0.15.0] - 2026-11-03
 

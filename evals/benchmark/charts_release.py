@@ -17,6 +17,7 @@ plt.rcParams.update({
     "axes.axisbelow": True, "figure.facecolor": SURFACE, "axes.facecolor": SURFACE, "savefig.facecolor": SURFACE,
     "svg.hashsalt": "magenta", "savefig.dpi": 160,
 })
+COST_VERSIONS = 2  # the versions in the cost panel of versions.png
 META = {"Software": None, "Creation Time": None}  # the same data gives the same file
 
 
@@ -135,15 +136,19 @@ def history(vs, out):
     a1.set_ylim(lo - 6, 101); a1.set_xticks(x, names); a1.set_xlim(-0.3, len(x) - 0.7)
     a1.set_title("Hidden tests passed (%)", loc="left", fontsize=12, color=INK)
     w = 0.36
+    last = rows[-COST_VERSIONS:]  # the cost panel shows only the newest versions
+    xc = list(range(len(last)))
     for off, i, color in ((-w / 2 - 0.01, 1, PLAIN), (w / 2 + 0.01, 2, MAGENTA)):
-        bars = a2.bar([j + off for j in x], [r[i]["cost"] for r in rows], w, color=color, zorder=2)
-        a2.bar_label(bars, labels=[f"${r[i]['cost']:.2f}" for r in rows], padding=3, fontsize=10)
-    a2.set_xticks(x, names); a2.set_title("Cost for each task (USD)", loc="left", fontsize=12, color=INK)
+        bars = a2.bar([j + off for j in xc], [r[i]["cost"] for r in last], w, color=color, zorder=2)
+        a2.bar_label(bars, labels=[f"${r[i]['cost']:.2f}" for r in last], padding=3, fontsize=10)
+    a2.set_ylim(0, max(r[i]["cost"] for r in last for i in (1, 2)) * 1.2)
+    a2.set_xticks(xc, [f"v{r[0]}" for r in last])
+    a2.set_title(f"Cost for each task (USD), last {len(last)} versions", loc="left", fontsize=12, color=INK)
     a2.yaxis.set_major_formatter(lambda v, _: f"${v:.2f}")
     for a in (a1, a2):
         a.tick_params(axis="x", length=0, labelcolor=INK)
-    q0, q1, c0, c1 = rows[0][2]["hidden"], rows[-1][2]["hidden"], rows[0][2]["cost"], rows[-1][2]["cost"]
-    _title(fig, f"Since v{rows[0][0]}: hidden tests {q0:.1f}% → {q1:.1f}%, cost for each task {(c1 / c0 - 1) * 100:+.0f}%",
+    q0, q1 = rows[0][2]["hidden"], rows[-1][2]["hidden"]
+    _title(fig, f"Since v{rows[0][0]}: hidden tests passed {q0:.1f}% → {q1:.1f}% with Magenta",
            "The 14 tasks that every version ran, with the models of that run.")
     _legend(fig)
     _save(fig, out / "versions.png")
@@ -163,10 +168,8 @@ def card(vs, out):
     ax.text(70, 488, "Role-based AI agents for Claude Code. Done means the checks pass.", fontsize=18, color="#c9c3d1")
     tiles = [(f"{hard['plain']['hidden']:.0f}% → {hard['magenta']['hidden']:.0f}%", "hidden tests passed\non hard tasks"),
              (f"{b['hidden']:.0f}%", f"hidden tests, {R.NAMES[best]}\n(${b['cost']:.2f} for each task)")]
-    if len(vs) > 1:
-        first = R.stats(R.select(vs[0], "magenta", tasks=R.CORE))["cost"]
-        now = R.stats(R.select(v, "magenta", tasks=R.CORE))["cost"]
-        tiles.append((f"−{(1 - now / first) * 100:.0f}%", f"cost for each task\nsince v{vs[0]['version']}"))
+    m = s["all"]["magenta"]
+    tiles.append((f"{m['old_tests_kept']}/{m['runs']}", "runs with all old\ntests still passing"))
     for i, (big, small) in enumerate(tiles):
         x0 = 70 + i * 385
         ax.add_patch(FancyBboxPatch((x0, 120), 350, 270, boxstyle="round,pad=0,rounding_size=18", color="#231d2b"))
