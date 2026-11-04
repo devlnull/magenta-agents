@@ -158,7 +158,7 @@ def card(vs, out):
     """A 1280 x 640 image to share (the GitHub social preview)."""
     v = vs[-1]; s = R.summary(v)
     hard = s["by_kind"]["hard"]
-    best = max(v["setup"]["models"], key=lambda x: (s["by_model"][x]["magenta"]["hidden"], -s["by_model"][x]["magenta"]["cost"]))
+    best = R.best_value(s, v["setup"]["models"])
     b = s["by_model"][best]["magenta"]
     fig = plt.figure(figsize=(12.8, 6.4), dpi=100)
     fig.patch.set_facecolor("#15121a")

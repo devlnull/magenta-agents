@@ -567,7 +567,8 @@ def start(repo: Path, item: str, session=None, force: bool = False, auto: bool =
         _write_json(_mdir(repo) / "active.json", data)
     else:
         note = f"replaced the task {current} of another session" if current and other_session else ""
-        data = {"work_item": item, "session": session, "base_fingerprint": fingerprint(repo), "started_at": _now(),
+        data = {"work_item": item, "session": session, "base_fingerprint": fingerprint(repo),
+                "base_tree": _tree_fingerprint(repo), "agents": [], "started_at": _now(),
                 "blocks": 0, "previous": current or data.get("last"), "note": note, "auto": bool(auto)}
         _write_json(_mdir(repo) / "active.json", data)
     if data.get("session"):
@@ -584,12 +585,79 @@ def finish(repo: Path, force: bool = False) -> dict:
     if not force and _blocks_close(repo, data):
         raise VerifyError(f"the checks of {item} do not pass on the current code ({status}). Fix them, or ask the "
                           f"human to close the task: {self_command()} finish --force")
+    gaps = [] if force else mode_gaps(repo, data)
+    if gaps:
+        raise VerifyError(mode_text(item, gaps))
     out = {"work_item": None, "last": item, "last_status": status + (" (closed by the human)" if force else ""),
            "finished_at": _now()}
     _write_json(_mdir(repo) / "active.json", out)
     if data.get("session"):
         _forget_session(repo, data["session"])
     return out
+
+
+# ----- the mode of a risky task -----
+
+TEST_PATH = re.compile(r"(^|/)(tests?|spec|__tests__)/|(^|/)tests?_[^/]*$|_tests?\.[^/.]+$|Tests?\.[^/.]+$"
+                       r"|\.(test|spec)\.[^/.]+$")
+CODE_SUFFIXES = {".py", ".php", ".js", ".jsx", ".ts", ".tsx", ".java", ".kt", ".cs", ".go", ".rb", ".rs", ".scala",
+                 ".swift", ".c", ".cc", ".cpp", ".h", ".sql", ".vue", ".svelte"}
+
+
+def changed_code(repo: Path, data: dict) -> list[str]:
+    """The code files that the task changed (not the tests and not the docs), from the tree at `begin`."""
+    base = data.get("base_tree")
+    now = _tree_fingerprint(repo)
+    if not base or not now or base == now:
+        return []
+    base, now = base.split(":", 1)[-1], now.split(":", 1)[-1]  # "tree:<sha>"
+    out = _git(repo, "diff-tree", "-r", "--name-only", "--no-renames", "-z", base, now) or b""
+    names = [n.decode("utf-8", "replace") for n in out.split(b"\0") if n]
+    return [n for n in names if Path(n).suffix.lower() in CODE_SUFFIXES and not TEST_PATH.search(n)
+            and (repo / n).is_file()]
+
+
+def mode_gaps(repo: Path, data: dict) -> list[str]:
+    """What a risky task still needs before it closes. A change is risky when the rule scan of the changed code
+    says that direct mode is not allowed. Then "done" needs checks that the human approved for this task (the
+    checks gate) and, in Claude Code, at least one review agent. The result is cached for each fingerprint."""
+    item = data.get("work_item")
+    if not item or not data.get("base_tree"):
+        return []  # no task, or a task of an older version
+    key = fingerprint(repo)
+    cache = data.get("mode_check") or {}
+    if cache.get("fingerprint") == key and key is not None:
+        risks = cache.get("risks") or []
+    else:
+        paths = changed_code(repo, data)
+        risks = scan(repo, paths)[1] if paths else []
+        data["mode_check"] = {"fingerprint": key, "risks": risks[:8]}
+        if _mdir(repo).joinpath("active.json").is_file():
+            current = active(repo)
+            if current.get("work_item") == item:
+                _write_json(_mdir(repo) / "active.json", dict(current, mode_check=data["mode_check"]))
+    if not risks:
+        return []
+    gaps = []
+    try:
+        runnable = required(repo, "task")[0]
+    except (VerifyError, test_lock.LockError, OSError):
+        runnable = []
+    if not any(c.get("work_item") == item for c in runnable):
+        gaps.append(f"no check of this task is approved: write the checks and the tests first, then run "
+                    f"`{self_command()} gate {item} <test files>` and ask the human to approve")
+    reviewers = [a for a in (active(repo).get("agents") or data.get("agents") or []) if a not in MAKERS]
+    if data.get("session") and not reviewers:
+        gaps.append("no review agent ran: start one or more lenses of the routing table (for example qa, "
+                    "security, architect) with the brief and the diff")
+    return [f"why: {'; '.join(risks[:3])}"] + gaps if gaps else []
+
+
+def mode_text(item: str, gaps: list[str]) -> str:
+    why, rest = gaps[0], gaps[1:]
+    return (f"{item} changed risky code, so it needs the default mode ({why}). Before it closes:\n"
+            + "\n".join(f"- {g}" for g in rest)
+            + f"\nOnly the human can close it without these: {self_command()} finish --force")
 
 
 # ----- selection and evaluation -----
@@ -864,6 +932,16 @@ def direct_risks(repo: Path, paths: list[str], rules: dict[str, str], callers: d
 def context(repo: Path, paths: list[str], limit: int = 2500) -> str:
     """The rules and the callers for a change, found by a script (no model tokens): the rule files of the
     repository with their rule lines, and, for each function or class in the given files, where other files use it."""
+    lines, risks = scan(repo, paths, limit)
+    lines.append("## Direct mode")
+    lines.append("Not allowed:\n" + "\n".join(f"- {r}" for r in risks) + "\nUse the default mode: the checks "
+                 "gate, a lead agent, and the lenses. `verify close` does not close this task without them."
+                 if risks else "Allowed: no rule file, sensitive area, stored format, or shared caller found.")
+    return "\n".join(lines)
+
+
+def scan(repo: Path, paths: list[str], limit: int = 2500) -> tuple[list[str], list[str]]:
+    """(the lines of `context` without the verdict, the reasons why direct mode is not allowed)."""
     lines = ["## Rule files"]
     raw = _git(repo, "ls-files", "-z") or b""
     files = [n.decode("utf-8", "replace") for n in raw.split(b"\0") if n]
@@ -910,11 +988,7 @@ def context(repo: Path, paths: list[str], limit: int = 2500) -> str:
             caller_hits[f"{path}:{name}"] = hits
             shown = "; ".join(hits[:8]) + (f" (+{len(hits) - 8})" if len(hits) > 8 else "")
             lines.append(f"- {path}: {name}: " + (shown if hits else "no other use"))
-    risks = direct_risks(repo, paths, rule_text, caller_hits)
-    lines.append("## Direct mode")
-    lines.append("Not allowed:\n" + "\n".join(f"- {r}" for r in risks) if risks else
-                 "Allowed: no rule file, sensitive area, stored format, or shared caller found.")
-    return "\n".join(lines)
+    return lines, direct_risks(repo, paths, rule_text, caller_hits)
 
 
 def short_summary(outcome: dict) -> str | None:
@@ -1012,6 +1086,11 @@ def subagent_start(event: dict) -> None:
     _write_json(_agent_file(repo, data["session"], event["agent_id"]),
                 {"agent_id": event["agent_id"], "agent_type": event.get("agent_type"), "started_at": _now(),
                  "blocks": 0})
+    agent = _magenta_agent(event.get("agent_type"))
+    if agent:  # the evidence of the mode: the agents that ran for this task
+        agents = list(data.get("agents") or [])
+        if agent not in agents:
+            _write_json(_mdir(repo) / "active.json", dict(data, agents=agents + [agent]))
 
 
 def subagent_stop(event: dict) -> tuple[int, str]:
@@ -1081,7 +1160,19 @@ def hook(event: dict) -> tuple[int, str]:
         return 0, ""  # not a git repository, or the code did not change
     result = evaluate(repo, current)
     if result["status"] == PASS:
-        return 0, ""
+        gaps = mode_gaps(repo, data)
+        if not gaps:
+            return 0, ""
+        data = active(repo)
+        state_key = hashlib.sha256(json.dumps(["mode", current, gaps]).encode("utf-8")).hexdigest()[:16]
+        blocks = (int(data.get("blocks") or 0) if event.get("stop_hook_active") else 0) + 1
+        if data.get("reminded") == state_key or blocks > MAX_BLOCKS:
+            return _note_once(repo, data, ["mode", state_key],
+                              f"Magenta: {item} changed risky code without approved checks or a review. "
+                              "It stays open.")
+        data.update(blocks=blocks, reminded=state_key)
+        _write_json(_mdir(repo) / "active.json", data)
+        return 2, "Magenta: " + mode_text(item, gaps)
     # Tell the human only what needs the human, one time for each state. Internal states stay internal.
     if result["pending_linked"]:
         return _note_once(repo, data, ["pending", sorted(result["pending_linked"])],
@@ -1501,6 +1592,10 @@ def main(argv=None) -> int:
             outcome = run(repo, "task")
             print(summary(outcome))
             code = exit_code(outcome)
+            gaps = mode_gaps(repo, active(repo)) if code in (0, 4) else []
+            if gaps:
+                print("The task stays open. " + mode_text(active(repo).get("work_item"), gaps))
+                return 5
             if code == 0 or (code == 4 and not active(repo).get("work_item")):
                 data = finish(repo)
                 print(f"Task {data['last'] or '(none)'} finished: {data['last_status']}.")

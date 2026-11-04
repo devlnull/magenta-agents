@@ -4,6 +4,18 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-11-04
+
+### Fixed
+
+- **Magenta did not start its agents with some models.** With Sonnet 5.5 (in all risky runs of the benchmark) and Haiku 4.5 (16 of 25), the conductor wrote "default mode" and then did all the work alone: no checks gate, no lead agent, no review. Now the scripts enforce the mode. When the rule scan of the changed code says that direct mode is not allowed, `verify close`, `verify finish`, and the Stop hook keep the task open until checks of the task are approved and, in Claude Code, a review agent ran. `verify close` exits with 5 and tells what is missing. Only the human closes the task without them (`finish --force`).
+- The SubagentStart hook keeps the list of the Magenta agents that ran for the task (the evidence).
+- The skill says that in default mode the conductor does not change the code itself.
+
+### Changed
+
+- Benchmark (new runs for Sonnet 5.5 and Haiku 4.5): subagents in 82 of 108 runs (before: 11), and no risky run without a review (before: 53 of 62). Hidden tests 95.8% → 96.4% (Haiku 4.5 86.1% → 89.2%, Sonnet 5.5 100% → 99.2%). Cost for each task with Magenta: $0.50 → $0.69 (Sonnet 5.5 $0.14 → $0.44, Haiku 4.5 $0.15 → $0.60).
+
 ## [0.16.0] - 2026-11-04
 
 ### Added

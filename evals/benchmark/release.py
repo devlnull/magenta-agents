@@ -152,6 +152,13 @@ def cmd_collect(a):
           f"magenta {s['magenta']['hidden']}% ${s['magenta']['cost']} ({len(runs)} runs)")
 
 
+def best_value(s, models):
+    """The cheapest model whose hidden-test score is within one point of the best score."""
+    top = max(s["by_model"][m]["magenta"]["hidden"] for m in models)
+    return min((m for m in models if s["by_model"][m]["magenta"]["hidden"] >= top - 1.0),
+               key=lambda m: s["by_model"][m]["magenta"]["cost"])
+
+
 def readme_block(vs):
     v = vs[-1]
     s = v["summary"]
@@ -183,7 +190,7 @@ def readme_block(vs):
         f"(hard tasks: {hard['plain']['hidden']:.0f}% → {hard['magenta']['hidden']:.0f}%), and smaller models. "
         "**Where it does not:** small, clear tasks with a strong model. There, a plain prompt is as good and cheaper.",
     ]
-    best = max(v["setup"]["models"], key=lambda x: (s["by_model"][x]["magenta"]["hidden"], -s["by_model"][x]["magenta"]["cost"]))
+    best = best_value(s, v["setup"]["models"])
     b = s["by_model"][best]["magenta"]
     lines += ["", f"**Best value:** {NAMES[best]} with Magenta passed {b['hidden']:.0f}% of the hidden tests "
               f"({b['all_passed']} of {b['runs']} runs with all hidden tests passed) at ${b['cost']:.2f} for each task."]

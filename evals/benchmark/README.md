@@ -29,30 +29,31 @@ Each release of Magenta runs the same benchmark before it is tagged. The release
 <!-- scenarios:start -->
 | Task | Kind | What the hidden tests check | Plain | Magenta |
 |---|---|---|---:|---:|
-| `s1-pagination` | simple | Fix an off-by-one in paginate; bad page and size raise the error that the docstring gives | 100% | 93% |
-| `s2-discount` | simple | Round a discount half up; reject a percent outside 0 to 100 as the docstring says | 96% | 95% |
+| `s1-pagination` | simple | Fix an off-by-one in paginate; bad page and size raise the error that the docstring gives | 100% | 98% |
+| `s2-discount` | simple | Round a discount half up; reject a percent outside 0 to 100 as the docstring says | 96% | 97% |
 | `s3-slugify` | simple | Add max_length to slugify: cut at a word, no last dash, old behavior kept | 100% | 100% |
 | `s4-email-refactor` | simple | Merge two email checks into one function; each caller keeps its own behavior | 100% | 100% |
-| `c1-order-totals` | complex | Order totals follow RULES.md: discount order, VAT after discount, free shipping, half-up rounding | 99% | 98% |
-| `c2-rate-limit` | complex | A token-bucket login limit for each IP and each user, with retry-after (SPEC.md) | 98% | 98% |
-| `c3-csv-import` | complex | A CSV product import with validation, line numbers, and duplicate SKUs (SPEC.md) | 100% | 100% |
-| `c4-idempotent-save` | complex | Idempotent order save: the same request gives the same order, a paid order is not reused (SPEC.md) | 99% | 99% |
-| `h1-rounding-trap` | hard | VAT rounds half up, but refunds must still round down (a rule in a comment) | 92% | 94% |
-| `h2-duplicates-speed` | hard | Make find_duplicates fast, and keep the form and the order of the result | 100% | 100% |
+| `c1-order-totals` | complex | Order totals follow RULES.md: discount order, VAT after discount, free shipping, half-up rounding | 99% | 99% |
+| `c2-rate-limit` | complex | A token-bucket login limit for each IP and each user, with retry-after (SPEC.md) | 98% | 94% |
+| `c3-csv-import` | complex | A CSV product import with validation, line numbers, and duplicate SKUs (SPEC.md) | 100% | 98% |
+| `c4-idempotent-save` | complex | Idempotent order save: the same request gives the same order, a paid order is not reused (SPEC.md) | 99% | 98% |
+| `h1-rounding-trap` | hard | VAT rounds half up, but refunds must still round down (a rule in a comment) | 92% | 100% |
+| `h2-duplicates-speed` | hard | Make find_duplicates fast, and keep the form and the order of the result | 100% | 98% |
 | `h3-invoice-download` | hard | Download an invoice: owner or admin only, no path traversal, only PDF (SECURITY.md) | 84% | 100% |
 | `h4-price-cache` | hard | Cache prices, but never return an old price after set_price | 100% | 100% |
-| `h5-orders-format` | hard | Add a field to a stored file format: old files still load, bad values are rejected | 79% | 85% |
+| `h5-orders-format` | hard | Add a field to a stored file format: old files still load, bad values are rejected | 79% | 88% |
 | `h6-split-utils` | hard | Split a module: the old imports still work, no copied code | 72% | 100% |
-| `h7-user-export` | held-out | Export users as CSV: support staff see masked email and phone, deleted users are hidden | 85% | 82% |
-| `h8-api-field` | held-out | Add a field to an API response with the naming rules of the API (snake_case, _rials, int) | 98% | 82% |
-| `h9-catalog-cache` | held-out | Cache a parsed file, but see a change to the file, and keep two files separate | 100% | 100% |
-| `h10-retry-client` | held-out | Retry GET on a timeout or 503, at most 3 tries; never retry POST or a 4xx | 92% | 99% |
+| `h7-user-export` | held-out | Export users as CSV: support staff see masked email and phone, deleted users are hidden | 85% | 83% |
+| `h8-api-field` | held-out | Add a field to an API response with the naming rules of the API (snake_case, _rials, int) | 98% | 85% |
+| `h9-catalog-cache` | held-out | Cache a parsed file, but see a change to the file, and keep two files separate | 100% | 97% |
+| `h10-retry-client` | held-out | Retry GET on a timeout or 503, at most 3 tries; never retry POST or a 4xx | 92% | 100% |
 <!-- scenarios:end -->
 
 ## Results of each version
 
 | Version | Results | Notes |
 |---|---|---|
+| 0.16.1 | [results/v0.16.1.json](results/v0.16.1.json) | New Magenta runs for Sonnet 5.5 and Haiku 4.5 (the mode fix). The other runs are the runs of 0.16.0. |
 | 0.16.0 | [results/v0.16.0.json](results/v0.16.0.json) | 18 tasks, 4 models, 3 runs. |
 | 0.15.0 | [results/v0.15.0.json](results/v0.15.0.json) | 14 tasks, 4 models, 1 run. The plain runs are the runs of 0.14.0. |
 | 0.14.0 | [results/v0.14.0.json](results/v0.14.0.json) | The first benchmark: 14 tasks, 4 models, 1 run. |

@@ -28,23 +28,23 @@ It works best with [Claude Code](https://code.claude.com). OpenCode, Codex CLI, 
 ## Benchmark
 
 <!-- benchmark:start -->
-Measured on Magenta 0.16.0 (2026-11-03): 18 coding tasks with hidden tests, 4 Claude models, 3 runs of each task. The same model does the same task with a plain prompt and with `/magenta`.
+Measured on Magenta 0.16.1 (2026-11-04): 18 coding tasks with hidden tests, 4 Claude models, 3 runs of each task. The same model does the same task with a plain prompt and with `/magenta`.
 
 <p align="center"><img src="docs/assets/benchmark/headline.png" alt="Hidden tests passed on hard tasks, a plain prompt against Magenta, for each model" width="860"></p>
 
 | | Plain prompt | Magenta |
 |---|---:|---:|
-| Simple tasks | **99.0%** | 96.9% |
-| Complex tasks (a spec) | **99.0%** | 98.7% |
-| Hard tasks (hidden rules) | 87.9% | **96.6%** |
-| Held-out tasks | **93.7%** | 90.6% |
-| **All tasks** | 94.1% | **95.8%** |
+| Simple tasks | **99.0%** | 98.6% |
+| Complex tasks (a spec) | **99.0%** | 97.2% |
+| Hard tasks (hidden rules) | 87.9% | **97.6%** |
+| Held-out tasks | **93.7%** | 91.4% |
+| **All tasks** | 94.1% | **96.4%** |
 | Old tests still pass | 210 of 216 | 214 of 216 |
-| Cost for each task | $0.114 | $0.503 |
+| Cost for each task | $0.114 | $0.694 |
 
-**Where Magenta helps:** tasks where the repository has rules that the request does not say (hard tasks: 88% → 97%), and smaller models. **Where it does not:** small, clear tasks with a strong model. There, a plain prompt is as good and cheaper.
+**Where Magenta helps:** tasks where the repository has rules that the request does not say (hard tasks: 88% → 98%), and smaller models. **Where it does not:** small, clear tasks with a strong model. There, a plain prompt is as good and cheaper.
 
-**Best value:** Sonnet 5.5 with Magenta passed 100% of the hidden tests (54 of 54 runs with all hidden tests passed) at $0.14 for each task.
+**Best value:** Sonnet 5.5 with Magenta passed 99% of the hidden tests (52 of 54 runs with all hidden tests passed) at $0.44 for each task.
 
 <p align="center"><img src="docs/assets/benchmark/versions.png" alt="Quality and cost of each Magenta version" width="860"></p>
 

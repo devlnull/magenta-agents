@@ -228,3 +228,82 @@ class DirectRiskTest(RepoCase):
         write(self.repo / "shop" / "conv.py", "def to_int(a):\n    return int(a)\n")
         write(self.repo / "shop" / "a.py", "from .other import to_integer\nx = to_integer(1)\n")
         self.assertIn("Allowed", self.ctx("shop/conv.py"))
+
+
+class RiskyModeTest(RepoCase):
+    """A change that the rule scan calls risky closes only with approved checks of the task and a review agent."""
+
+    def cli(self, *args):
+        return subprocess.run([sys.executable, str(VERIFY), "--repo", str(self.repo), *args], capture_output=True,
+                              text=True, cwd=self.repo)
+
+    def setUp(self):
+        super().setUp()
+        write(self.repo / "SECURITY.md", "- Only the owner or an admin reads an invoice.\n")
+        write(self.repo / "shop" / "invoices.py", "def list_invoices(user):\n    return []\n")
+        write(self.repo / ".magenta" / "t" / "ok.py", "pass\n")
+        git(self.repo, "add", "-A")
+        git(self.repo, "commit", "-qm", "shop")
+        write(self.repo / ".magenta" / "checks" / "project.yaml",
+              f'checks:\n  - id: project.ok\n    command: "{PY} .magenta/t/ok.py"\n    set: quick\n')
+        verify.approve(self.repo, [])
+
+    def change(self):
+        write(self.repo / "shop" / "invoices.py",
+              "def list_invoices(user):\n    return []\n\ndef download_invoice(user, name):\n    return b''\n")
+
+    def hook(self, name, **extra):
+        event = {"hook_event_name": name, "session_id": "S1", "cwd": str(self.repo), **extra}
+        return subprocess.run([sys.executable, str(VERIFY), "hook"], input=json.dumps(event), capture_output=True,
+                              text=True, cwd=self.repo)
+
+    def test_direct_work_on_risky_code_stays_open(self):
+        self.cli("begin", "T9-inv", "--session", "S1")
+        self.change()
+        out = self.cli("close")
+        self.assertEqual(out.returncode, 5, out.stdout + out.stderr)
+        self.assertIn("needs the default mode", out.stdout)
+        self.assertIn("sensitive area (invoice)", out.stdout)
+        self.assertIn("no check of this task is approved", out.stdout)
+        self.assertIn("no review agent ran", out.stdout)
+        self.assertEqual(verify.active(self.repo)["work_item"], "T9-inv")
+        self.assertNotEqual(self.cli("finish").returncode, 0)  # finish does not avoid it
+        stop = self.hook("Stop")
+        self.assertIn("needs the default mode", stop.stdout + stop.stderr)
+        self.assertIn("block", stop.stdout + stop.stderr)
+
+    def test_checks_gate_and_a_review_close_the_task(self):
+        self.cli("begin", "T9-inv", "--session", "S1")
+        self.change()
+        write(self.repo / "tests" / "test_inv.py", "def test_x():\n    pass\n")
+        self.checks([{"id": "qa.inv", "command": f"{PY} .magenta/t/ok.py", "work_item": "T9-inv"}])
+        verify.approve(self.repo, [])
+        out = self.cli("close")
+        self.assertEqual(out.returncode, 5)
+        self.assertNotIn("no check of this task is approved", out.stdout)
+        self.assertIn("no review agent ran", out.stdout)
+        self.hook("SubagentStart", agent_id="a1", agent_type="magenta:engineer")
+        self.assertIn("no review agent ran", self.cli("close").stdout)  # a maker is not a review
+        self.hook("SubagentStart", agent_id="a2", agent_type="magenta:security")
+        self.assertEqual(verify.active(self.repo)["agents"], ["engineer", "security"])
+        out = self.cli("close")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.assertIn("finished: PASS", out.stdout)
+
+    def test_a_low_risk_change_or_tests_only_close_directly(self):
+        self.cli("begin", "T9-doc", "--session", "S1")
+        write(self.repo / "tests" / "test_inv.py", "def test_x():\n    pass\n")
+        write(self.repo / "invoice_tests.py", "def test_y():\n    pass\n")
+        write(self.repo / "src" / "InvoiceTest.java", "class InvoiceTest {}\n")
+        write(self.repo / "README.md", "invoices\n")
+        out = self.cli("close")
+        self.assertEqual(out.returncode, 0, out.stdout)
+        self.cli("begin", "T9-page", "--session", "S1")
+        write(self.repo / "shop" / "pages.py", "def paginate(items, page, size):\n    return items\n")
+        self.assertEqual(self.cli("close").returncode, 0)
+
+    def test_the_human_can_force_it(self):
+        self.cli("begin", "T9-inv", "--session", "S1")
+        self.change()
+        data = verify.finish(self.repo, force=True)
+        self.assertEqual(data["last"], "T9-inv")

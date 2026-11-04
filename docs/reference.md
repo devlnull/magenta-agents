@@ -26,7 +26,7 @@ All commands run with `python3 magenta.py <command>` from the Magenta folder (fo
 | `verify run [--set quick\|task\|full\|all] [--only ID,ID] [--table] --repo <repo>` | Run the approved checks and record the result. When all checks pass, it prints one line (`--table` prints the table). |
 | `verify begin <ID> --session=<id> [--auto]` | Start or resume a task, and run the baseline (the conductor uses it). |
 | `verify gate <ID> [test files]` | Lock the test files of the task, and show the checks that wait for approval with the approve command. |
-| `verify close` | Run the checks of the task, and finish the task when they pass. A failing task stays open. |
+| `verify close` | Run the checks of the task, and finish the task when they pass. A failing task stays open. When the task changed risky code (the rule scan of the changed code says that direct mode is not allowed), it also needs approved checks of the task and, in Claude Code, a review agent; else it stays open with exit code 5. `finish` and the Stop hook use the same rule. Only the human closes it without them (`finish --force`). |
 | `verify context [files]` | Show the rule files of the repository, the other files that use each function in the files, and whether direct mode is allowed (not when a rule file applies, the files touch a sensitive area, read or write a stored format, or have callers in two or more files). A script: no model tokens. |
 | `verify status --repo <repo>` | Show the active task and the result for the current code. |
 | `lock <repo> <work-item> [--files FILE ...]` | Lock the tests of a work item. |
