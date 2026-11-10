@@ -4,6 +4,13 @@ All notable changes are in this file. The format follows [Keep a Changelog](http
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-11-11
+
+### Changed
+
+- **Auto mode has no approval dialog.** In a task that the human started with `--auto`, the conductor approves the checks and runs `--force` itself, without a dialog (ADR-0017). Before, one auto task showed the dialog 75 times. Other subagents still get the dialog, and the Magenta agents still cannot approve. The Stop hook sends the conductor back to approve the checks that wait, and does not tell the human. The conductor writes each approval and each `--force` in the brief and in the final report.
+- A repository with the ask rules of `magenta.py init` still shows the dialog: Claude Code applies ask rules before hook decisions.
+
 ## [0.16.1] - 2026-11-04
 
 ### Fixed
