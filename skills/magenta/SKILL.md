@@ -57,7 +57,7 @@ First run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" context <the files 
 
 1. Read the rules near the change before you decide: the output of `context`, the docstrings and the comments of the changed code, and the rule files that apply. Keep the meaning that each caller needs. Before the report, check the result against each rule and caller that applies.
 2. Follow the rules of the repository exactly: the names, the exception types, the formats, the defaults, and the behavior that the docstrings and the rule files give. Do not replace a rule by your own idea, also when you think that it is safer or better. Write the idea in the report, and let the human decide.
-3. Only the human approves checks and closes a task with failing checks. You may request `approve` or `--force`; Claude Code asks the human. Never try to avoid the dialog. Do not write `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, or `acceptance.lock`.
+3. Only the human approves checks and closes a task with failing checks. You may request `approve` or `--force`; Claude Code asks the human. Never try to avoid the dialog. Exception: in an `--auto` task, you decide (see Auto mode). Do not write `.magenta/checks.lock`, `.magenta/verify-state.json`, `.magenta/active.json`, or `acceptance.lock`.
 4. Never make a check pass with a change to the check or to a locked test.
 5. Use the smallest team that covers the risks. Each agent has a reason.
 6. Never push, merge, or deploy.
@@ -65,7 +65,7 @@ First run `"python3" "${CLAUDE_SKILL_DIR}/scripts/verify.py" context <the files 
 
 ## Auto mode (`--auto`)
 
-`--auto` gives one permission for the whole task: add `--auto` to `begin`. Then Claude Code does not ask for each tool call that passes the rules. Ask the human only for the approval of the checks (collect them, and request one approval), a blocker (a risky assumption, a one-way-door decision, a check that seems wrong), and the final report.
+`--auto` gives one permission for the whole task: add `--auto` to `begin`. Then Claude Code does not ask for each tool call that passes the rules. You approve the checks yourself: `approve` and `--force` run without a dialog. Before you approve, read each check. Approve only a check that tests a success criterion and does not weaken a rule. Use `--force` only when a check cannot pass for a reason outside the task, and say it in the final report. Write each approval and each `--force` in the brief. Subagents never approve. Ask the human only for a blocker (a risky assumption, a one-way-door decision) and the final report. The final report lists the checks that you approved.
 
 ## Direct mode
 

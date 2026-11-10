@@ -1174,16 +1174,16 @@ def hook(event: dict) -> tuple[int, str]:
         _write_json(_mdir(repo) / "active.json", data)
         return 2, "Magenta: " + mode_text(item, gaps)
     # Tell the human only what needs the human, one time for each state. Internal states stay internal.
-    if result["pending_linked"]:
+    if result["pending_linked"] and not data.get("auto"):
         return _note_once(repo, data, ["pending", sorted(result["pending_linked"])],
                           f"Magenta: checks of {item} wait for your approval: {', '.join(result['pending_linked'])}. "
                           "Say \"approve\" to continue.")
-    if result["status"] == "NO CHECKS":
+    if result["status"] == "NO CHECKS" and not result["pending_linked"]:
         return _note_once(repo, data, ["no-checks", item],
                           f"Magenta: {item} changed the code, but no approved check exists.")
     # Remind Claude one time for each state of the code and of the results. The same reminder again and again
     # is noise: Claude knows the result, and its report must say it. A new change gives a new reminder.
-    bad = result["failed"] + result["invalid"] + result["not_run"]
+    bad = result["failed"] + result["invalid"] + result["not_run"] + result["pending_linked"]
     state_key = hashlib.sha256(json.dumps([current, result["status"], sorted(bad), result["error"]])
                                .encode("utf-8")).hexdigest()[:16]
     if data.get("reminded") == state_key:
@@ -1192,7 +1192,12 @@ def hook(event: dict) -> tuple[int, str]:
     data.update(blocks=blocks, reminded=state_key)
     _write_json(_mdir(repo) / "active.json", data)
     run_cmd = f"{self_command()} run" + (" --set task" if result["full"] else "")
-    if result["status"] == "ERROR":
+    if result["pending_linked"]:
+        ids = " ".join(result["pending_linked"])
+        reason = (f"Magenta: checks of {item} wait for approval: {', '.join(result['pending_linked'])}. The task runs "
+                  "with --auto, so you approve them. Read each check. Approve only the checks that test the success "
+                  f"criteria and do not weaken a rule: {self_command()} approve {ids}. Write the decision in the brief.")
+    elif result["status"] == "ERROR":
         reason = (f"Magenta: the checks configuration has an error: {result['error']}. "
                   "The owner of the file must fix it: the file name is the role (qa.yaml: QA, project.yaml: Principal).")
     elif result["invalid"]:

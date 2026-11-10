@@ -1,5 +1,5 @@
 """--auto: in a task that the human started with --auto, the hooks allow the tool calls that pass the rules, so
-Claude Code does not ask for each one. The decisions of the human (approve, --force) and blocked calls stay."""
+Claude Code does not ask for each one. The conductor approves the checks and uses --force itself; blocked calls stay."""
 import json
 import os
 import subprocess
@@ -79,10 +79,23 @@ class AutoTest(unittest.TestCase):
         self.assertEqual(self.hook(self.event("Read", agent_type="Explore", file_path="src/a.py")), "allow")
         self.assertIsNone(self.hook(self.event("Write", session="S2", file_path="src/a.py")))  # another session
 
+    def test_the_conductor_approves_and_forces_without_a_prompt(self):
+        approve = '"python3" "/x/verify.py" approve qa.one'
+        force = '"python3" "/x/verify.py" finish --force'
+        verify.start(self.repo, "T1-x", session="S1")
+        self.assertEqual(self.hook(self.event("Bash", command=approve)), "ask")
+        verify.start(self.repo, "T1-x", session="S1", auto=True)
+        for script, mode in ((GUARD, "--auto"), (VERIFY, "protect")):
+            self.assertEqual(self.hook(self.event("Bash", command=approve), script, mode), "allow")
+            self.assertEqual(self.hook(self.event("Bash", command=force), script, mode), "allow")
+            bypass = dict(self.event("Bash", command=approve), permission_mode="bypassPermissions")
+            self.assertEqual(self.hook(bypass, script, mode), "allow")
+            self.assertEqual(self.hook(self.event("Bash", agent_type="Explore", command=approve), script, mode), "ask")
+            self.assertEqual(self.hook(self.event("Bash", session="S2", command=approve), script, mode), "ask")
+        self.assertEqual(self.agent(self.event("Bash", agent_type="magenta:qa", command=approve)), "deny")
+
     def test_important_and_blocked_calls_are_not_allowed(self):
         verify.start(self.repo, "T1-x", session="S1", auto=True)
-        approve = '"python3" "/x/verify.py" approve qa.one'
-        self.assertEqual(self.hook(self.event("Bash", command=approve)), "ask")  # the decision of the human
         self.assertIsNone(self.hook(self.event("Bash", command="git push origin main")))  # the normal prompt
         self.assertIsNone(self.hook(self.event("Write", file_path=".magenta/policy.json")))
         self.assertIsNone(self.hook(self.event("Read", file_path="/etc/hosts")))  # outside the project

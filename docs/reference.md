@@ -92,7 +92,7 @@ Write a shell pattern as narrow as possible, for example `docker compose exec -T
 
 ### Auto mode
 
-`verify.py start <ID> --session=<id> --auto` records that the human started the task with `--auto` (the conductor does it for `/magenta --auto`). While the task is active, the PreToolUse hooks answer `allow` for each tool call of that session (the conductor, the Magenta agents, and other subagents) that passes the rules: files in the session folder, no human-only file, no secret, and no dangerous command. Then Claude Code does not ask. `approve` and `--force` still ask the human. A blocked call stays blocked. Other calls get the normal prompt. `finish` ends auto mode.
+`verify.py start <ID> --session=<id> --auto` records that the human started the task with `--auto` (the conductor does it for `/magenta --auto`). While the task is active, the PreToolUse hooks answer `allow` for each tool call of that session (the conductor, the Magenta agents, and other subagents) that passes the rules: files in the session folder, no human-only file, no secret, and no dangerous command. Then Claude Code does not ask. `approve` and `--force` from the conductor (the main session) also run without a prompt: the conductor decides (ADR-0017). They still ask when another subagent runs them, and the Magenta agents cannot run them. An `ask` rule from `magenta.py init` in `.claude/settings.local.json` still shows the dialog, because Claude Code applies ask rules before hook decisions. A blocked call stays blocked. Other calls get the normal prompt. `finish` ends auto mode.
 
 ### Hook output
 

@@ -308,6 +308,16 @@ class TaskTest(RepoCase):
 
 
 class HookTest(RepoCase):
+    def test_auto_task_gives_the_checks_gate_to_the_conductor(self):
+        self.checks("qa.yaml", [{"id": "qa.b", "command": self.has_b(), "work_item": "T1-x"}])
+        verify.start(self.repo, "T1-x", session="S1", auto=True)
+        write(self.repo / "a.txt", "a\nc\n")
+        code, text = self.hook(session_id="S1")
+        self.assertEqual(code, 2)
+        self.assertIn("wait for approval: qa.b", text)
+        self.assertIn("approve qa.b", text)
+        self.assertEqual(self.hook(session_id="S1", stop_hook_active=True), (0, ""))
+
     def test_decisions(self):
         self.assertEqual(self.hook(), (0, ""))  # no active task
         self.checks("qa.yaml", [{"id": "qa.b", "command": self.has_b(), "work_item": "T1-x"}])

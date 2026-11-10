@@ -9,8 +9,9 @@ This rule stops the model in the main session from:
 
 `approve` and `--force` are decisions of the human. In the main session, `evaluate` answers "ask" for them:
 Claude Code shows its permission dialog, and the human confirms or refuses there. Subagents never get the
-dialog (`decide` blocks them). When Claude Code cannot ask (bypass mode without the ask rules of
-`magenta.py init`), the call is blocked, and the human approves in a terminal.
+dialog (`decide` blocks them). In a task that the human started with --auto, the conductor decides:
+`evaluate` answers "auto" for its approve and --force (ADR-0017). When Claude Code cannot ask (bypass mode
+without the ask rules of `magenta.py init`), the call is blocked, and the human approves in a terminal.
 This rule is a guardrail, not a sandbox.
 """
 from __future__ import annotations
@@ -98,12 +99,25 @@ def _ask_rules_installed(cwd) -> bool:
     return False
 
 
+def _conductor_in_auto(event: dict) -> bool:
+    if event.get("agent_type"):
+        return False
+    try:
+        import verify
+        return verify.auto_session(event)
+    except Exception:
+        return False
+
+
 def evaluate(event: dict) -> tuple[str, str]:
-    """For the main session: ("allow" | "ask" | "deny", reason). Approve and --force ask the human."""
+    """For the main session: ("allow" | "ask" | "deny" | "auto", reason). Approve and --force ask the human,
+    except in a task that the human started with --auto: there the conductor decides."""
     tool_input = event.get("tool_input") or {}
     if event.get("tool_name") == "Bash":
         human = _HUMAN_ONLY.search(unquoted(str(tool_input.get("command") or "")))
         if human and (human.group(2) in _ASK_WORDS or human.group(2).startswith("--fo")):
+            if _conductor_in_auto(event):
+                return "auto", "Magenta: the task runs with --auto; the conductor decides"
             word = "approve the checks" if human.group(2) == "approve" else f"run `{human.group(2)}`"
             if event.get("permission_mode") == "bypassPermissions" and not _ask_rules_installed(event.get("cwd")):
                 return "deny", (f"only the human can {word}, and Claude Code runs without permission prompts, so it "
